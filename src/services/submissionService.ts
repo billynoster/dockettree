@@ -30,7 +30,7 @@ export interface SubmitDocumentResult {
 
 /**
  * A submission is created only when file and date validation both succeed. File bytes are
- * read before the write transaction so the IndexedDB transaction never waits on I/O.
+ * read before the write transaction so the database transaction never waits on file I/O.
  */
 export async function submitDocument(
   ctx: ServiceContext,
