@@ -1,17 +1,19 @@
-# Vendor Readiness — working local prototype (milestone A)
+# Docksy Vendor Readiness — V1
 
 Know which vendors are ready to work, what's missing, and what expires next.
 
-This repository is the **milestone A prototype** described in
-`vendor-readiness-mvp-requirements.md`: a complete, interactive B2B application for operations
-teams who request vendor documents, review submissions, track expirations and see which vendors
-meet their organization's document requirements.
+Vendor Readiness is a self-hosted B2B application for operations teams who request vendor
+documents, review submissions, track expirations, and need to see which vendors meet their
+organization's document requirements. V1 is a real product, not a demo: it authenticates people,
+enforces permissions on the server, keeps records in SQLite and documents in a private directory,
+and records every notification it produces with its true delivery state.
 
-> **This is not a secure production service.** Demo role switching, portal links reachable by URL
-> id, the demo date control and local browser persistence are simulations. There is no
-> authentication, no server-enforced authorization, no private document storage and no email
-> delivery. Nothing in this build may hold real customer documents. See
-> [Remaining pilot release gates](#remaining-pilot-release-gates).
+- One Node process serves the API and the browser client.
+- Staff and vendor contacts sign in with an email and password; roles come from stored memberships.
+- Documents never leave the server except through an authorized route.
+- Email is optional: with no SMTP configured, messages are queued and the app says so rather than
+  claiming delivery.
+- No API keys, cloud accounts or external services are needed to run it.
 
 ---
 
@@ -24,19 +26,64 @@ npm install
 npm run dev            # http://127.0.0.1:43217
 ```
 
-The app seeds itself on first load: 12 fictional vendors for "Cedar Grove Property Operations",
-real generated sample PDFs and images, and an injected clock fixed to **2026-09-17**. Everything is
-stored in your browser with IndexedDB, so a refresh keeps your work and **Reset demo** restores the
-seeded fixtures.
+`npm run dev` starts two processes: the API (port 43218) and the Vite dev server (port 43217) that
+proxies `/api` to it. Open <http://127.0.0.1:43217>.
+
+The first run has an empty database, so the app opens its **setup** screen: create the organization
+(name, timezone, support contact) and the first admin account. Everything else is done in the app.
+
+### Optional sample data
+
+To evaluate the app with a populated organization:
+
+```bash
+npm run db:seed
+```
+
+This **replaces** the contents of the database with the fictional "Cedar Grove Property Operations"
+dataset from the requirements: 12 vendors (4 Ready — 2 of them Expiring soon, 2 Awaiting review,
+3 Not ready, 1 Unconfigured, 2 Archived), real generated sample PDFs and images marked
+`SAMPLE — NOT VALID FOR BUSINESS USE`, and fictional history. It prints the accounts it creates:
+
+| Account | Role | Password |
+| --- | --- | --- |
+| `dana.whitfield@example.com` | Admin | `cedar-grove-staff-2026` |
+| `marcus.reyes@example.com` | Coordinator | `cedar-grove-staff-2026` |
+| `priya.raman@example.com` | Reviewer | `cedar-grove-staff-2026` |
+| any seeded vendor contact, e.g. `damon.frazier@example.com` | Vendor contact | `cedar-grove-vendor-2026` |
+
+Sample passwords are printed on purpose and are meant for a local evaluation only. Override them
+with `SAMPLE_STAFF_PASSWORD` and `SAMPLE_VENDOR_PASSWORD`.
+
+### Running it for real
+
+```bash
+npm run build          # typecheck + client build
+npm start              # one process serves the API and the built client on PORT
+```
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `PORT` / `HOST` | `43217` / `127.0.0.1` | Where the server listens |
+| `DOCKSY_DATA_DIR` | `./var` | SQLite database and stored documents |
+| `PUBLIC_URL` | `http://HOST:PORT` | Base URL used in invitation links |
+| `SECURE_COOKIES` | `false` | Set `true` when served over HTTPS |
+| `SMTP_HOST` | — | Enables email delivery; without it messages stay queued |
+| `SMTP_PORT` / `SMTP_SECURE` / `SMTP_USER` / `SMTP_PASSWORD` / `SMTP_FROM` | `587` / `false` / — / — / `docksy@localhost` | SMTP details |
+| `RUN_BACKGROUND_JOBS` | `true` | Daily reminder job and the delivery worker |
+
+Other scripts:
 
 | Command | What it does |
 | --- | --- |
-| `npm run dev` | Vite dev server on port 43217 |
-| `npm run build` | `tsc -b` project typecheck plus a production build |
+| `npm run dev` | API plus client dev server |
+| `npm run build` | `tsc -b` across client, server and Node configs, then the client build |
 | `npm run typecheck` | TypeScript only |
 | `npm run lint` | oxlint |
-| `npm test` | Vitest business-rule and service tests (Node + fake-indexeddb) |
-| `npm run e2e` | Playwright end-to-end gates (starts its own server on port 43218) |
+| `npm test` | Vitest: domain, service and HTTP API suites |
+| `npm run e2e` | Playwright: builds and boots the server on port 43219 with its own data directory |
+| `npm run db:seed` | Load the sample dataset (`--force` to overwrite a real organization) |
+| `npm run db:reset` | Delete every record and stored document (asks for confirmation) |
 
 First Playwright run only: `npx playwright install chromium --with-deps`.
 
@@ -45,237 +92,155 @@ First Playwright run only: `npx playwright install chromium --with-deps`.
 Last full run on this branch:
 
 ```
-npm run typecheck   →  clean (TypeScript 6, strict)
-npm run build       →  clean (2229 modules, 752 kB JS / 222 kB gzip)
-npm test            →  6 files, 73 tests passed
-npm run e2e         →  25 tests passed (chromium, 1440×900 and 390×780)
+npm run typecheck   →  clean (TypeScript 6, strict, client + server)
+npm run build       →  clean (678 kB JS / 202 kB gzip)
+npm test            →  11 files, 108 tests passed
+npm run e2e         →  33 tests passed (chromium, 1440×900 and 390×780)
+npx oxlint          →  no errors (5 warnings: shadcn/ui fast-refresh and set-state-in-effect)
 ```
 
-**Unit / service tests** (`tests/unit`) cover the section 11 risk table directly:
+**Domain and service tests** (`tests/unit`) run the real service layer against the real SQLite
+adapter and local file store, with the clock pinned so date boundaries are deterministic. They
+cover the requirements section 11 risk table: the readiness truth table (accepted with no
+expiration, expires today, expired yesterday, all-pending vs. Awaiting review, expired effective
+with a pending replacement, valid effective plus a pending or rejected renewal, revocation with no
+fallback, optional and retired items, archived vendors, the dashboard partition), organization-local
+today and the UTC/local midnight boundary, reminder milestones and deduplication keys, CSV formula
+neutralization, template edits not touching existing assignments, stale review conflicts, repeated
+request idempotency, and the exact sample-data distribution.
 
-- `readiness.test.ts` — the full readiness truth table: accepted with no expiration, expires today,
-  expired yesterday, all-pending vs. Awaiting review, expired effective with a pending replacement,
-  valid effective plus pending or rejected renewal, revocation with no fallback, optional items,
-  retired requirements, archived vendors, and the dashboard partition.
-- `dates.test.ts` — organization-local today, the UTC/local midnight expiration boundary, and the
-  inclusive 30-day expiring window.
-- `reminders.test.ts` — missing-item cadence (day 3, then every 7), no backfill of missed
-  milestones, renewal milestones 30/14/7/0 and expired, pending-replacement suppression, internal
-  expiration notices, and deduplication keys.
-- `csv.test.ts` — formula neutralization (`=`, `+`, `-`, `@`, tab, CR), RFC 4180 quoting, import
-  column/row validation, duplicate warnings and the 500-row cap.
-- `seed.test.ts` — the exact seeded distribution and every documented edge case.
-- `workflows.test.ts` — W1–W5 through the real services and the real IndexedDB adapter, including
-  stale-review conflicts, idempotent retries, atomic imports, permission denials and archive
-  behaviour.
+**Server tests** (`tests/server`) drive the HTTP API:
 
-**End-to-end gates** (`tests/e2e`) run the built app in Chromium: the complete demo script, refresh
-persistence, demo reset, CSV import error recovery, export sanitization, keyboard-only review and
-upload flows, dialog focus return, the 390 px viewport, direct links to deep routes, invalid file
-rejection, expired-document acceptance blocking, reminder cooldown and deduplication, and archive
-and restore.
+- `auth.test.ts` — sign-in with one indistinguishable failure message, throttling, sign-out, a
+  disabled account losing its sessions, the last-admin guard, the section 3 matrix per role, vendor
+  contacts confined to their own portal and documents, upload byte validation, response headers that
+  prevent inline execution, and first-run setup being available exactly once.
+- `isolation.test.ts` — two organizations on one server: no listing, reading or mutating across
+  them, adversarial id substitution on vendors, requirements and invitations, and a composite
+  foreign key that rejects a cross-organization reference at the database level.
+- `invitations.test.ts` — hashed single-use tokens, distinct copy for invalid, revoked, used and
+  expired links, account plus verified membership creation, resend revoking the previous token, and
+  a repeated request not sending twice.
+- `delivery.test.ts` — queued with no SMTP configured, sent only after SMTP accepts, bounded retries
+  with backoff then failure with the recorded error, admin retry, and the daily scheduler running
+  once per organization-local day and deduplicating against a manual reminder.
+- `layering.test.ts` — the browser bundle imports server modules for types only and never touches
+  the database or file system; the SQLite schema matches the row mapping.
 
-## Five-minute demo walkthrough
+**End-to-end tests** (`tests/e2e`) cover sign-in and access denial, invitation to portal, member
+administration, W1–W5 (add and invite, submit, request changes and accept, renewal superseding an
+older version, remind, import, export, archive and restore), an expired document that cannot be
+accepted, revocation with no fallback, keyboard-only review and upload, dialog focus return, deep
+links, and the 390 px layouts.
 
-Start on `/overview`. The amber **Demo tools** bar at the top switches roles, moves the demo date,
-opens the simulated outbox and resets the demonstration.
+## What V1 includes
 
-1. **Overview → Not ready.** Confirm the partition: 10 active vendors = 4 Ready + 2 Awaiting review
-   + 3 Not ready + 1 Unconfigured, with **Expiring soon 2** labelled as an overlapping secondary
-   count and 7 submissions pending review. Click **Not ready** to land on the matching filter.
-2. **Open Ironwood Pest Control** (missing safety acknowledgment). Read the blocker list, then press
-   **Remind** to preview the recipient and item. Close it without sending.
-3. **Open demo portal** for that vendor (or switch the demo role to *Vendor contact*). On the
-   requirement card press **Submit document**, use **Download a sample PDF to upload** to get a real
-   file, select it and submit. The requirement moves to *Pending review*.
-4. **Switch the demo role to Reviewer** and open the review queue. Open the Ironwood submission,
-   enter a correction reason and press **Request changes**.
-5. **Back to the vendor portal.** The correction reason is shown. Submit a corrected version;
-   switch to *Reviewer* and **Accept** it. Ironwood becomes **Ready** without a refresh, and version
-   1 stays in history with its rejection.
-6. **Open Cedar Line Landscaping** (Ready, Expiring soon, insurance expires 2026-09-30). Set the
-   demo date to **2026-10-01**. Readiness becomes **Not ready** and the current document reads
-   *Expired* — while the submission itself is still *Accepted*, because time never rewrites a review
-   decision.
-7. **Submit and accept a renewal.** The new version becomes effective, the previous version is
-   marked *Superseded* in the same transaction, and both files and all decisions remain in history.
-8. **Export and inspect.** On `/vendors`, filter and press **Export CSV** (all filtered rows, not
-   just the page). Then open **Simulated outbox** to read the exact messages that a pilot would have
-   sent — every entry is labelled *Not delivered*.
+**Operations**: overview with the four readiness counts plus the overlapping Expiring soon flag and
+a prioritized attention list; vendor directory with search, combined filters, sorting, pagination
+and CSV export; vendor detail with blockers, requirement cards that show the current document and
+the latest submission separately, invitation and reminder actions, archive and restore; a review
+queue with oldest-first ordering and a decision screen with document preview, prior version
+reference and mandatory correction reasons; reusable requirement templates that snapshot on
+assignment; the organization activity timeline; settings with timezone, support contact and member
+administration.
 
-Reset with **Reset demo** in the demo bar when you are done.
+**Vendor portal**: a signed-in vendor contact sees only their own checklist, correction reasons,
+progress and history, uploads with real progress and retry, and can withdraw a pending submission.
+Contacts authorized for several vendors switch context explicitly.
 
-## Demo driver scripts
-
-`scripts/` holds the scripts used to verify and record the demo. They are optional helpers, not
-part of the app:
-
-```bash
-node scripts/capture-screenshots.mjs <output-dir> [baseUrl]   # walkthrough screenshots
-DISPLAY=:1 node scripts/demo-walkthrough.mjs [baseUrl] [pdf]  # submit -> correct -> accept -> Ready
-DISPLAY=:1 node scripts/demo-renewal.mjs [baseUrl] [pdf]      # expiration -> renewal -> superseded
-```
-
-## Implemented scope
-
-Routes: `/overview`, `/vendors`, `/vendors/new`, `/vendors/:id`, `/review`, `/review/:submissionId`,
-`/requirements`, `/activity`, `/settings`, `/portal/:vendorId`, `/demo/outbox`.
-
-- **Readiness engine (section 5.4)** — one pure module derives exactly one status per active vendor
-  (Unconfigured → Not ready → Awaiting review → Ready) plus the overlapping *Expiring soon* flag and
-  an ordered blocker list. Components never compute a second version.
-- **Current document vs. latest submission** — always shown as two separate facts, so a combined
-  label can never hide an expiring current document.
-- **Vendor directory** — case-insensitive name/contact/email search, readiness / category /
-  property / expiring / lifecycle filters combined with AND, sort by name, next expiration or
-  updated date, 25-row pages, filters mirrored in the URL so dashboard links reproduce counts.
-- **Add and edit vendors** — inline validation that preserves input, duplicate company-name warning
-  with explicit confirmation, checklist preview, and *Save* separate from *Save and invite*.
-- **Checklist templates** — create, edit (version bump), archive, and per-item required/optional,
-  expiration and issue-date policy. Assignment copies a snapshot; template edits never change
-  existing vendors. Assigning to a vendor shows a readiness impact preview and requires a reason.
-- **Uploads** — real local files stored as blobs in IndexedDB, PDF/PNG/JPEG only, 10 MiB cap, magic
-  byte sniffing rather than trusting the extension, visible progress, retry on failure, and one
-  pending submission per requirement with withdrawal while pending.
-- **Review** — oldest-first queue excluding archived vendors, document preview beside instructions
-  and entered dates, accept or request changes with a mandatory reason, record-version checks that
-  reject stale or repeated decisions, atomic supersede of the previous effective version, and
-  acceptance revocation with a mandatory reason and no fallback.
-- **Renewals** — everything expiration-driven flows from the injected clock, so advancing the demo
-  date expires documents without touching review state.
-- **Reminders (simulated)** — pure eligibility rules, preview before sending, 24-hour manual
-  cooldown, one digest per vendor per organization-local date, internal expiration notices even when
-  a replacement is pending, and a "run today's job" button that stands in for the pilot scheduler.
-- **CSV import/export** — preview with the first 10 rows and every error, 500-row cap, one template
-  for the batch, atomic and idempotent by request key, never auto-invites; export covers all
-  filtered rows with formula-injection neutralization and no document bytes or storage keys.
-- **Archive/restore** — confirmation with impact text, removal from active metrics, review queue and
-  reminders, portal uploads disabled, full history retained, readiness recalculated on restore.
-- **Activity** — append-only events for vendor changes, invitations, uploads (including "on behalf
-  of"), withdrawals, decisions, revocations, reminders, checklist changes and archive/restore,
-  filterable by vendor and event type. The portal sees only its own vendor-visible events.
-- **Demo facilities** — role selector, vendor portal context, demo date control, simulated outbox
-  with deduplication keys and failure/retry states, and a confirmed reset.
+**Server**: email and password sign-in behind an identity-provider port, sessions as hashed opaque
+tokens in the database with rolling expiry and revocation, the section 3 permission matrix enforced
+on every read, mutation and file access, organization scoping backed by composite foreign keys,
+uploads validated by magic bytes and size on the server, documents stored outside any web root,
+an append-only activity and review history written in the same transaction as the change it
+describes, a notification outbox with idempotency keys and bounded retries, and a daily reminder job
+at 09:00 organization-local time.
 
 ### Architecture
 
 ```
-src/domain/        entity types, dates, readiness, reminders, permissions, validation, CSV — pure
-src/repositories/  repository interfaces + the IndexedDB adapter (one transaction per unit of work)
-src/services/      use cases: createVendor, submitDocument, reviewSubmission, sendReminder, …
-src/features/      overview, vendors, review, requirements, activity, settings, portal, outbox
-src/components/    status chips, document preview, dialogs, requirement card, layout, shadcn/ui
-src/demo/          injected clock, seed fixtures, generated sample documents
+src/domain/        pure rules: types, dates, readiness, reminders, validation, csv   (shared)
+src/services/      use cases: createVendor, submitDocument, reviewSubmission, …      (server only)
+src/repositories/  storage contracts                                                 (shared types)
+server/            http api, sqlite adapter, auth, file store, mailer, scheduler, seed
+src/api/           browser HTTP client mirroring the service surface
+src/app|features|components/   browser UI; reaches the core only over /api
 ```
 
-Services take a `ServiceContext` (`db`, injected `clock`, simulated `session`, organization id,
-timezone). Every multi-entity write — submission plus effective pointer plus activity event — runs
-inside a single IndexedDB transaction, which is where a pilot would use a database transaction.
-Replacing `src/repositories/indexeddb` with a server adapter is the intended milestone B path;
-`src/domain` should not change.
-
-Stack: React 19, TypeScript 6, Vite 8, React Router 8, Tailwind CSS 4, shadcn/ui (Radix), Zod 4,
-`idb`, Vitest 5, Playwright 1.63. `package-lock.json` is committed.
+Readiness is derived in exactly one place (`src/domain/readiness.ts`) and the browser never
+evaluates it independently. The browser may import **types** from the service layer but never
+values; `tests/server/layering.test.ts` enforces that boundary.
 
 ### Decisions taken where the requirements left a choice
 
-- **Component library.** shadcn/ui on Radix primitives, so dialog focus containment and return,
-  labelled selects and checkbox semantics come from tested primitives.
-- **Demo tools placement.** Requirements put demo controls on `/settings`; a demonstration also
-  needs to switch role mid-flow, so the same controls appear in one clearly labelled amber demo bar
-  and in a bordered "Demo tools (simulation only)" section on `/settings`.
-- **Demo date semantics.** The date control stores `T12:00:00Z` for the chosen day, which is
-  unambiguous for the default `America/Chicago` organization timezone.
-- **"Next expiration" column** shows the earliest expiration among *effective required* documents.
-  Optional item dates are visible on their own requirement cards.
-- **Missing-item reminder cadence** requires an invitation before the scheduled job starts (day 3,
-  then every 7 days, most recent milestone only). A manual reminder ignores the cadence but still
-  excludes requirements whose only outstanding state is "awaiting review".
-- **Manual reminders consume the daily digest slot** by writing the same
-  `digest:<org>:<vendor>:<local-date>:email` key, so the simulated job cannot duplicate them.
-- **Property tags** are a fixed list from the seeded properties, chosen with checkboxes; CSV import
-  splits the `property_tags` cell on semicolons.
-- **Sample files** are generated in the browser rather than committed as binaries: seeding writes
-  real PDF and PNG bytes into IndexedDB, and the upload dialog offers "Download a sample PDF/PNG" so
-  you can pick a real file from disk. Every sample is stamped
-  `SAMPLE - NOT VALID FOR BUSINESS USE`.
-- **Unsaved-change confirmation** on the add-vendor form uses a confirmation dialog on Cancel plus a
-  `beforeunload` guard, rather than a router-level navigation blocker.
-- **Requirement retire/reinstate** is admin-only (it changes what readiness means); assigning an
-  additional checklist is available to coordinators, with a reason recorded either way.
-- **Correction reasons** require at least 5 characters so the vendor-facing message is meaningful.
-- **A vendor contact may withdraw** its own pending submission; coordinators and admins may withdraw
-  on behalf; reviewers may not.
-- **Retried simulated deliveries** flip a failed outbox entry to "simulated send" and increment the
-  attempt counter, so failure and retry states are visible without inventing a delivery guarantee.
-
-### Requirement conflicts and how they were resolved
-
-1. **Demo controls: `/settings` only vs. a usable demonstration.** Section 6 places demo role and
-   date controls in a distinct Demo tools area on `/settings`, while the section 10 script switches
-   role and date repeatedly from other screens. Both surfaces exist and both are explicitly labelled
-   simulation; no business rule changed.
-2. **"Combined status" vs. the review queue count.** Section 5.2 forbids a combined status that
-   hides an expiring current document, and section 5.4 requires exactly one readiness value. Vendor
-   headers therefore show readiness *plus* the separate Expiring soon flag, and every requirement
-   card shows current document and latest submission separately.
-3. **Manual reminders vs. scheduled deduplication.** Section 5.5 asks for a 24-hour manual cooldown
-   *and* one digest per organization/vendor/local-date/channel. A manual send therefore consumes
-   that day's digest key; the 24-hour cooldown is enforced separately on manual sends, so a manual
-   reminder late one day and early the next is still blocked by the cooldown.
-4. **Expired documents may be submitted but not accepted.** Section 5.3 allows submitting an expired
-   file with a warning; the reviewer's Accept action is disabled with an explanation instead, because
-   accepting would create a satisfied requirement with an expired document.
+- **Auth**: interim email and password (scrypt, minimum 12 characters) behind an
+  `IdentityProvider` port. **Firebase Authentication is the planned provider**; swapping it in means
+  writing one adapter that verifies an ID token and maps the uid onto `users.auth_subject`, with no
+  change to sessions, authorization or any product flow. V1 deliberately ships no Firebase client
+  and needs no API keys.
+- **Database**: SQLite via `better-sqlite3`, WAL, foreign keys on, real columns and indexes.
+- **Documents**: a private directory (`$DOCKSY_DATA_DIR/uploads`), mode 0600, served only through
+  `GET /api/submissions/:id/file` after an authorization check.
+- **Email**: optional SMTP through `nodemailer`. Unconfigured is a supported state, not a failure.
+- **Invitations**: single-use token, hashed with SHA-256, 7-day expiry, revoked on resend. Because a
+  self-hosted server may have no SMTP, the acceptance link is shown once to the operator who sent it
+  so they can pass it on deliberately.
+- **Password resets**: admin-assisted. An admin sets a temporary password and every session for that
+  account is revoked. There is no self-service reset email.
+- **Sample data**: never loaded automatically; `npm run db:seed` is explicit.
+- **Deployment**: single process, single organization per install in practice (the data model and
+  tests support several, and each administrator only ever sees their own).
 
 ## Known limitations
 
-- **No security.** Roles are a demo selector, the portal is reachable by URL id, and everything is
-  readable in your browser's IndexedDB. Do not put real documents here.
-- **Single browser, single organization.** There is no server, no sync between browsers or tabs and
-  no multi-organization isolation; the seeded organization id is fixed.
-- **No malware scanning or server-side validation.** File type sniffing and size limits are
-  client-side only, and `scan_status` is always `not_scanned`.
-- **No email.** Invitations, reminders and correction notices exist only as simulated outbox
-  entries. Invitation tokens are non-secret digest stand-ins, never emailed and never redeemable.
-- **No scheduler.** The daily reminder job runs when you press the button on `/settings`.
-- **Concurrency is demonstrated, not distributed.** Record-version checks reject stale decisions
-  within one browser; a second tab writing simultaneously is not fully modelled.
-- **Membership management is read-only**, and the internal member list is seeded.
-- **Scale is untested.** Seeded data is 12 vendors; list queries load and derive readiness in
-  memory. Pagination exists, but server-side paging and indexes are pilot work.
-- **Storage failures are surfaced, not recovered.** If IndexedDB is unavailable (private browsing,
-  blocked site data), the app explains the failure and offers a retry rather than degrading.
-- **Not deployed.** No hosting, analytics, error monitoring or backups.
+- **One process per database.** SQLite gives a database file to one process; do not run two servers
+  against the same `DOCKSY_DATA_DIR`. Automated tests reset data through a test-only endpoint that
+  is mounted only when `DOCKSY_ENABLE_TEST_RESET=true` for exactly this reason.
+- **No malware scanning.** Uploads are checked for type and size on the server; `scan_status` is
+  recorded as `not_scanned`. Quarantine behaviour is not implemented.
+- **Email delivery is best-effort.** With SMTP configured, messages are retried up to five times
+  with backoff and then marked failed with the SMTP error. There is no bounce or complaint handling.
+- **Sign-in throttling is per process and in memory.** A restart clears it, and it does not
+  coordinate across instances.
+- **No self-service password reset, no SSO, no SCIM, no multi-factor authentication.**
+- **Vendor list derivation is in memory.** Filtering and readiness run over the organization's
+  vendors on each request. It is indexed and fast at the scale this is built for, but it has not
+  been profiled at 1,000+ vendors and 10,000+ submissions.
+- **No backups, monitoring or retention policy.** Copy `$DOCKSY_DATA_DIR` while the server is
+  stopped; nothing is automated, and no recovery objective is implied.
+- **Archive is not deletion.** There is no self-service deletion path for a vendor's documents.
+- **No AI review, billing, inspections, e-signatures or third-party integrations**, by design.
+- Accepting a document is a record of receipt. It is not a legal determination, insurance
+  verification, or authorization to perform work, and the app never says "compliant".
 
-## Remaining pilot release gates
+## Requirement conflicts, resolved without changing the business rules
 
-Milestone B is a separate scope. Before any real customer record is accepted (requirements
-section 13):
+The requirements document describes a milestone-A prototype in places; V1 follows the pilot column
+of its section 2 table instead. The section 3–5 permissions, states and calculations are unchanged.
 
-- Organization isolation and vendor-level access enforced at the server and storage layers, verified
-  with two organizations and adversarial id-substitution tests.
-- Verified authentication; revocable invitations and sessions; internal roles enforced on every read,
-  write, export, review and file preview. Private files served through short-lived authorized access,
-  never public URLs.
-- TLS, private object storage, secret management, server-side MIME and size checks, and malware
-  scanning. Quarantined or failed scans cannot be reviewed or downloaded; expired upload
-  authorizations fail safely.
-- Append-only review and activity records, atomic version replacement, conflict handling, and
-  database constraints that prevent cross-organization references.
-- A persistent scheduler and notification queue with idempotency, bounded retry, delivery and bounce
-  visibility, and accurate sent/failed states. Never log tokens, signed URLs or document contents.
-- Backups enabled and a restore exercised; error monitoring and an operational support contact;
-  documented recovery objectives and retention/deletion policy.
-- Archive is not deletion: an authenticated, admin-assisted deletion process covering files, audit
-  history and backups.
-- Accessibility checks on all critical workflows, understandable upload failure recovery, and
-  page/query behaviour verified with at least 1,000 vendors and 10,000 metadata records.
-- Baseline metrics implemented: invitation-to-first-submission time, submission-to-decision time,
-  first-pass acceptance rate, reminders per vendor, overdue required items — excluding synthetic and
-  archived records.
-- Pricing, support obligations, data handling terms and scope confirmed with pilot customers. No
-  claim of certification, legal compliance or verified insurance coverage because a document was
-  accepted.
+1. **Simulation surfaces.** Sections 2, 5.5 and 6 specify demo role switching, an injected demo
+   date, a "Simulated" outbox, `/portal/:vendorId` and a Reset demo control. V1 removes all of them:
+   the clock is the system clock, roles come from memberships, the portal comes from a verified
+   membership, and the outbox reports real states. The calculations those surfaces fed are untouched.
+2. **"Simulated" wording** (section 5.5) is replaced by real delivery states, plus an explicit
+   "queued — email delivery is not configured" state when there is no SMTP. Nothing ever claims a
+   message was delivered when it was not.
+3. **Exactly one readiness status** (5.4) versus *a combined status must not hide an expiring
+   document* (5.2): the vendor shows one readiness chip plus a separate Expiring soon flag, and each
+   requirement shows its current document and its latest submission separately.
+4. **Manual reminder cooldown** (24 hours per vendor) versus **one digest per organization, vendor,
+   local date and channel**: a manual send consumes that day's digest key, and the 24-hour cooldown
+   is enforced separately on manual sends.
+5. **Expired files may be submitted with a warning but cannot be accepted** (5.3): the submission is
+   accepted into the queue with a warning, and the reviewer's Accept button is disabled with an
+   explanation until a new version carries a valid expiration date.
 
-All data in this repository is synthetic. "Ready" means an organization's own document requirements
-have been met, not a legal determination, insurance verification or authorization to perform work.
+## Remaining gates before real customer data
+
+From requirements section 13, still open: malware scanning with quarantine, backup and restore
+exercised, error monitoring, documented recovery objectives and a retention/deletion policy,
+admin-assisted deletion consistent with a customer agreement, load and query behaviour verified at
+1,000 vendors and 10,000 metadata records, the baseline product metrics (invitation-to-first-
+submission, submission-to-decision, first-pass acceptance rate, reminders per vendor, overdue
+required items), and the commercial terms. TLS termination, secret management and host hardening are
+deployment concerns this repository does not configure for you.
