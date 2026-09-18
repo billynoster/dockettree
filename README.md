@@ -105,6 +105,17 @@ opens the simulated outbox and resets the demonstration.
 
 Reset with **Reset demo** in the demo bar when you are done.
 
+## Demo driver scripts
+
+`scripts/` holds the scripts used to verify and record the demo. They are optional helpers, not
+part of the app:
+
+```bash
+node scripts/capture-screenshots.mjs <output-dir> [baseUrl]   # walkthrough screenshots
+DISPLAY=:1 node scripts/demo-walkthrough.mjs [baseUrl] [pdf]  # submit -> correct -> accept -> Ready
+DISPLAY=:1 node scripts/demo-renewal.mjs [baseUrl] [pdf]      # expiration -> renewal -> superseded
+```
+
 ## Implemented scope
 
 Routes: `/overview`, `/vendors`, `/vendors/new`, `/vendors/:id`, `/review`, `/review/:submissionId`,
