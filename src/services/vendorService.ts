@@ -20,6 +20,8 @@ import { nowIso, requireCapability, today, type ServiceContext } from './context
 import {
   buildSnapshot,
   invitationStatus,
+  loadVendorActivity,
+  loadVendorInvitations,
   loadVendorSnapshot,
   loadVendorSnapshots,
   type VendorSnapshot,
@@ -146,6 +148,56 @@ export async function listAllFilteredVendors(
 
 export async function getVendorSnapshot(ctx: ServiceContext, vendorId: UUID): Promise<VendorSnapshot> {
   return await ctx.db.read((uow) => loadVendorSnapshot(uow, vendorId, today(ctx)))
+}
+
+export interface VendorDetail {
+  snapshot: VendorSnapshot
+  invitation: ReturnType<typeof invitationStatus>
+  invitations: Awaited<ReturnType<typeof loadVendorInvitations>>
+  activity: Awaited<ReturnType<typeof loadVendorActivity>>
+  /** Latest correction or revocation reason per requirement, for the vendor-facing message. */
+  correctionReasons: Record<UUID, string | null>
+  lastReminderAt: string | null
+}
+
+export async function getVendorDetail(ctx: ServiceContext, vendorId: UUID): Promise<VendorDetail> {
+  return await ctx.db.read(async (uow) => {
+    const snapshot = await loadVendorSnapshot(uow, vendorId, today(ctx))
+    const invitations = await loadVendorInvitations(uow, vendorId)
+    const activity = await loadVendorActivity(uow, vendorId)
+    const notifications = await uow.notifications.where('by_vendor', vendorId)
+    const reviewEvents = await uow.reviewEvents.getAll()
+
+    const correctionReasons: Record<UUID, string | null> = {}
+    for (const status of snapshot.requirementStatuses) {
+      const latest = status.latest
+      if (!latest || (latest.state !== 'changes_requested' && latest.state !== 'revoked')) {
+        correctionReasons[status.requirement.id] = null
+        continue
+      }
+      const reason = reviewEvents
+        .filter(
+          (event) =>
+            event.submission_id === latest.id &&
+            (event.decision === 'changes_requested' || event.decision === 'revoked'),
+        )
+        .sort((a, b) => b.created_at.localeCompare(a.created_at))[0]?.reason
+      correctionReasons[status.requirement.id] = reason ?? null
+    }
+
+    const reminders = notifications
+      .filter((notification) => notification.type === 'vendor_digest')
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+
+    return {
+      snapshot,
+      invitation: invitationStatus(invitations, nowIso(ctx)),
+      invitations,
+      activity,
+      correctionReasons,
+      lastReminderAt: reminders[0]?.created_at ?? null,
+    }
+  })
 }
 
 export interface DuplicateWarning {

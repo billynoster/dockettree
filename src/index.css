@@ -128,3 +128,35 @@
     @apply font-sans;
     }
 }
+/* Vendor Readiness: one restrained blue action color on light neutral surfaces. */
+:root {
+    --primary: oklch(0.52 0.17 256);
+    --primary-foreground: oklch(0.99 0 0);
+    --ring: oklch(0.52 0.17 256);
+    --radius: 0.5rem;
+}
+
+html {
+    font-size: 16px;
+}
+
+body {
+    background-color: var(--muted);
+    color: var(--foreground);
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Visible focus for keyboard users on every interactive element. */
+:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.001ms !important;
+        transition-duration: 0.001ms !important;
+    }
+}
