@@ -32,6 +32,20 @@ export interface VendorSnapshot {
   readiness: VendorReadiness
 }
 
+/**
+ * Rejects a record owned by another organization. Database constraints already make a
+ * cross-organization reference impossible; this stops an id substituted into a request from
+ * reaching a record the caller's organization does not own.
+ */
+export function requireOwned<T extends { organization_id: UUID }>(
+  entity: T | undefined | null,
+  organizationId: UUID,
+  message: string,
+): T {
+  if (!entity || entity.organization_id !== organizationId) throw notFound(message)
+  return entity
+}
+
 export function buildSnapshot(
   vendor: Vendor,
   requirements: AssignedRequirement[],
@@ -76,9 +90,13 @@ export async function loadVendorSnapshot(
   uow: UnitOfWork,
   vendorId: UUID,
   todayValue: IsoDate,
+  organizationId: UUID,
 ): Promise<VendorSnapshot> {
-  const vendor = await uow.vendors.get(vendorId)
-  if (!vendor) throw notFound('That vendor no longer exists.')
+  const vendor = requireOwned(
+    await uow.vendors.get(vendorId),
+    organizationId,
+    'That vendor no longer exists.',
+  )
   const [requirements, submissions] = await Promise.all([
     uow.requirements.where('by_vendor', vendorId),
     uow.submissions.where('by_vendor', vendorId),

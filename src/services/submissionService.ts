@@ -12,6 +12,7 @@ import {
 import { withIdempotency } from '@/repositories/types'
 import { recordActivity } from './activityService'
 import { nowIso, today, type ServiceContext } from './context'
+import { requireOwned } from './queries'
 
 export interface SubmitDocumentInput {
   requirementId: UUID
@@ -36,10 +37,16 @@ export async function submitDocument(
   input: SubmitDocumentInput,
 ): Promise<SubmitDocumentResult> {
   const context = await ctx.db.read(async (uow) => {
-    const requirement = await uow.requirements.get(input.requirementId)
-    if (!requirement) throw notFound('That requirement no longer exists.')
-    const vendor = await uow.vendors.get(requirement.vendor_id)
-    if (!vendor) throw notFound('That vendor no longer exists.')
+    const requirement = requireOwned(
+      await uow.requirements.get(input.requirementId),
+      ctx.organizationId,
+      'That requirement no longer exists.',
+    )
+    const vendor = requireOwned(
+      await uow.vendors.get(requirement.vendor_id),
+      ctx.organizationId,
+      'That vendor no longer exists.',
+    )
     const submissions = await uow.submissions.where('by_requirement', requirement.id)
     return { requirement, vendor, submissions }
   })
@@ -51,7 +58,7 @@ export async function submitDocument(
       throw forbidden('This portal belongs to a different vendor.')
     }
   } else if (!can(ctx.session.role, 'document.upload_on_behalf')) {
-    throw forbidden(`The ${ctx.session.role} role cannot upload documents in the demo permission matrix.`)
+    throw forbidden(`The ${ctx.session.role} role cannot upload documents.`)
   }
 
   if (vendor.lifecycle === 'archived') {
@@ -163,10 +170,16 @@ export async function withdrawSubmission(
   expectedVersion: number,
 ): Promise<void> {
   await ctx.db.write(async (uow) => {
-    const submission = await uow.submissions.get(submissionId)
-    if (!submission) throw notFound('That submission no longer exists.')
-    const vendor = await uow.vendors.get(submission.vendor_id)
-    if (!vendor) throw notFound('That vendor no longer exists.')
+    const submission = requireOwned(
+      await uow.submissions.get(submissionId),
+      ctx.organizationId,
+      'That submission no longer exists.',
+    )
+    const vendor = requireOwned(
+      await uow.vendors.get(submission.vendor_id),
+      ctx.organizationId,
+      'That vendor no longer exists.',
+    )
     if (ctx.session.role === 'vendor_contact' && ctx.session.vendorId !== vendor.id) {
       throw forbidden('This portal belongs to a different vendor.')
     }
@@ -209,15 +222,18 @@ export async function loadSubmissionFile(
   submissionId: UUID,
 ): Promise<LoadedFile> {
   return await ctx.db.read(async (uow) => {
-    const submission = await uow.submissions.get(submissionId)
-    if (!submission) throw notFound('That submission no longer exists.')
+    const submission = requireOwned(
+      await uow.submissions.get(submissionId),
+      ctx.organizationId,
+      'That submission no longer exists.',
+    )
     if (ctx.session.role === 'vendor_contact' && ctx.session.vendorId !== submission.vendor_id) {
       throw forbidden('This document belongs to a different vendor.')
     }
     const file = await uow.files.get(submission.file_object_id)
-    if (!file) throw notFound('That document file is missing from demo storage.')
+    if (!file) throw notFound('That document file is missing from storage.')
     const blob = await uow.blobs.get(file.storage_key)
-    if (!blob) throw notFound('That document file is missing from demo storage.')
+    if (!blob) throw notFound('That document file is missing from storage.')
     return { file, blob }
   })
 }

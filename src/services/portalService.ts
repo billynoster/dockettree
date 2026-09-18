@@ -1,8 +1,8 @@
 /**
- * Vendor portal data (requirements section 6 `/portal/:vendorId`, W2).
+ * Vendor portal data (requirements section 6, W2).
  *
- * Demo only: the vendor context is explicit in the URL. In the pilot an authenticated
- * vendor membership determines the portal context and a URL id grants nothing.
+ * The portal context comes from the caller's verified vendor membership; the vendor id is
+ * never taken from the request path.
  */
 import { forbidden } from '@/domain/errors'
 import { CURRENT_DOCUMENT_LABEL, type RequirementStatus } from '@/domain/readiness'
@@ -39,7 +39,7 @@ export async function getVendorPortal(ctx: ServiceContext, vendorId: UUID): Prom
   }
   return await ctx.db.read(async (uow) => {
     const todayValue = today(ctx)
-    const snapshot = await loadVendorSnapshot(uow, vendorId, todayValue)
+    const snapshot = await loadVendorSnapshot(uow, vendorId, todayValue, ctx.organizationId)
     const organization = await uow.organizations.get(ctx.organizationId)
     const reviewEvents = await uow.reviewEvents.getAll()
     const eventsBySubmission = new Map<UUID, ReviewEvent[]>()

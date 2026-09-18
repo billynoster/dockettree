@@ -94,4 +94,8 @@ export const ACTIVITY_TYPE_LABEL: Record<ActivityEventType, string> = {
   template_updated: 'Template updated',
   template_archived: 'Template archived',
   settings_updated: 'Settings updated',
+  invitation_accepted: 'Invitation accepted',
+  member_added: 'Member added',
+  member_updated: 'Member updated',
+  member_removed: 'Member removed',
 }

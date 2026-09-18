@@ -1,10 +1,11 @@
 /** Vendor CSV import (requirements FR-10). Atomic, idempotent, never auto-invites. */
-import { conflict, notFound, validationError } from '@/domain/errors'
+import { conflict, validationError } from '@/domain/errors'
 import { newId } from '@/domain/ids'
 import { validateImportCsv, type ImportValidation } from '@/domain/csv'
 import type { AssignedRequirement, ImportBatch, UUID, Vendor } from '@/domain/types'
 import { recordActivity } from './activityService'
 import { nowIso, requireCapability, type ServiceContext } from './context'
+import { requireOwned } from './queries'
 
 export async function previewImport(ctx: ServiceContext, text: string): Promise<ImportValidation> {
   requireCapability(ctx, 'vendor.manage')
@@ -76,8 +77,13 @@ export async function importVendors(
     }
 
     const timestamp = nowIso(ctx)
-    const template = input.templateId ? await uow.templates.get(input.templateId) : null
-    if (input.templateId && !template) throw notFound('That checklist template no longer exists.')
+    const template = input.templateId
+      ? requireOwned(
+          await uow.templates.get(input.templateId),
+          ctx.organizationId,
+          'That checklist template no longer exists.',
+        )
+      : null
     const templateItems = template
       ? (await uow.templateItems.where('by_template', template.id)).sort((a, b) => a.sort_order - b.sort_order)
       : []

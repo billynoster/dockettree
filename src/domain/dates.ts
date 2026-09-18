@@ -78,11 +78,6 @@ export function isExpiringSoonOn(expiration: IsoDate | null, today: IsoDate): bo
   return remaining >= 0 && remaining <= EXPIRING_SOON_WINDOW_DAYS
 }
 
-/** Demo date control: pick a calendar date, keep a stable mid-day instant. */
-export function instantForDemoDate(date: IsoDate): IsoDateTime {
-  return `${date}T12:00:00.000Z`
-}
-
 export function formatDate(value: IsoDate | null): string {
   if (!value) return '—'
   const ms = dateOnlyMs(value)

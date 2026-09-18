@@ -18,8 +18,8 @@ function formatUuid(bytes: Uint8Array): UUID {
 }
 
 /**
- * Deterministic UUID for seeded fixtures so demo links and test assertions stay stable
- * across resets. Not used for records created at runtime.
+ * Deterministic UUID for the optional sample dataset so test assertions stay stable across
+ * reseeds. Never used for records created at runtime.
  */
 export function stableId(key: string): UUID {
   const bytes = new Uint8Array(16)
@@ -36,13 +36,4 @@ export function stableId(key: string): UUID {
     bytes[i] = (i % 2 === 0 ? h1 : h2) & 0xff
   }
   return formatUuid(bytes)
-}
-
-/** Non-secret stand-in for a hashed invitation token; the prototype never emails a token. */
-export function tokenDigest(value: string): string {
-  let hash = 0x811c9dc5
-  for (let i = 0; i < value.length; i += 1) {
-    hash = Math.imul(hash ^ value.charCodeAt(i), 0x01000193) >>> 0
-  }
-  return `sim$${hash.toString(16).padStart(8, '0')}`
 }

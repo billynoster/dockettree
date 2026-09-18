@@ -36,7 +36,7 @@ export function notFound(message = 'That record no longer exists.'): AppError {
   return new AppError('not_found', message)
 }
 
-export function forbidden(message = 'Your demo role cannot perform this action.'): AppError {
+export function forbidden(message = 'Your role cannot perform this action.'): AppError {
   return new AppError('forbidden', message)
 }
 

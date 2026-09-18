@@ -1,6 +1,6 @@
 /** Vendor directory and lifecycle use cases (requirements W1, FR-01, FR-02, FR-13). */
 import { compareDates } from '@/domain/dates'
-import { conflict, notFound, validationError } from '@/domain/errors'
+import { conflict, validationError } from '@/domain/errors'
 import { newId } from '@/domain/ids'
 import { compareNextExpiration, countReadiness, type ReadinessCounts } from '@/domain/readiness'
 import type {
@@ -18,13 +18,14 @@ import { withIdempotency, type UnitOfWork } from '@/repositories/types'
 import { recordActivity } from './activityService'
 import { nowIso, requireCapability, today, type ServiceContext } from './context'
 import {
+  type VendorSnapshot,
   buildSnapshot,
   invitationStatus,
   loadVendorActivity,
   loadVendorInvitations,
   loadVendorSnapshot,
   loadVendorSnapshots,
-  type VendorSnapshot,
+  requireOwned,
 } from './queries'
 
 export interface VendorListQuery {
@@ -65,6 +66,7 @@ export async function listVendors(
   ctx: ServiceContext,
   query: VendorListQuery = {},
 ): Promise<VendorListResult> {
+  requireCapability(ctx, 'org.view_all_vendors')
   return await ctx.db.read(async (uow) => {
     const todayValue = today(ctx)
     const snapshots = await loadVendorSnapshots(uow, ctx.organizationId, todayValue)
@@ -147,7 +149,8 @@ export async function listAllFilteredVendors(
 }
 
 export async function getVendorSnapshot(ctx: ServiceContext, vendorId: UUID): Promise<VendorSnapshot> {
-  return await ctx.db.read((uow) => loadVendorSnapshot(uow, vendorId, today(ctx)))
+  requireCapability(ctx, 'org.view_all_vendors')
+  return await ctx.db.read((uow) => loadVendorSnapshot(uow, vendorId, today(ctx), ctx.organizationId))
 }
 
 export interface VendorDetail {
@@ -161,8 +164,9 @@ export interface VendorDetail {
 }
 
 export async function getVendorDetail(ctx: ServiceContext, vendorId: UUID): Promise<VendorDetail> {
+  requireCapability(ctx, 'org.view_all_vendors')
   return await ctx.db.read(async (uow) => {
-    const snapshot = await loadVendorSnapshot(uow, vendorId, today(ctx))
+    const snapshot = await loadVendorSnapshot(uow, vendorId, today(ctx), ctx.organizationId)
     const invitations = await loadVendorInvitations(uow, vendorId)
     const activity = await loadVendorActivity(uow, vendorId)
     const notifications = await uow.notifications.where('by_vendor', vendorId)
@@ -323,8 +327,11 @@ export async function updateVendor(
   }
 
   return await ctx.db.write(async (uow) => {
-    const vendor = await uow.vendors.get(vendorId)
-    if (!vendor) throw notFound('That vendor no longer exists.')
+    const vendor = requireOwned(
+      await uow.vendors.get(vendorId),
+      ctx.organizationId,
+      'That vendor no longer exists.',
+    )
     if (vendor.record_version !== input.expectedVersion) {
       throw conflict('This vendor changed in another tab. Reload to see the current details.')
     }
@@ -369,8 +376,11 @@ export async function archiveVendor(
     })
   }
   return await ctx.db.write(async (uow) => {
-    const vendor = await uow.vendors.get(vendorId)
-    if (!vendor) throw notFound('That vendor no longer exists.')
+    const vendor = requireOwned(
+      await uow.vendors.get(vendorId),
+      ctx.organizationId,
+      'That vendor no longer exists.',
+    )
     if (vendor.lifecycle === 'archived') return vendor
     const timestamp = nowIso(ctx)
     const updated: Vendor = {
@@ -396,8 +406,11 @@ export async function archiveVendor(
 export async function restoreVendor(ctx: ServiceContext, vendorId: UUID): Promise<Vendor> {
   requireCapability(ctx, 'vendor.archive')
   return await ctx.db.write(async (uow) => {
-    const vendor = await uow.vendors.get(vendorId)
-    if (!vendor) throw notFound('That vendor no longer exists.')
+    const vendor = requireOwned(
+      await uow.vendors.get(vendorId),
+      ctx.organizationId,
+      'That vendor no longer exists.',
+    )
     if (vendor.lifecycle === 'active') return vendor
     const timestamp = nowIso(ctx)
     const updated: Vendor = {
@@ -425,6 +438,7 @@ export interface TemplateWithItems {
 }
 
 export async function listTemplatesWithItems(ctx: ServiceContext): Promise<TemplateWithItems[]> {
+  requireCapability(ctx, 'org.view_all_vendors')
   return await ctx.db.read(async (uow) => {
     const templates = await uow.templates.where('by_organization', ctx.organizationId)
     const items = await uow.templateItems.getAll()
@@ -446,8 +460,11 @@ async function assignTemplateWithin(
   vendor: Vendor,
   templateId: UUID,
 ): Promise<AssignedRequirement[]> {
-  const template = await uow.templates.get(templateId)
-  if (!template) throw notFound('That checklist template no longer exists.')
+  const template = requireOwned(
+    await uow.templates.get(templateId),
+    ctx.organizationId,
+    'That checklist template no longer exists.',
+  )
   const items = (await uow.templateItems.where('by_template', templateId)).sort(
     (a, b) => a.sort_order - b.sort_order,
   )
@@ -501,9 +518,12 @@ export async function previewAssignTemplate(
 ): Promise<ChecklistImpactPreview> {
   return await ctx.db.read(async (uow) => {
     const todayValue = today(ctx)
-    const snapshot = await loadVendorSnapshot(uow, vendorId, todayValue)
-    const template = await uow.templates.get(templateId)
-    if (!template) throw notFound('That checklist template no longer exists.')
+    const snapshot = await loadVendorSnapshot(uow, vendorId, todayValue, ctx.organizationId)
+    const template = requireOwned(
+      await uow.templates.get(templateId),
+      ctx.organizationId,
+      'That checklist template no longer exists.',
+    )
     const items = await uow.templateItems.where('by_template', templateId)
     const timestamp = nowIso(ctx)
     const projected: AssignedRequirement[] = items.map((item, index) => ({
@@ -556,8 +576,11 @@ export async function assignTemplate(
     })
   }
   await ctx.db.write(async (uow) => {
-    const vendor = await uow.vendors.get(vendorId)
-    if (!vendor) throw notFound('That vendor no longer exists.')
+    const vendor = requireOwned(
+      await uow.vendors.get(vendorId),
+      ctx.organizationId,
+      'That vendor no longer exists.',
+    )
     const created = await assignTemplateWithin(uow, ctx, vendor, templateId)
     await recordActivity(uow, ctx, {
       vendor_id: vendorId,
@@ -583,8 +606,11 @@ export async function retireRequirement(
     })
   }
   await ctx.db.write(async (uow) => {
-    const requirement = await uow.requirements.get(requirementId)
-    if (!requirement) throw notFound('That requirement no longer exists.')
+    const requirement = requireOwned(
+      await uow.requirements.get(requirementId),
+      ctx.organizationId,
+      'That requirement no longer exists.',
+    )
     const vendor = await uow.vendors.get(requirement.vendor_id)
     const timestamp = nowIso(ctx)
     await uow.requirements.put({
@@ -617,8 +643,11 @@ export async function restoreRequirement(
     })
   }
   await ctx.db.write(async (uow) => {
-    const requirement = await uow.requirements.get(requirementId)
-    if (!requirement) throw notFound('That requirement no longer exists.')
+    const requirement = requireOwned(
+      await uow.requirements.get(requirementId),
+      ctx.organizationId,
+      'That requirement no longer exists.',
+    )
     const timestamp = nowIso(ctx)
     await uow.requirements.put({
       ...requirement,
@@ -645,8 +674,11 @@ export async function setRequirementDueDate(
 ): Promise<void> {
   requireCapability(ctx, 'vendor.manage')
   await ctx.db.write(async (uow) => {
-    const requirement = await uow.requirements.get(requirementId)
-    if (!requirement) throw notFound('That requirement no longer exists.')
+    const requirement = requireOwned(
+      await uow.requirements.get(requirementId),
+      ctx.organizationId,
+      'That requirement no longer exists.',
+    )
     if (dueDate && requirement.due_date && compareDates(dueDate, requirement.due_date) === 0) return
     const timestamp = nowIso(ctx)
     await uow.requirements.put({

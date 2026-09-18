@@ -1,12 +1,14 @@
 /**
- * Synthetic seed data (requirements section 10).
+ * Optional sample dataset (requirements section 10). Loaded only by `npm run db:seed`, never
+ * automatically: a fresh install starts empty and is configured through /setup.
  *
  * Organization "Cedar Grove Property Operations", 12 fictional vendors:
  * 4 Ready (2 of them Expiring soon), 3 Not ready, 2 Awaiting review, 1 Unconfigured,
- * 2 Archived. All documents are generated sample files stamped SAMPLE.
+ * 2 Archived. All documents are generated sample files stamped SAMPLE. Fixed sample dates
+ * are shifted on seed so the documented distribution holds on any calendar day.
  */
-import { addDays, todayInTimeZone } from '@/domain/dates'
-import { stableId, tokenDigest } from '@/domain/ids'
+import { addDays, daysBetween, todayInTimeZone } from '@/domain/dates'
+import { stableId } from '@/domain/ids'
 import { digestIdempotencyKey, invitationIdempotencyKey } from '@/domain/reminders'
 import type {
   ActivityEvent,
@@ -29,8 +31,19 @@ import type {
   VendorMembership,
 } from '@/domain/types'
 import type { Database } from '@/repositories/types'
-import { INITIAL_DEMO_INSTANT } from './clock'
 import { createSamplePdf, createSamplePng } from './sampleFiles'
+
+/** Every fixed date in this file is written relative to this day. */
+const SEED_ANCHOR_DATE: IsoDate = '2026-09-17'
+
+export interface SeedOptions {
+  /** Hashes the shared sample password for every seeded account. */
+  hashPassword(password: string): Promise<string>
+  /** SHA-256 used for the already-redeemed sample invitation tokens. */
+  hashToken(value: string): string
+  staffPassword: string
+  vendorPassword: string
+}
 
 export const ORGANIZATION_ID = stableId('org:cedar-grove')
 export const DEFAULT_TIMEZONE = 'America/Chicago'
@@ -102,7 +115,7 @@ const GROUNDS_ITEMS: RequirementDefinition[] = [
 
 interface SubmissionSpec {
   state: SubmissionState
-  /** Days before the demo date the vendor submitted this version. */
+  /** Days before the seed date the vendor submitted this version. */
   submittedDaysAgo: number
   issue?: IsoDate
   expiration?: IsoDate
@@ -110,7 +123,7 @@ interface SubmissionSpec {
   effective?: boolean
   /** Review reason, required for changes_requested and revoked. */
   reason?: string
-  /** Days before the demo date the decision was recorded. */
+  /** Days before the seed date the decision was recorded. */
   decidedDaysAgo?: number
   onBehalf?: boolean
 }
@@ -373,7 +386,7 @@ const VENDOR_SPECS: VendorSpec[] = [
         ],
       },
       { key: 'agreement', submissions: [{ state: 'accepted', submittedDaysAgo: 42, effective: true, decidedDaysAgo: 41 }] },
-      // Safety acknowledgment intentionally missing: demo script starts here.
+      // Safety acknowledgment intentionally missing: this is the "missing required item" case.
       { key: 'safety', submissions: [] },
     ],
   },
@@ -555,7 +568,7 @@ function fileContentFor(
         `Service category: ${vendor.category}`,
         'Term: 12 months, renewable',
         '',
-        'Synthetic document generated for the prototype.',
+        'Synthetic document, sample dataset.',
       ],
       preferImage: false,
     },
@@ -605,9 +618,14 @@ interface SeedRecords {
 }
 
 /** Build every seeded record. Async because sample documents are generated as real bytes. */
-export async function buildSeedRecords(now: Date): Promise<SeedRecords> {
+export async function buildSeedRecords(now: Date, options: SeedOptions): Promise<SeedRecords> {
   const at = (daysAgo: number): IsoDateTime =>
     new Date(now.getTime() - daysAgo * 86_400_000).toISOString()
+  const shiftDays = daysBetween(SEED_ANCHOR_DATE, todayInTimeZone(now, DEFAULT_TIMEZONE))
+  const onDate = (value: IsoDate | null | undefined): IsoDate | null =>
+    value ? addDays(value, shiftDays) : null
+  const staffHash = await options.hashPassword(options.staffPassword)
+  const vendorHash = await options.hashPassword(options.vendorPassword)
 
   const organization: Organization = {
     id: ORGANIZATION_ID,
@@ -620,10 +638,22 @@ export async function buildSeedRecords(now: Date): Promise<SeedRecords> {
     record_version: 1,
   }
 
+  const account = (id: UUID, display_name: string, email: string, passwordHash: string): User => ({
+    id,
+    display_name,
+    email,
+    auth_subject: null,
+    password_hash: passwordHash,
+    password_updated_at: at(420),
+    status: 'active',
+    last_login_at: null,
+    created_at: at(420),
+  })
+
   const users: User[] = [
-    { id: ADMIN_USER_ID, display_name: 'Dana Whitfield', email: 'dana.whitfield@example.com', auth_subject: null },
-    { id: COORDINATOR_USER_ID, display_name: 'Marcus Reyes', email: 'marcus.reyes@example.com', auth_subject: null },
-    { id: REVIEWER_USER_ID, display_name: 'Priya Raman', email: 'priya.raman@example.com', auth_subject: null },
+    account(ADMIN_USER_ID, 'Dana Whitfield', 'dana.whitfield@example.com', staffHash),
+    account(COORDINATOR_USER_ID, 'Marcus Reyes', 'marcus.reyes@example.com', staffHash),
+    account(REVIEWER_USER_ID, 'Priya Raman', 'priya.raman@example.com', staffHash),
   ]
   const memberships: Membership[] = [
     { id: stableId('membership:dana'), organization_id: ORGANIZATION_ID, user_id: ADMIN_USER_ID, role: 'admin' },
@@ -713,10 +743,9 @@ export async function buildSeedRecords(now: Date): Promise<SeedRecords> {
     const archivedAt = spec.archivedDaysAgo != null ? at(spec.archivedDaysAgo) : null
 
     records.users.push({
-      id: contactUserId,
-      display_name: spec.contact_name,
-      email: spec.contact_email,
-      auth_subject: null,
+      ...account(contactUserId, spec.contact_name, spec.contact_email, vendorHash),
+      created_at: at(spec.createdDaysAgo),
+      password_updated_at: at(spec.invitedDaysAgo ?? spec.createdDaysAgo),
     })
     records.vendorMemberships.push({
       id: stableId(`vendor-membership:${spec.slug}`),
@@ -787,9 +816,10 @@ export async function buildSeedRecords(now: Date): Promise<SeedRecords> {
         organization_id: ORGANIZATION_ID,
         vendor_id: vendorId,
         invited_email: spec.contact_email,
-        token_hash: tokenDigest(`${vendorId}:${invitedAt}`),
+        token_hash: options.hashToken(`sample-invitation:${vendorId}:${invitedAt}`),
         expires_at: at(spec.invitedDaysAgo - 7),
         redeemed_at: at(spec.invitedDaysAgo - 1),
+        redeemed_by_user_id: contactUserId,
         revoked_at: null,
         created_by: COORDINATOR_USER_ID,
         created_at: invitedAt,
@@ -806,9 +836,7 @@ export async function buildSeedRecords(now: Date): Promise<SeedRecords> {
           `Hello ${spec.contact_name},`,
           '',
           `Cedar Grove Property Operations has requested vendor documents from ${spec.company_name}.`,
-          'Open your vendor portal to see the checklist and upload each document.',
-          '',
-          'Simulated message. No email was sent by this prototype.',
+          'Sign in to your vendor portal to see the checklist and upload each document.',
         ].join('\n'),
         items: definitions
           .filter((definition) => definition.required)
@@ -819,7 +847,7 @@ export async function buildSeedRecords(now: Date): Promise<SeedRecords> {
             detail: 'Requested with the invitation.',
             submission_version: null,
           })),
-        status: 'simulated_sent',
+        status: 'sent',
         idempotency_key: invitationIdempotencyKey(ORGANIZATION_ID, invitationId),
         attempt_count: 1,
         next_attempt_at: null,
@@ -835,9 +863,9 @@ export async function buildSeedRecords(now: Date): Promise<SeedRecords> {
         actor_role: 'coordinator',
         event_type: 'invitation_sent',
         target_id: invitationId,
-        summary: `Simulated invitation sent to ${spec.contact_email}`,
+        summary: `Invitation sent to ${spec.contact_email}`,
         reason: null,
-        metadata: { recipient: spec.contact_email, simulated: true },
+        metadata: { recipient: spec.contact_email },
         vendor_visible: true,
         created_at: invitedAt,
       })
@@ -898,8 +926,8 @@ export async function buildSeedRecords(now: Date): Promise<SeedRecords> {
           version_number: version,
           state: submissionSpec.state,
           file_object_id: fileId,
-          issue_date: submissionSpec.issue ?? null,
-          expiration_date: submissionSpec.expiration ?? null,
+          issue_date: onDate(submissionSpec.issue),
+          expiration_date: onDate(submissionSpec.expiration),
           submitted_by: submissionSpec.onBehalf ? COORDINATOR_USER_ID : contactUserId,
           submitted_by_label: submissionSpec.onBehalf ? 'Marcus Reyes' : spec.contact_name,
           submitted_on_behalf: submissionSpec.onBehalf ?? false,
@@ -927,7 +955,7 @@ export async function buildSeedRecords(now: Date): Promise<SeedRecords> {
           metadata: {
             requirement: definition.title,
             version,
-            expiration_date: submissionSpec.expiration ?? null,
+            expiration_date: onDate(submissionSpec.expiration),
           },
           vendor_visible: true,
           created_at: submission.submitted_at,
@@ -999,9 +1027,7 @@ export async function buildSeedRecords(now: Date): Promise<SeedRecords> {
               '',
               `Reason: ${submissionSpec.reason ?? 'Changes requested.'}`,
               '',
-              'Open your vendor portal to upload a corrected version.',
-              '',
-              'Simulated message. No email was sent by this prototype.',
+              'Sign in to your vendor portal to upload a corrected version.',
             ].join('\n'),
             items: [
               {
@@ -1012,7 +1038,7 @@ export async function buildSeedRecords(now: Date): Promise<SeedRecords> {
                 submission_version: version,
               },
             ],
-            status: 'simulated_sent',
+            status: 'sent',
             idempotency_key: `correction:${ORGANIZATION_ID}:${submissionId}:v${version}:email`,
             attempt_count: 1,
             next_attempt_at: null,
@@ -1053,7 +1079,7 @@ export async function buildSeedRecords(now: Date): Promise<SeedRecords> {
     }
   }
 
-  // Two prior simulated digests so the outbox is not empty on first run.
+  // Two earlier digests so the notification log is not empty in the sample data.
   const digestSeeds: { slug: string; daysAgo: number; subject: string; lines: string[] }[] = [
     {
       slug: 'ironwood-pest-control',
@@ -1065,7 +1091,7 @@ export async function buildSeedRecords(now: Date): Promise<SeedRecords> {
       slug: 'cedar-line-landscaping',
       daysAgo: 18,
       subject: 'Reminder: 1 document expires soon',
-      lines: ['Insurance certificate - Expires 2026-09-30. Submit a replacement document.'],
+      lines: [`Insurance certificate - Expires ${onDate('2026-09-30')}. Submit a replacement document.`],
     },
   ]
   for (const digest of digestSeeds) {
@@ -1087,8 +1113,6 @@ export async function buildSeedRecords(now: Date): Promise<SeedRecords> {
         '',
         'Cedar Grove Property Operations is waiting on the following:',
         ...digest.lines.map((line) => `- ${line}`),
-        '',
-        'Simulated message. No email was sent by this prototype.',
       ].join('\n'),
       items: digest.lines.map((line) => ({
         requirement_id: null,
@@ -1097,7 +1121,7 @@ export async function buildSeedRecords(now: Date): Promise<SeedRecords> {
         detail: line,
         submission_version: null,
       })),
-      status: 'simulated_sent',
+      status: 'sent',
       idempotency_key: digestIdempotencyKey(ORGANIZATION_ID, vendorId, localDate),
       attempt_count: 1,
       next_attempt_at: null,
@@ -1111,19 +1135,19 @@ export async function buildSeedRecords(now: Date): Promise<SeedRecords> {
       organization_id: ORGANIZATION_ID,
       vendor_id: vendorId,
       actor_id: 'system',
-      actor_label: 'Simulated daily reminder job',
+      actor_label: 'Scheduled reminder job',
       actor_role: 'system',
       event_type: 'reminder_sent',
       target_id: null,
-      summary: `Simulated reminder queued for ${spec.contact_email}`,
+      summary: `Daily digest sent to ${spec.contact_email}`,
       reason: null,
-      metadata: { items: digest.lines.length, simulated: true },
+      metadata: { items: digest.lines.length },
       vendor_visible: true,
       created_at: sentAt,
     })
   }
 
-  // One failed delivery attempt so the outbox shows accurate failure states.
+  // One genuinely failed delivery so the notification log shows an accurate failure state.
   const failedVendor = VENDOR_SPECS.find((spec) => spec.slug === 'lakeside-window-care')
   if (failedVendor) {
     const sentAt = at(9)
@@ -1139,8 +1163,6 @@ export async function buildSeedRecords(now: Date): Promise<SeedRecords> {
         `Hello ${failedVendor.contact_name},`,
         '',
         'Cedar Grove Property Operations is waiting on your documents.',
-        '',
-        'Simulated message. No email was sent by this prototype.',
       ].join('\n'),
       items: [],
       status: 'failed',
@@ -1152,7 +1174,7 @@ export async function buildSeedRecords(now: Date): Promise<SeedRecords> {
       attempt_count: 2,
       next_attempt_at: null,
       sent_at: null,
-      last_error: 'Simulated delivery failure: recipient mailbox unavailable (demo only).',
+      last_error: 'SMTP 550 recipient mailbox unavailable.',
       manual: false,
       created_at: sentAt,
     })
@@ -1193,7 +1215,7 @@ async function attachSampleBlobs(records: SeedRecords): Promise<void> {
           lines: [
             `File: ${file.original_filename}`,
             'Cedar Grove Property Operations',
-            'Synthetic scan generated by the prototype',
+            'Synthetic scan, sample dataset',
           ],
         }))
       pngCache.set(cacheKey, blob)
@@ -1206,7 +1228,7 @@ async function attachSampleBlobs(records: SeedRecords): Promise<void> {
           `File: ${file.original_filename}`,
           `Created: ${file.created_at.slice(0, 10)}`,
           '',
-          'Synthetic document generated by the Vendor Readiness prototype.',
+          'Synthetic sample document. SAMPLE - NOT VALID FOR BUSINESS USE.',
         ],
       })
       file.detected_mime = 'application/pdf'
@@ -1217,9 +1239,9 @@ async function attachSampleBlobs(records: SeedRecords): Promise<void> {
   }
 }
 
-/** Wipe the database and write the seeded demonstration data in one transaction. */
-export async function seedDatabase(db: Database, now: Date = new Date(INITIAL_DEMO_INSTANT)): Promise<void> {
-  const records = await buildSeedRecords(now)
+/** Replace the contents of the database with the sample dataset, in one transaction. */
+export async function seedSampleData(db: Database, now: Date, options: SeedOptions): Promise<void> {
+  const records = await buildSeedRecords(now, options)
   await attachSampleBlobs(records)
 
   await db.clear()
@@ -1231,9 +1253,13 @@ export async function seedDatabase(db: Database, now: Date = new Date(INITIAL_DE
     await uow.vendorMemberships.putMany(records.vendorMemberships)
     await uow.templates.putMany(records.templates)
     await uow.templateItems.putMany(records.templateItems)
-    await uow.requirements.putMany(records.requirements)
-    await uow.submissions.putMany(records.submissions)
     await uow.files.putMany(records.files)
+    // The effective-submission pointer is written after its submission row exists.
+    await uow.requirements.putMany(
+      records.requirements.map((requirement) => ({ ...requirement, effective_submission_id: null })),
+    )
+    await uow.submissions.putMany(records.submissions)
+    await uow.requirements.putMany(records.requirements)
     await uow.reviewEvents.putMany(records.reviewEvents)
     await uow.invitations.putMany(records.invitations)
     await uow.notifications.putMany(records.notifications)
@@ -1241,13 +1267,5 @@ export async function seedDatabase(db: Database, now: Date = new Date(INITIAL_DE
     for (const blob of records.blobs) {
       await uow.blobs.put(blob.key, blob.blob)
     }
-    await uow.demoState.put({
-      id: 'demo_state',
-      role: 'coordinator',
-      active_user_id: COORDINATOR_USER_ID,
-      active_vendor_id: vendorIdFor('ironwood-pest-control'),
-      clock_instant: now.toISOString(),
-      seeded_at: new Date().toISOString(),
-    })
   })
 }

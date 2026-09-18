@@ -1,11 +1,11 @@
 /**
- * Repository interfaces. Services depend only on these, so the IndexedDB demo adapter
- * can be replaced by a server adapter in milestone B without touching domain or services.
+ * Repository interfaces. Services depend only on these, so storage can change without
+ * touching domain rules or use cases. V1 ships a SQLite + local-disk adapter.
  */
 import type {
   ActivityEvent,
   AssignedRequirement,
-  DemoState,
+  AuthSession,
   FileObject,
   ImportBatch,
   Invitation,
@@ -27,7 +27,7 @@ export interface Collection<T> {
   get(id: string): Promise<T | undefined>
   getAll(): Promise<T[]>
   /** Index lookup, e.g. `where('by_vendor', vendorId)`. */
-  where(index: string, key: IDBValidKey): Promise<T[]>
+  where(index: string, key: string | number): Promise<T[]>
   put(value: T): Promise<void>
   putMany(values: T[]): Promise<void>
   delete(id: string): Promise<void>
@@ -38,15 +38,18 @@ export interface BlobStore {
   get(storageKey: string): Promise<Blob | undefined>
   put(storageKey: string, blob: Blob): Promise<void>
   delete(storageKey: string): Promise<void>
+  /** Optional bulk removal, used when the whole dataset is reset. */
+  clearAll?(): Promise<void>
 }
 
 /**
- * One unit of work == one IndexedDB transaction. Multi-entity demo writes (submission +
+ * One unit of work == one database transaction. Multi-entity writes (submission +
  * requirement pointer + activity event) must all happen inside a single `write` call.
  */
 export interface UnitOfWork {
   organizations: Collection<Organization>
   users: Collection<User>
+  sessions: Collection<AuthSession>
   memberships: Collection<Membership>
   vendors: Collection<Vendor>
   vendorMemberships: Collection<VendorMembership>
@@ -61,14 +64,13 @@ export interface UnitOfWork {
   activity: Collection<ActivityEvent>
   importBatches: Collection<ImportBatch>
   requests: Collection<RequestRecord>
-  demoState: Collection<DemoState>
   blobs: BlobStore
 }
 
 export interface Database {
   read<T>(work: (uow: UnitOfWork) => Promise<T>): Promise<T>
   write<T>(work: (uow: UnitOfWork) => Promise<T>): Promise<T>
-  /** Demo reset: drop every record and blob. */
+  /** Removes every record and stored document. Used by tests and `npm run db:reset`. */
   clear(): Promise<void>
   close(): void
 }

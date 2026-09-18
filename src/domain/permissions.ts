@@ -1,9 +1,9 @@
 /**
- * Demo authorization matrix (requirements section 3).
+ * Authorization matrix (requirements section 3).
  *
- * This is a demonstration of role-dependent UI and command behaviour only. Real
- * authorization must be enforced by a server in milestone B; the role selector is
- * never a production authorization mechanism.
+ * The server evaluates this on every read, mutation and file access, using the role stored
+ * on the caller's membership. The browser imports it only to hide controls the caller
+ * cannot use; hiding a control is never the enforcement point.
  */
 import type { Role } from './types'
 
@@ -69,7 +69,7 @@ export const ROLE_LABEL: Record<Role, string> = {
 }
 
 export const ROLE_SUMMARY: Record<Role, string> = {
-  admin: 'Full access: vendors, reviews, templates, settings and members.',
+  admin: 'Full access: vendors, reviews, templates, settings and member administration.',
   coordinator: 'Manages vendors, checklists, invitations, reminders and exports. Cannot decide reviews.',
   reviewer: 'Reads all vendors, decides submissions and exports. Cannot edit vendors.',
   vendor_contact: 'Sees and submits documents for one vendor only, through the portal.',

@@ -1,17 +1,28 @@
-/** Shared service context: storage, injected clock and the (simulated) session. */
+/** Shared service context: storage, clock and the authenticated session. */
+import type { Clock } from '@/domain/clock'
 import { todayInTimeZone } from '@/domain/dates'
 import { forbidden } from '@/domain/errors'
-import { can, type Capability } from '@/domain/permissions'
+import { ROLE_LABEL, can, type Capability } from '@/domain/permissions'
 import type { IsoDate, IsoDateTime, Role, UUID } from '@/domain/types'
 import type { Database } from '@/repositories/types'
-import type { Clock } from '@/demo/clock'
 
+/**
+ * Identity of the caller. The server builds this from the session cookie and the stored
+ * membership rows; nothing here is ever accepted from the browser.
+ */
 export interface Session {
   role: Role
   userId: UUID
   userLabel: string
-  /** Vendor context for the vendor-contact role. Null for internal roles. */
+  /** Active vendor context for a vendor contact. Null for internal roles. */
   vendorId: UUID | null
+  /** Session record the request arrived on, when there is one. */
+  sessionId?: UUID | null
+  /**
+   * Set for work the server itself performs, such as the scheduled reminder job. Capability
+   * checks are skipped because no user is acting; activity events record a system actor.
+   */
+  system?: boolean
 }
 
 export interface ServiceContext {
@@ -31,11 +42,11 @@ export function nowIso(ctx: ServiceContext): IsoDateTime {
   return ctx.clock.nowIso()
 }
 
+/** Server-side authorization check for the permission matrix in requirements section 3. */
 export function requireCapability(ctx: ServiceContext, capability: Capability): void {
+  if (ctx.session.system) return
   if (!can(ctx.session.role, capability)) {
-    throw forbidden(
-      `The ${ctx.session.role.replace('_', ' ')} role cannot perform this action in the demo permission matrix.`,
-    )
+    throw forbidden(`The ${ROLE_LABEL[ctx.session.role]} role cannot perform this action.`)
   }
 }
 

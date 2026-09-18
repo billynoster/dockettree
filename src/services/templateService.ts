@@ -4,12 +4,13 @@
  * Editing a template bumps its version and never changes requirements already assigned to
  * a vendor: assignments are snapshots.
  */
-import { notFound, validationError } from '@/domain/errors'
+import { validationError } from '@/domain/errors'
 import { newId } from '@/domain/ids'
 import type { RequirementTemplate, TemplateItem, UUID } from '@/domain/types'
 import { fieldErrorsFrom, templateItemSchema, templateSchema } from '@/domain/validation'
 import { recordActivity } from './activityService'
 import { nowIso, requireCapability, type ServiceContext } from './context'
+import { requireOwned } from './queries'
 
 export interface TemplateSummary {
   template: RequirementTemplate
@@ -21,6 +22,7 @@ export interface TemplateSummary {
 }
 
 export async function listTemplates(ctx: ServiceContext): Promise<TemplateSummary[]> {
+  requireCapability(ctx, 'org.view_all_vendors')
   return await ctx.db.read(async (uow) => {
     const templates = await uow.templates.where('by_organization', ctx.organizationId)
     const items = await uow.templateItems.getAll()
@@ -133,8 +135,11 @@ export async function updateTemplate(
   requireCapability(ctx, 'template.manage')
   const validated = validateTemplateInput(input)
   await ctx.db.write(async (uow) => {
-    const template = await uow.templates.get(templateId)
-    if (!template) throw notFound('That template no longer exists.')
+    const template = requireOwned(
+      await uow.templates.get(templateId),
+      ctx.organizationId,
+      'That template no longer exists.',
+    )
     const timestamp = nowIso(ctx)
     await uow.templates.put({
       ...template,
@@ -178,8 +183,11 @@ export async function setTemplateArchived(
 ): Promise<void> {
   requireCapability(ctx, 'template.manage')
   await ctx.db.write(async (uow) => {
-    const template = await uow.templates.get(templateId)
-    if (!template) throw notFound('That template no longer exists.')
+    const template = requireOwned(
+      await uow.templates.get(templateId),
+      ctx.organizationId,
+      'That template no longer exists.',
+    )
     const timestamp = nowIso(ctx)
     await uow.templates.put({
       ...template,

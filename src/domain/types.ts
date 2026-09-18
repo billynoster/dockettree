@@ -44,7 +44,11 @@ export type NotificationType =
   | 'correction_requested'
   | 'internal_expiration_notice'
 
-export type NotificationStatus = 'requested' | 'simulated_sent' | 'failed' | 'retry_scheduled'
+/**
+ * Delivery state of an outbox row. `queued` means the message is persisted and waiting:
+ * either for the next delivery attempt or, when SMTP is not configured, indefinitely.
+ */
+export type NotificationStatus = 'queued' | 'sent' | 'failed' | 'retry_scheduled'
 
 export type ActivityEventType =
   | 'vendor_created'
@@ -69,6 +73,10 @@ export type ActivityEventType =
   | 'template_updated'
   | 'template_archived'
   | 'settings_updated'
+  | 'invitation_accepted'
+  | 'member_added'
+  | 'member_updated'
+  | 'member_removed'
 
 export interface Timestamps {
   created_at: IsoDateTime
@@ -85,12 +93,33 @@ export interface Organization extends Timestamps {
   record_version: number
 }
 
+export type UserStatus = 'active' | 'disabled'
+
 export interface User {
   id: UUID
   display_name: string
   email: string
-  /** Pilot only: identity-provider subject. Always null in the prototype. */
+  /** Reserved for a future identity provider subject; null for password accounts. */
   auth_subject: string | null
+  /** scrypt digest. Null until the account has been given a password. */
+  password_hash: string | null
+  password_updated_at: IsoDateTime | null
+  status: UserStatus
+  last_login_at: IsoDateTime | null
+  created_at: IsoDateTime
+}
+
+/** Server-side session record. The raw token exists only in the client cookie. */
+export interface AuthSession {
+  id: UUID
+  user_id: UUID
+  token_hash: string
+  /** Explicit active vendor context for a vendor contact with several memberships. */
+  active_vendor_id: UUID | null
+  created_at: IsoDateTime
+  last_seen_at: IsoDateTime
+  expires_at: IsoDateTime
+  revoked_at: IsoDateTime | null
 }
 
 export interface Membership {
@@ -194,7 +223,7 @@ export interface FileObject {
   original_filename: string
   detected_mime: string
   byte_size: number
-  /** Pilot only. The prototype records `not_scanned`. */
+  /** V1 validates type and size server-side but does not run a malware scanner. */
   scan_status: 'not_scanned' | 'clean' | 'quarantined'
   created_by: UUID
   created_at: IsoDateTime
@@ -216,10 +245,11 @@ export interface Invitation {
   organization_id: UUID
   vendor_id: UUID
   invited_email: string
-  /** Prototype stores a non-secret digest stand-in; pilot stores a real hash. */
+  /** SHA-256 of the single-use token. The raw token is never stored or logged. */
   token_hash: string
   expires_at: IsoDateTime
   redeemed_at: IsoDateTime | null
+  redeemed_by_user_id: UUID | null
   revoked_at: IsoDateTime | null
   created_by: UUID
   created_at: IsoDateTime
@@ -250,7 +280,7 @@ export interface Notification {
   next_attempt_at: IsoDateTime | null
   sent_at: IsoDateTime | null
   last_error: string | null
-  /** True when a person pressed Send reminder rather than the simulated daily job. */
+  /** True when a person pressed Send reminder rather than the scheduled daily job. */
   manual: boolean
   created_at: IsoDateTime
 }
@@ -282,18 +312,6 @@ export interface ImportBatch {
   template_id: UUID | null
   created_at: IsoDateTime
   created_vendor_ids: UUID[]
-}
-
-/** Persisted demo session/simulation state so a refresh keeps the demonstration. */
-export interface DemoState {
-  id: 'demo_state'
-  role: Role
-  active_user_id: UUID
-  /** Vendor context for the vendor-contact role and portal links. */
-  active_vendor_id: UUID | null
-  /** Instant the injected clock returns. */
-  clock_instant: IsoDateTime
-  seeded_at: IsoDateTime
 }
 
 /** Idempotency ledger: request key -> serialized result. */

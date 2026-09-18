@@ -1,11 +1,11 @@
 /**
- * Reminder simulation (requirements FR-08, section 5.5).
+ * Reminders (requirements FR-08, section 5.5).
  *
- * Nothing is ever delivered. Every entry is written to the simulated outbox with a status
- * of Simulated, Failed or Requested so the demo never claims delivery.
+ * A reminder is persisted in the notification outbox as `queued` and delivered by the SMTP
+ * worker. When SMTP is not configured the row stays queued: the app never claims delivery.
  */
 import { todayInTimeZone } from '@/domain/dates'
-import { notFound, rateLimited } from '@/domain/errors'
+import { conflict, notFound, rateLimited } from '@/domain/errors'
 import { newId } from '@/domain/ids'
 import {
   MANUAL_REMINDER_COOLDOWN_HOURS,
@@ -49,10 +49,8 @@ function buildDigestBody(
     `${organizationName} is waiting on the following documents:`,
     ...lines.map((line) => `- ${line.requirement_title}: ${line.detail}`),
     '',
-    'Open your vendor portal to upload each document.',
+    'Sign in to your vendor portal to upload each document.',
     supportLine,
-    '',
-    'Simulated message. No email was sent by this prototype.',
   ].join('\n')
 }
 
@@ -91,7 +89,7 @@ async function planFor(
 export async function previewReminder(ctx: ServiceContext, vendorId: UUID): Promise<ReminderPreview> {
   return await ctx.db.read(async (uow) => {
     const todayValue = today(ctx)
-    const snapshot = await loadVendorSnapshot(uow, vendorId, todayValue)
+    const snapshot = await loadVendorSnapshot(uow, vendorId, todayValue, ctx.organizationId)
     const organization = await uow.organizations.get(ctx.organizationId)
     const plan = await planFor(ctx, uow, snapshot, todayValue, false)
     const notifications = sortByCreatedAtDesc(await uow.notifications.where('by_vendor', vendorId))
@@ -139,14 +137,14 @@ export async function previewReminder(ctx: ServiceContext, vendorId: UUID): Prom
 }
 
 export interface SendReminderResult {
-  status: 'simulated_sent' | 'no_action' | 'deduplicated'
+  status: 'queued' | 'no_action' | 'deduplicated'
   notification_id: UUID | null
   message: string
 }
 
 /**
  * Manual reminder. It consumes the same daily digest slot as the scheduled job, so the
- * simulated job will not send a duplicate on the same local date.
+ * scheduled job will not send a duplicate on the same local date.
  */
 export async function sendReminder(
   ctx: ServiceContext,
@@ -164,7 +162,7 @@ export async function sendReminder(
 
   return await ctx.db.write(async (uow) => {
     const todayValue = today(ctx)
-    const snapshot = await loadVendorSnapshot(uow, vendorId, todayValue)
+    const snapshot = await loadVendorSnapshot(uow, vendorId, todayValue, ctx.organizationId)
     const organization = await uow.organizations.get(ctx.organizationId)
     if (!organization) throw notFound('The organization record is missing.')
     const key = digestIdempotencyKey(ctx.organizationId, vendorId, todayValue)
@@ -186,9 +184,9 @@ export async function sendReminder(
       requestKey,
     })
     return {
-      status: 'simulated_sent' as const,
+      status: 'queued' as const,
       notification_id: notification.id,
-      message: `Simulated reminder queued for ${snapshot.vendor.contact_email}. No email was sent.`,
+      message: `Reminder queued for ${snapshot.vendor.contact_email}.`,
     }
   })
 }
@@ -221,11 +219,11 @@ async function writeDigest(
       `Questions? Contact ${input.organization.support_contact_name} at ${input.organization.support_email}.`,
     ),
     items: input.lines,
-    status: 'simulated_sent',
+    status: 'queued',
     idempotency_key: input.key,
-    attempt_count: 1,
-    next_attempt_at: null,
-    sent_at: timestamp,
+    attempt_count: 0,
+    next_attempt_at: timestamp,
+    sent_at: null,
     last_error: null,
     manual: input.manual,
     created_at: timestamp,
@@ -236,13 +234,13 @@ async function writeDigest(
     event_type: 'reminder_sent',
     target_id: notification.id,
     summary: input.manual
-      ? `Simulated reminder queued for ${notification.recipient} (${input.lines.length} item${input.lines.length === 1 ? '' : 's'})`
-      : `Simulated daily digest queued for ${notification.recipient} (${input.lines.length} item${input.lines.length === 1 ? '' : 's'})`,
-    metadata: { items: input.lines.length, simulated: true, manual: input.manual },
+      ? `Reminder queued for ${notification.recipient} (${input.lines.length} item${input.lines.length === 1 ? '' : 's'})`
+      : `Daily digest queued for ${notification.recipient} (${input.lines.length} item${input.lines.length === 1 ? '' : 's'})`,
+    metadata: { items: input.lines.length, manual: input.manual },
     vendor_visible: true,
     actor: input.manual
       ? undefined
-      : { id: 'system', label: 'Simulated daily reminder job', role: 'system' },
+      : { id: 'system', label: 'Scheduled reminder job', role: 'system' },
   })
   return notification
 }
@@ -257,8 +255,8 @@ export interface DailyJobResult {
 }
 
 /**
- * Simulated stand-in for the pilot's daily 09:00 organization-local job. It sends at most
- * one digest per vendor per local date and at most one catch-up per missed milestone.
+ * The daily 09:00 organization-local job. It queues at most one digest per vendor per local
+ * date and at most one catch-up per missed milestone.
  */
 export async function runDailyReminderJob(ctx: ServiceContext): Promise<DailyJobResult> {
   requireCapability(ctx, 'reminder.send')
@@ -323,15 +321,13 @@ export async function runDailyReminderJob(ctx: ServiceContext): Promise<DailyJob
               `${snapshot.vendor.company_name} has an expired required document.`,
               '',
               ...plan.internalLines.map((line) => `- ${line.requirement_title}: ${line.detail}`),
-              '',
-              'Simulated internal notice. No email was sent by this prototype.',
             ].join('\n'),
             items: plan.internalLines,
-            status: 'simulated_sent',
+            status: 'queued',
             idempotency_key: key,
-            attempt_count: 1,
-            next_attempt_at: null,
-            sent_at: timestamp,
+            attempt_count: 0,
+            next_attempt_at: timestamp,
+            sent_at: null,
             last_error: null,
             manual: false,
             created_at: timestamp,
@@ -356,6 +352,7 @@ export async function listOutbox(
   ctx: ServiceContext,
   filters: { vendorId?: UUID | null; type?: Notification['type'] | null } = {},
 ): Promise<{ entries: OutboxEntry[]; total: number; vendors: { id: UUID; company_name: string }[] }> {
+  requireCapability(ctx, 'org.view_all_vendors')
   return await ctx.db.read(async (uow) => {
     const notifications = sortByCreatedAtDesc(await uow.notifications.getAll()).filter(
       (notification) => notification.organization_id === ctx.organizationId,
@@ -380,19 +377,21 @@ export async function listOutbox(
   })
 }
 
-/** Demo affordance: retry a simulated failed delivery so retry states are visible. */
+/** Puts a failed message back in the delivery queue for another attempt. */
 export async function retryNotification(ctx: ServiceContext, notificationId: UUID): Promise<void> {
   requireCapability(ctx, 'reminder.send')
   await ctx.db.write(async (uow) => {
     const notification = await uow.notifications.get(notificationId)
-    if (!notification) throw notFound('That outbox entry no longer exists.')
-    const timestamp = nowIso(ctx)
+    if (!notification || notification.organization_id !== ctx.organizationId) {
+      throw notFound('That outbox entry no longer exists.')
+    }
+    if (notification.status === 'sent') {
+      throw conflict('That message was already delivered.')
+    }
     await uow.notifications.put({
       ...notification,
-      status: 'simulated_sent',
-      attempt_count: notification.attempt_count + 1,
-      sent_at: timestamp,
-      next_attempt_at: null,
+      status: 'queued',
+      next_attempt_at: nowIso(ctx),
       last_error: null,
     })
   })

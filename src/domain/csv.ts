@@ -10,7 +10,7 @@ export const IMPORT_COLUMNS = [
 ] as const
 
 export const MAX_IMPORT_ROWS = 500
-/** Property tags share one cell; the prototype splits on semicolons. */
+/** Property tags share one cell, separated by semicolons. */
 export const PROPERTY_TAG_SEPARATOR = ';'
 
 export interface ParsedCsv {

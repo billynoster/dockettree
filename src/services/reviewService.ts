@@ -14,7 +14,11 @@ import type {
 } from '@/domain/types'
 import { recordActivity } from './activityService'
 import { nowIso, requireCapability, today, type ServiceContext } from './context'
-import { loadReviewEvents, loadVendorSnapshot } from './queries'
+import {
+  loadReviewEvents,
+  loadVendorSnapshot,
+  requireOwned,
+} from './queries'
 
 export interface ReviewQueueItem {
   submission: Submission
@@ -38,6 +42,7 @@ export async function listReviewQueue(
   ctx: ServiceContext,
   filters: { vendorId?: UUID | null; requirementTitle?: string | null } = {},
 ): Promise<ReviewQueueResult> {
+  requireCapability(ctx, 'org.view_all_vendors')
   return await ctx.db.read(async (uow) => {
     const pending = (await uow.submissions.where('by_state', 'pending_review')).filter(
       (submission) => submission.organization_id === ctx.organizationId,
@@ -104,8 +109,11 @@ export interface ReviewDetail {
 export async function getReviewDetail(ctx: ServiceContext, submissionId: UUID): Promise<ReviewDetail> {
   const queue = await listReviewQueue(ctx)
   return await ctx.db.read(async (uow) => {
-    const submission = await uow.submissions.get(submissionId)
-    if (!submission) throw notFound('That submission no longer exists.')
+    const submission = requireOwned(
+      await uow.submissions.get(submissionId),
+      ctx.organizationId,
+      'That submission no longer exists.',
+    )
     const requirement = await uow.requirements.get(submission.requirement_id)
     const vendor = await uow.vendors.get(submission.vendor_id)
     if (!requirement || !vendor) throw notFound('That submission is no longer linked to a vendor.')
@@ -190,8 +198,11 @@ export async function reviewSubmission(
   }
 
   const outcome = await ctx.db.write(async (uow) => {
-    const submission = await uow.submissions.get(input.submissionId)
-    if (!submission) throw notFound('That submission no longer exists.')
+    const submission = requireOwned(
+      await uow.submissions.get(input.submissionId),
+      ctx.organizationId,
+      'That submission no longer exists.',
+    )
     if (submission.state !== 'pending_review') {
       throw conflict(
         `This submission was already decided (${submission.state.replace('_', ' ')}). Reload the review queue for the current decision.`,
@@ -298,9 +309,7 @@ export async function reviewSubmission(
           '',
           `Reason: ${reason}`,
           '',
-          'Open your vendor portal to upload a corrected version.',
-          '',
-          'Simulated message. No email was sent by this prototype.',
+          'Sign in to your vendor portal to upload a corrected version.',
         ].join('\n'),
         items: [
           {
@@ -311,15 +320,15 @@ export async function reviewSubmission(
             submission_version: submission.version_number,
           },
         ],
-        status: 'simulated_sent',
+        status: 'queued',
         idempotency_key: correctionIdempotencyKey(
           ctx.organizationId,
           submission.id,
           submission.version_number,
         ),
-        attempt_count: 1,
-        next_attempt_at: null,
-        sent_at: timestamp,
+        attempt_count: 0,
+        next_attempt_at: timestamp,
+        sent_at: null,
         last_error: null,
         manual: false,
         created_at: timestamp,
@@ -330,7 +339,7 @@ export async function reviewSubmission(
     return { vendorId: vendor.id, supersededSubmissionId }
   })
 
-  const snapshot = await ctx.db.read((uow) => loadVendorSnapshot(uow, outcome.vendorId, today(ctx)))
+  const snapshot = await ctx.db.read((uow) => loadVendorSnapshot(uow, outcome.vendorId, today(ctx), ctx.organizationId))
   return {
     submission_id: input.submissionId,
     vendor_id: outcome.vendorId,
@@ -357,8 +366,11 @@ export async function revokeAcceptance(
     })
   }
   await ctx.db.write(async (uow) => {
-    const submission = await uow.submissions.get(submissionId)
-    if (!submission) throw notFound('That submission no longer exists.')
+    const submission = requireOwned(
+      await uow.submissions.get(submissionId),
+      ctx.organizationId,
+      'That submission no longer exists.',
+    )
     if (submission.state !== 'accepted') {
       throw conflict('Only an accepted submission can have its acceptance revoked.')
     }

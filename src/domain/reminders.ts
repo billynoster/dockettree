@@ -1,8 +1,8 @@
 /**
  * Reminder eligibility — pure implementation of requirements section 5.5.
  *
- * The prototype never sends email. These functions decide what *would* be sent;
- * the reminder service turns a plan into simulated outbox entries.
+ * These pure functions decide which reminders are eligible; the reminder service turns a
+ * plan into outbox rows and the delivery worker attempts to send them.
  */
 import { daysBetween, daysUntilExpiration } from './dates'
 import type { RequirementStatus } from './readiness'

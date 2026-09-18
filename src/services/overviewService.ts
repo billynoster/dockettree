@@ -2,7 +2,7 @@
 import { daysUntilExpiration } from '@/domain/dates'
 import { countReadiness, type Blocker, type ReadinessCounts } from '@/domain/readiness'
 import type { ActivityEvent, IsoDate, ReadinessStatus, UUID } from '@/domain/types'
-import { today, type ServiceContext } from './context'
+import { requireCapability, today, type ServiceContext } from './context'
 import { loadVendorSnapshots, sortByCreatedAtDesc } from './queries'
 
 export interface AttentionItem {
@@ -37,6 +37,7 @@ const PRIORITY = {
 }
 
 export async function getOverview(ctx: ServiceContext): Promise<OverviewData> {
+  requireCapability(ctx, 'org.view_all_vendors')
   return await ctx.db.read(async (uow) => {
     const todayValue = today(ctx)
     const snapshots = await loadVendorSnapshots(uow, ctx.organizationId, todayValue)
