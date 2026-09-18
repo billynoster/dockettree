@@ -122,7 +122,10 @@ function InternalRoutes() {
     <Routes>
       <Route element={<AppShell />}>
         <Route path="/" element={<Navigate to="/overview" replace />} />
+        {/* Signing in from one of the unauthenticated screens lands on the overview. */}
         <Route path="/login" element={<Navigate to="/overview" replace />} />
+        <Route path="/setup" element={<Navigate to="/overview" replace />} />
+        <Route path="/invitations/accept" element={<Navigate to="/overview" replace />} />
         <Route path="/overview" element={<OverviewPage />} />
         <Route path="/vendors" element={<VendorsPage />} />
         {app.can('vendor.manage') ? <Route path="/vendors/new" element={<VendorNewPage />} /> : null}

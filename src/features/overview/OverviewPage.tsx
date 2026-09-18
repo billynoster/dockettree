@@ -20,6 +20,7 @@ export function OverviewPage() {
   if (!query.data) return null
 
   const { counts, pendingReviewCount, attention, recentActivity } = query.data
+  const organizationIsEmpty = counts.active === 0 && counts.archived === 0
 
   const primary = [
     {
@@ -125,9 +126,23 @@ export function OverviewPage() {
           <p className="text-xs text-muted-foreground">Highest-impact exceptions first</p>
         </div>
         {attention.length === 0 ? (
-          <p className="px-4 py-6 text-sm text-muted-foreground">
-            Every active vendor is ready and nothing expires in the next 30 days.
-          </p>
+          <div className="space-y-3 px-4 py-6">
+            <p className="text-sm text-muted-foreground">
+              {organizationIsEmpty
+                ? 'No vendors yet. Add your first vendor, assign a checklist, and invite their contact to upload documents.'
+                : 'Every active vendor is ready and nothing expires in the next 30 days.'}
+            </p>
+            {organizationIsEmpty && app.can('vendor.manage') ? (
+              <div className="flex flex-wrap gap-2">
+                <Button asChild size="sm">
+                  <Link to="/vendors/new">Add your first vendor</Link>
+                </Button>
+                <Button asChild variant="outline" size="sm">
+                  <Link to="/requirements">Set up a checklist template</Link>
+                </Button>
+              </div>
+            ) : null}
+          </div>
         ) : (
           <ul className="divide-y">
             {attention.slice(0, 8).map((item) => (
@@ -167,6 +182,11 @@ export function OverviewPage() {
             <Link to="/activity">View all activity</Link>
           </Button>
         </div>
+        {recentActivity.length === 0 ? (
+          <p className="px-4 py-6 text-sm text-muted-foreground">
+            Nothing has happened yet. Every vendor change, submission and decision is recorded here.
+          </p>
+        ) : null}
         <ul className="divide-y">
           {recentActivity.map((event) => (
             <li key={event.id} className="px-4 py-3">
