@@ -1,6 +1,7 @@
+import { api } from '@/api/client'
 import { useEffect, useState } from 'react'
-import { Link, useParams, useSearchParams } from 'react-router'
-import { Archive, ArchiveRestore, BellRing, ExternalLink, Save, Send } from 'lucide-react'
+import { useParams, useSearchParams } from 'react-router'
+import { Archive, ArchiveRestore, BellRing, Save, Send } from 'lucide-react'
 import { useApp } from '@/app/AppProvider'
 import { useAction } from '@/app/useAction'
 import { useServiceQuery } from '@/app/useServiceQuery'
@@ -23,19 +24,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { PROPERTIES } from '@/demo/fixtures'
 import { formatDate, formatDateTime } from '@/domain/dates'
-import { can } from '@/domain/permissions'
 import { READINESS_EXPLANATION } from '@/domain/readiness'
-import { listTemplates } from '@/services/templateService'
-import {
-  archiveVendor,
-  assignTemplate,
-  getVendorDetail,
-  previewAssignTemplate,
-  restoreVendor,
-  updateVendor,
-} from '@/services/vendorService'
 import { InviteVendorDialog } from './InviteVendorDialog'
 import { RemindVendorDialog } from './RemindVendorDialog'
 import { VendorFormFields, type VendorFormValues } from './VendorFormFields'
@@ -45,7 +35,7 @@ export function VendorDetailPage() {
   const { vendorId = '' } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
   const tab = searchParams.get('tab') ?? 'requirements'
-  const detail = useServiceQuery((ctx) => getVendorDetail(ctx, vendorId), [vendorId])
+  const detail = useServiceQuery(() => api.vendorDetail(vendorId), [vendorId])
   const lifecycleAction = useAction()
 
   if (detail.loading && !detail.data) return <LoadingState label="Loading the vendor" rows={5} />
@@ -63,8 +53,8 @@ export function VendorDetailPage() {
   const { snapshot, invitation, correctionReasons, activity, lastReminderAt } = detail.data
   const vendor = snapshot.vendor
   const readiness = snapshot.readiness
-  const canManage = can(app.role, 'vendor.manage')
-  const canArchive = can(app.role, 'vendor.archive')
+  const canManage = app.can('vendor.manage')
+  const canArchive = app.can('vendor.archive')
   const activeRequirements = snapshot.requirementStatuses.filter(
     (status) => status.requirement.retired_at === null,
   )
@@ -85,12 +75,6 @@ export function VendorDetailPage() {
         }
         actions={
           <>
-            <Button asChild variant="outline" size="sm">
-              <Link to={`/portal/${vendor.id}`}>
-                <ExternalLink aria-hidden="true" />
-                Open demo portal
-              </Link>
-            </Button>
             {canManage && vendor.lifecycle === 'active' ? (
               <>
                 <InviteVendorDialog
@@ -130,7 +114,7 @@ export function VendorDetailPage() {
                   error={lifecycleAction.fieldErrors.reason ?? null}
                   onConfirm={async (reason) => {
                     const result = await lifecycleAction.run(
-                      (ctx) => archiveVendor(ctx, vendor.id, reason),
+                      () => api.archiveVendor(vendor.id, reason),
                       { success: `${vendor.company_name} archived.` },
                     )
                     return result !== undefined
@@ -142,7 +126,7 @@ export function VendorDetailPage() {
                   size="sm"
                   disabled={lifecycleAction.pending}
                   onClick={() =>
-                    void lifecycleAction.run((ctx) => restoreVendor(ctx, vendor.id), {
+                    void lifecycleAction.run(() => api.restoreVendor(vendor.id), {
                       success: `${vendor.company_name} restored. Readiness has been recalculated.`,
                     })
                   }
@@ -203,7 +187,7 @@ export function VendorDetailPage() {
             <dd>{formatDateTime(vendor.invited_at, app.organization.timezone)}</dd>
           </div>
           <div className="flex gap-2">
-            <dt className="text-muted-foreground">Last simulated reminder</dt>
+            <dt className="text-muted-foreground">Last reminder</dt>
             <dd>{formatDateTime(lastReminderAt, app.organization.timezone)}</dd>
           </div>
           <div className="flex gap-2">
@@ -312,9 +296,9 @@ function AssignChecklistPanel({
   compact?: boolean
 }) {
   const [templateId, setTemplateId] = useState('')
-  const templates = useServiceQuery((ctx) => listTemplates(ctx), [])
+  const templates = useServiceQuery(() => api.listTemplates(), [])
   const impact = useServiceQuery(
-    (ctx) => (templateId ? previewAssignTemplate(ctx, vendorId, templateId) : Promise.resolve(null)),
+    () => (templateId ? api.previewChecklist(vendorId, templateId) : Promise.resolve(null)),
     [vendorId, templateId],
   )
   const action = useAction()
@@ -380,7 +364,7 @@ function AssignChecklistPanel({
           error={action.fieldErrors.reason ?? null}
           onConfirm={async (reason) => {
             const result = await action.run(
-              (ctx) => assignTemplate(ctx, vendorId, templateId, reason),
+              () => api.assignChecklist(vendorId, templateId, reason),
               { success: 'Checklist assigned. Readiness recalculated.' },
             )
             if (result !== undefined) setTemplateId('')
@@ -406,6 +390,9 @@ function VendorDetailsForm({
   const [values, setValues] = useState<VendorFormValues>(initial)
   const [confirmDuplicate, setConfirmDuplicate] = useState(false)
   const action = useAction()
+  // Property tags are free text; suggest the ones already used in this organization.
+  const directory = useServiceQuery(() => api.listVendors({ lifecycle: 'all', pageSize: 1 }), [])
+  const knownProperties = directory.data?.properties ?? []
 
   useEffect(() => {
     setValues(initial)
@@ -435,7 +422,7 @@ function VendorDetailsForm({
             <dd>{initial.property_tags.join(', ') || '—'}</dd>
           </div>
         </dl>
-        <AccessDeniedState message="Your demo role can view vendor details but not edit them." />
+        <AccessDeniedState message="Your role can view vendor details but not edit them." />
       </div>
     )
   }
@@ -447,8 +434,7 @@ function VendorDetailsForm({
       onSubmit={(event) => {
         event.preventDefault()
         void action.run(
-          (ctx) =>
-            updateVendor(ctx, vendorId, {
+          () => api.updateVendor(vendorId, {
               ...values,
               expectedVersion: recordVersion,
               confirmDuplicate,
@@ -462,7 +448,7 @@ function VendorDetailsForm({
         values={values}
         onChange={setValues}
         fieldErrors={action.fieldErrors}
-        properties={PROPERTIES}
+        properties={knownProperties}
         idPrefix="edit-vendor"
       />
       {action.conflict ? (
@@ -475,8 +461,7 @@ function VendorDetailsForm({
             onClick={() => {
               setConfirmDuplicate(true)
               void action.run(
-                (ctx) =>
-                  updateVendor(ctx, vendorId, {
+                () => api.updateVendor(vendorId, {
                     ...values,
                     expectedVersion: recordVersion,
                     confirmDuplicate: true,

@@ -3,6 +3,7 @@
  * implementation of the section 5.4 rules in the application.
  */
 import { notFound } from '@/domain/errors'
+import { INVITATION_LABEL, invitationStatus, type InvitationStatus } from '@/domain/invitations'
 import {
   computeRequirementStatuses,
   computeVendorReadiness,
@@ -152,25 +153,4 @@ export function groupBy<T, K>(items: T[], key: (item: T) => K): Map<K, T[]> {
   return map
 }
 
-/** Latest invitation state used by the vendor header badge. */
-export type InvitationStatus = 'not_invited' | 'invited' | 'accepted' | 'expired' | 'revoked'
-
-export function invitationStatus(
-  invitations: Invitation[],
-  nowInstant: string,
-): { status: InvitationStatus; invitation: Invitation | null } {
-  const latest = sortByCreatedAtDesc(invitations)[0] ?? null
-  if (!latest) return { status: 'not_invited', invitation: null }
-  if (latest.revoked_at) return { status: 'revoked', invitation: latest }
-  if (latest.redeemed_at) return { status: 'accepted', invitation: latest }
-  if (latest.expires_at < nowInstant) return { status: 'expired', invitation: latest }
-  return { status: 'invited', invitation: latest }
-}
-
-export const INVITATION_LABEL: Record<InvitationStatus, string> = {
-  not_invited: 'Not invited',
-  invited: 'Invitation sent',
-  accepted: 'Invitation accepted',
-  expired: 'Invitation expired',
-  revoked: 'Invitation revoked',
-}
+export { INVITATION_LABEL, invitationStatus, type InvitationStatus }

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Upload } from 'lucide-react'
+import { api } from '@/api/client'
 import { useApp } from '@/app/AppProvider'
 import { useAction } from '@/app/useAction'
 import { Button } from '@/components/ui/button'
@@ -14,7 +15,7 @@ import {
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
-import { createSamplePdf, createSamplePng, SAMPLE_WATERMARK } from '@/demo/sampleFiles'
+import { todayInTimeZone } from '@/domain/dates'
 import { newId } from '@/domain/ids'
 import type { AssignedRequirement } from '@/domain/types'
 import {
@@ -23,8 +24,6 @@ import {
   MAX_UPLOAD_BYTES,
   validateSubmissionDates,
 } from '@/domain/validation'
-import { downloadBlob } from '@/lib/download'
-import { submitDocument } from '@/services/submissionService'
 
 /**
  * Upload form for one requirement. Validation runs before anything is stored, progress is
@@ -49,10 +48,11 @@ export function SubmitDocumentDialog({
   const [localErrors, setLocalErrors] = useState<Record<string, string>>({})
   const action = useAction()
 
+  const today = todayInTimeZone(new Date(), app.organization.timezone)
   const dateCheck = validateSubmissionDates(
     { issue_date: issueDate, expiration_date: expirationDate },
     requirement,
-    app.demoDate,
+    today,
   )
 
   const reset = () => {
@@ -83,14 +83,17 @@ export function SubmitDocumentDialog({
       return
     }
     setLocalErrors({})
-    setProgress(35)
+    setProgress(5)
     const result = await action.run(
-      (ctx) =>
-        submitDocument(ctx, {
+      () =>
+        api.submitDocument({
           requirementId: requirement.id,
           file,
-          dates: { issue_date: issueDate, expiration_date: expirationDate },
+          issue_date: issueDate,
+          expiration_date: expirationDate,
           requestKey,
+          // Real upload progress, so a large scan on a slow connection is visible.
+          onProgress: (fraction) => setProgress(Math.max(5, Math.round(fraction * 95))),
         }),
       {
         success: (value) =>
@@ -152,44 +155,6 @@ export function SubmitDocumentDialog({
                 Selected: <span className="font-medium">{file.name}</span> ({formatBytes(file.size)})
               </p>
             ) : null}
-            <div className="flex flex-wrap gap-2 pt-1">
-              <Button
-                type="button"
-                variant="link"
-                size="sm"
-                className="px-0"
-                onClick={() =>
-                  downloadBlob(
-                    'sample-document.pdf',
-                    createSamplePdf({
-                      title: requirement.title,
-                      subtitle: SAMPLE_WATERMARK,
-                      lines: [
-                        'Generated sample file for prototype testing.',
-                        `Requirement: ${requirement.title}`,
-                      ],
-                    }),
-                  )
-                }
-              >
-                Download a sample PDF to upload
-              </Button>
-              <Button
-                type="button"
-                variant="link"
-                size="sm"
-                className="px-0"
-                onClick={async () => {
-                  const png = await createSamplePng({
-                    title: requirement.title,
-                    lines: ['Generated sample image for prototype testing.', SAMPLE_WATERMARK],
-                  })
-                  if (png) downloadBlob('sample-document.png', png)
-                }}
-              >
-                Download a sample PNG
-              </Button>
-            </div>
           </div>
 
           {requirement.collect_issue_date ? (
@@ -233,7 +198,7 @@ export function SubmitDocumentDialog({
                 </p>
               ) : (
                 <p id="submit-expiration-hint" className="text-xs text-muted-foreground">
-                  The document is valid through this date. Today is {app.demoDate} in{' '}
+                  The document is valid through this date. Today is {today} in{' '}
                   {app.organization.timezone}.
                 </p>
               )}
@@ -250,7 +215,7 @@ export function SubmitDocumentDialog({
             <div className="space-y-1">
               <Progress value={progress} />
               <p className="text-xs text-muted-foreground" role="status">
-                {progress < 100 ? 'Validating and storing the document…' : 'Submitted.'}
+                {progress < 95 ? `Uploading… ${progress}%` : 'Validating and storing the document…'}
               </p>
             </div>
           ) : null}

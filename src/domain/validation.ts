@@ -69,8 +69,8 @@ export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 export type AllowedUploadMime = (typeof ALLOWED_UPLOAD_MIME_TYPES)[number]
 
 /**
- * Content sniffing so the prototype does not trust the file extension alone. The pilot
- * repeats this server side and adds malware scanning.
+ * Content sniffing, so a file extension is never trusted. The server runs this check on the
+ * uploaded bytes; the browser runs it too only to fail fast.
  */
 export function detectMimeFromBytes(bytes: Uint8Array): AllowedUploadMime | null {
   if (bytes.length >= 4 && bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46) {

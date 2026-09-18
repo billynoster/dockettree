@@ -1,11 +1,11 @@
 import { Link, useSearchParams } from 'react-router'
 import { RefreshCw } from 'lucide-react'
+import { api } from '@/api/client'
 import { useApp } from '@/app/AppProvider'
 import { useAction } from '@/app/useAction'
 import { useServiceQuery } from '@/app/useServiceQuery'
 import { PageHeader } from '@/components/PageHeader'
 import { EmptyState, ErrorState, LoadingState } from '@/components/States'
-import { SimulatedChip } from '@/components/StatusChips'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import {
@@ -16,9 +16,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { formatDateTime } from '@/domain/dates'
-import { can } from '@/domain/permissions'
 import type { Notification } from '@/domain/types'
-import { listOutbox, retryNotification } from '@/services/reminderService'
 
 const TYPE_LABEL: Record<Notification['type'], string> = {
   invitation: 'Invitation',
@@ -28,26 +26,26 @@ const TYPE_LABEL: Record<Notification['type'], string> = {
 }
 
 const STATUS_LABEL: Record<Notification['status'], string> = {
-  requested: 'Requested',
-  simulated_sent: 'Simulated send',
-  failed: 'Failed (simulated)',
+  queued: 'Queued',
+  sent: 'Sent',
+  failed: 'Failed',
   retry_scheduled: 'Retry scheduled',
 }
 
 const STATUS_STYLE: Record<Notification['status'], string> = {
-  requested: 'border-slate-200 bg-slate-100 text-slate-700',
-  simulated_sent: 'border-violet-200 bg-violet-50 text-violet-800',
+  queued: 'border-slate-200 bg-slate-100 text-slate-700',
+  sent: 'border-emerald-200 bg-emerald-50 text-emerald-800',
   failed: 'border-rose-200 bg-rose-50 text-rose-800',
   retry_scheduled: 'border-amber-300 bg-amber-50 text-amber-900',
 }
 
-export function OutboxPage() {
+export function NotificationsPage() {
   const app = useApp()
   const [searchParams, setSearchParams] = useSearchParams()
   const vendorId = searchParams.get('vendor')
   const type = searchParams.get('type') as Notification['type'] | null
   const action = useAction()
-  const outbox = useServiceQuery((ctx) => listOutbox(ctx, { vendorId, type }), [vendorId, type])
+  const outbox = useServiceQuery(() => api.notifications({ vendorId, type }), [vendorId, type])
 
   const setFilter = (key: string, value: string | null) => {
     const next = new URLSearchParams(searchParams)
@@ -59,16 +57,20 @@ export function OutboxPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Simulated outbox"
-        description="A demo facility, not a mail server. Nothing here was delivered to anyone; every entry records what the pilot would have sent."
+        title="Notifications"
+        description="Every invitation, reminder and correction notice this organization has produced, with its real delivery state."
       />
 
-      <p className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
-        This prototype never sends email. Invitations, reminders and correction notices are written
-        here with a simulated status so you can inspect the exact message content and recipients.
-      </p>
+      {outbox.data && !outbox.data.delivery.configured ? (
+        <p className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+          {outbox.data.delivery.reason} Queued messages stay here until SMTP is configured; you can
+          still read the exact content and hand the details over another way.
+        </p>
+      ) : null}
 
-      {outbox.loading && !outbox.data ? <LoadingState label="Loading the outbox" rows={4} /> : null}
+      {outbox.loading && !outbox.data ? (
+        <LoadingState label="Loading the notification log" rows={4} />
+      ) : null}
       {outbox.error ? <ErrorState message={outbox.error} onRetry={outbox.reload} /> : null}
 
       {outbox.data ? (
@@ -115,14 +117,14 @@ export function OutboxPage() {
           </div>
 
           <p className="text-sm text-muted-foreground" role="status">
-            {outbox.data.entries.length} of {outbox.data.total} simulated message
+            {outbox.data.entries.length} of {outbox.data.total} message
             {outbox.data.total === 1 ? '' : 's'}
           </p>
 
           {outbox.data.entries.length === 0 ? (
             <EmptyState
-              title="No simulated messages"
-              description="Send an invitation or a reminder, or run the simulated daily job from Settings."
+              title="No messages yet"
+              description="Send an invitation or a reminder, or run the reminder job from Settings."
             />
           ) : (
             <ul className="space-y-3">
@@ -157,7 +159,11 @@ export function OutboxPage() {
                       >
                         {STATUS_LABEL[entry.notification.status]}
                       </span>
-                      <SimulatedChip label="Not delivered" />
+                      {entry.notification.sent_at ? (
+                        <span className="text-xs text-muted-foreground">
+                          Sent {formatDateTime(entry.notification.sent_at, app.organization.timezone)}
+                        </span>
+                      ) : null}
                     </div>
                   </div>
 
@@ -196,20 +202,22 @@ export function OutboxPage() {
                     </dl>
                   </details>
 
-                  {entry.notification.status === 'failed' && can(app.role, 'reminder.send') ? (
+                  {entry.notification.status !== 'sent' && app.can('reminder.send') ? (
                     <Button
                       className="mt-3"
                       size="sm"
                       variant="outline"
                       disabled={action.pending}
                       onClick={() =>
-                        void action.run((ctx) => retryNotification(ctx, entry.notification.id), {
-                          success: 'Retry recorded as a simulated send. Nothing was delivered.',
+                        void action.run(() => api.retryNotification(entry.notification.id), {
+                          success: outbox.data?.delivery.configured
+                            ? 'Delivery attempted again. The status below reflects the result.'
+                            : 'Message re-queued. It stays queued until SMTP is configured.',
                         })
                       }
                     >
                       <RefreshCw aria-hidden="true" />
-                      Retry simulated send
+                      Try delivery again
                     </Button>
                   ) : null}
                 </li>

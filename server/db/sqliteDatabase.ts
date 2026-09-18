@@ -68,8 +68,11 @@ function wrapError(error: unknown): never {
 
 class TrackedBlobStore implements BlobStore {
   private written: string[] = []
+  private readonly inner: BlobStore
 
-  constructor(private readonly inner: BlobStore) {}
+  constructor(inner: BlobStore) {
+    this.inner = inner
+  }
 
   async get(storageKey: string): Promise<Blob | undefined> {
     return await this.inner.get(storageKey)

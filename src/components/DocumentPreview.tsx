@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react'
 import { Download, FileText } from 'lucide-react'
-import { useApp } from '@/app/AppProvider'
+import { api } from '@/api/client'
 import { Button } from '@/components/ui/button'
 import { errorMessage } from '@/domain/errors'
 import type { UUID } from '@/domain/types'
 import { formatBytes } from '@/domain/validation'
 import { downloadBlob } from '@/lib/download'
-import { loadSubmissionFile } from '@/services/submissionService'
 import { ErrorState, LoadingState } from './States'
 
-/** Renders the stored document bytes for a submission: PDF in a frame, images inline. */
+/**
+ * Renders a stored document. Bytes are fetched from the authorized file route, so the server
+ * checks on every request that this caller may see this vendor's document.
+ */
 export function DocumentPreview({
   submissionId,
   height = 'h-[420px]',
@@ -17,7 +19,6 @@ export function DocumentPreview({
   submissionId: UUID
   height?: string
 }) {
-  const app = useApp()
   const [state, setState] = useState<{
     url: string | null
     filename: string
@@ -33,16 +34,26 @@ export function DocumentPreview({
     let objectUrl: string | null = null
     let cancelled = false
     setState((current) => ({ ...current, loading: true, error: null }))
-    loadSubmissionFile(app.ctx, submissionId)
-      .then((loaded) => {
+
+    fetch(api.documentUrl(submissionId), { credentials: 'same-origin' })
+      .then(async (response) => {
+        if (!response.ok) {
+          const payload = (await response.json().catch(() => ({}))) as {
+            error?: { message?: string }
+          }
+          throw new Error(payload.error?.message ?? 'That document could not be opened.')
+        }
+        const disposition = response.headers.get('Content-Disposition') ?? ''
+        const match = /filename="([^"]+)"/.exec(disposition)
+        const loaded = await response.blob()
         if (cancelled) return
-        objectUrl = URL.createObjectURL(loaded.blob)
-        setBlob(loaded.blob)
+        objectUrl = URL.createObjectURL(loaded)
+        setBlob(loaded)
         setState({
           url: objectUrl,
-          filename: loaded.file.original_filename,
-          mime: loaded.file.detected_mime,
-          size: loaded.file.byte_size,
+          filename: match?.[1] ?? 'document',
+          mime: response.headers.get('Content-Type') ?? loaded.type,
+          size: loaded.size,
           error: null,
           loading: false,
         })
@@ -62,7 +73,7 @@ export function DocumentPreview({
       cancelled = true
       if (objectUrl) URL.revokeObjectURL(objectUrl)
     }
-  }, [app.ctx, submissionId, attempt])
+  }, [submissionId, attempt])
 
   if (state.loading) return <LoadingState label="Loading the document preview" rows={2} />
   if (state.error) {
@@ -86,16 +97,12 @@ export function DocumentPreview({
             {state.mime} · {formatBytes(state.size)}
           </span>
         </p>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => blob && downloadBlob(state.filename, blob)}
-        >
+        <Button variant="outline" size="sm" onClick={() => blob && downloadBlob(state.filename, blob)}>
           <Download aria-hidden="true" />
           Download
         </Button>
       </div>
-      {state.mime === 'application/pdf' ? (
+      {state.mime.startsWith('application/pdf') ? (
         <iframe
           src={state.url}
           title={`Document preview: ${state.filename}`}

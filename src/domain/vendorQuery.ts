@@ -1,6 +1,21 @@
-/** Vendor list filters live in the URL so links reproduce exact counts (FR-09). */
-import type { ReadinessStatus, VendorLifecycle } from '@/domain/types'
-import type { VendorListQuery } from '@/services/vendorService'
+/**
+ * Vendor list filters. They live in the browser URL so a link reproduces exact counts
+ * (FR-09) and are parsed again on the server from the API query string.
+ */
+import type { ReadinessStatus, VendorLifecycle } from './types'
+
+export interface VendorListQuery {
+  search?: string
+  readiness?: ReadinessStatus[]
+  category?: string | null
+  property?: string | null
+  expiringSoonOnly?: boolean
+  lifecycle?: VendorLifecycle | 'all'
+  sort?: 'name' | 'next_expiration' | 'updated'
+  direction?: 'asc' | 'desc'
+  page?: number
+  pageSize?: number
+}
 
 const READINESS_VALUES: ReadinessStatus[] = [
   'ready',

@@ -1,4 +1,5 @@
 import { Link, useSearchParams } from 'react-router'
+import { api } from '@/api/client'
 import { useApp } from '@/app/AppProvider'
 import { useServiceQuery } from '@/app/useServiceQuery'
 import { PageHeader } from '@/components/PageHeader'
@@ -13,8 +14,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { formatDate, formatDateTime } from '@/domain/dates'
-import { can } from '@/domain/permissions'
-import { listReviewQueue } from '@/services/reviewService'
 
 export function ReviewQueuePage() {
   const app = useApp()
@@ -23,7 +22,7 @@ export function ReviewQueuePage() {
   const requirementTitle = searchParams.get('requirement')
 
   const queue = useServiceQuery(
-    (ctx) => listReviewQueue(ctx, { vendorId, requirementTitle }),
+    () => api.reviewQueue({ vendorId, requirementTitle }),
     [vendorId, requirementTitle],
   )
 
@@ -34,7 +33,7 @@ export function ReviewQueuePage() {
     setSearchParams(next, { replace: true })
   }
 
-  const canDecide = can(app.role, 'submission.review')
+  const canDecide = app.can('submission.review')
 
   return (
     <div className="space-y-4">
@@ -97,8 +96,7 @@ export function ReviewQueuePage() {
 
           {!canDecide ? (
             <p className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
-              Your demo role can read the queue but only an admin or reviewer can decide a
-              submission.
+              Your role can read the queue, but only an admin or reviewer can decide a submission.
             </p>
           ) : null}
 

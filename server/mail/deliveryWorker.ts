@@ -25,11 +25,15 @@ export class NotificationDeliveryWorker {
   private timer: NodeJS.Timeout | null = null
   private running = false
 
-  constructor(
-    private readonly db: Database,
-    private readonly clock: Clock,
-    private readonly mailer: Mailer,
-  ) {}
+  private readonly db: Database
+  private readonly clock: Clock
+  private readonly mailer: Mailer
+
+  constructor(db: Database, clock: Clock, mailer: Mailer) {
+    this.db = db
+    this.clock = clock
+    this.mailer = mailer
+  }
 
   private async due(): Promise<Notification[]> {
     const nowInstant = this.clock.nowIso()

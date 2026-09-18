@@ -23,6 +23,12 @@ dist-ssr
 *.sln
 *.sw?
 
+# Local data: SQLite database and stored documents
+var
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+
 # Playwright
 test-results
 playwright-report

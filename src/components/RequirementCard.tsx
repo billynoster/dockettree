@@ -1,3 +1,4 @@
+import { api } from '@/api/client'
 import { useState } from 'react'
 import { Eye, RotateCcw, ShieldOff, Upload } from 'lucide-react'
 import { useApp } from '@/app/AppProvider'
@@ -15,11 +16,8 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { describeRelativeDays, formatDate, formatDateTime } from '@/domain/dates'
-import { can } from '@/domain/permissions'
 import type { RequirementStatus } from '@/domain/readiness'
 import type { Vendor } from '@/domain/types'
-import { revokeAcceptance } from '@/services/reviewService'
-import { withdrawSubmission } from '@/services/submissionService'
 
 /**
  * One assigned requirement. Current document and latest submission are always shown as two
@@ -47,19 +45,19 @@ export function RequirementCard({
     vendor.lifecycle === 'active' &&
     status.pending === null &&
     (app.role === 'vendor_contact'
-      ? app.session.vendorId === vendor.id
-      : can(app.role, 'document.upload_on_behalf'))
+      ? app.activeVendorId === vendor.id
+      : app.can('document.upload_on_behalf'))
   const canWithdraw =
     status.pending !== null &&
     vendor.lifecycle === 'active' &&
     (app.role === 'vendor_contact'
-      ? app.session.vendorId === vendor.id
-      : can(app.role, 'document.upload_on_behalf'))
+      ? app.activeVendorId === vendor.id
+      : app.can('document.upload_on_behalf'))
   const canRevoke =
     context === 'internal' &&
     status.effective !== null &&
     status.effective.state === 'accepted' &&
-    can(app.role, 'submission.revoke_acceptance')
+    app.can('submission.revoke_acceptance')
 
   const history = [...status.submissions].sort((a, b) => b.version_number - a.version_number)
 
@@ -105,7 +103,7 @@ export function RequirementCard({
               disabled={action.pending}
               onClick={() =>
                 void action.run(
-                  (ctx) => withdrawSubmission(ctx, status.pending!.id, status.pending!.record_version),
+                  () => api.withdrawSubmission(status.pending!.id, status.pending!.record_version),
                   { success: `Withdrew ${requirement.title} v${status.pending?.version_number}.` },
                 )
               }
@@ -191,7 +189,7 @@ export function RequirementCard({
                     error={action.fieldErrors.reason ?? null}
                     onConfirm={async (reason) => {
                       const result = await action.run(
-                        (ctx) => revokeAcceptance(ctx, status.effective!.id, reason),
+                        () => api.revokeAcceptance(status.effective!.id, reason),
                         { success: `Acceptance revoked for ${requirement.title}.` },
                       )
                       return result !== undefined

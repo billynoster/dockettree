@@ -1,4 +1,6 @@
 import { Link, useSearchParams } from 'react-router'
+import { api } from '@/api/client'
+import { ACTIVITY_TYPE_LABEL } from '@/domain/activity'
 import { useApp } from '@/app/AppProvider'
 import { useServiceQuery } from '@/app/useServiceQuery'
 import { PageHeader } from '@/components/PageHeader'
@@ -13,8 +15,6 @@ import {
 } from '@/components/ui/select'
 import { formatDateTime } from '@/domain/dates'
 import type { ActivityEventType } from '@/domain/types'
-import { ACTIVITY_TYPE_LABEL, listActivity } from '@/services/activityService'
-import { listVendors } from '@/services/vendorService'
 
 export function ActivityPage() {
   const app = useApp()
@@ -23,12 +23,11 @@ export function ActivityPage() {
   const eventType = searchParams.get('type')
 
   const vendors = useServiceQuery(
-    (ctx) => listVendors(ctx, { lifecycle: 'all', pageSize: 200, sort: 'name' }),
+    () => api.listVendors({ lifecycle: 'all', pageSize: 200, sort: 'name' }),
     [],
   )
   const activity = useServiceQuery(
-    (ctx) =>
-      listActivity(ctx, {
+    () => api.listActivity({
         vendorId: vendorId ?? 'all',
         eventType: (eventType as ActivityEventType | null) ?? 'all',
         limit: 200,

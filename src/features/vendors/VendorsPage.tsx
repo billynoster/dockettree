@@ -1,3 +1,4 @@
+import { api } from '@/api/client'
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { Download, Plus, Search, Upload } from 'lucide-react'
@@ -27,14 +28,11 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { formatDate, formatDateTime } from '@/domain/dates'
-import { can } from '@/domain/permissions'
 import { READINESS_LABEL } from '@/domain/readiness'
 import type { ReadinessStatus } from '@/domain/types'
 import { downloadText } from '@/lib/download'
-import { exportVendorStatus } from '@/services/exportService'
-import { listVendors } from '@/services/vendorService'
 import { ImportVendorsDialog } from './ImportVendorsDialog'
-import { hasActiveFilters, parseVendorQuery, vendorQueryToParams } from './vendorQuery'
+import { hasActiveFilters, parseVendorQuery, vendorQueryToParams } from '@/domain/vendorQuery'
 
 const READINESS_FILTERS: ReadinessStatus[] = [
   'ready',
@@ -60,7 +58,7 @@ export function VendorsPage() {
     setSearchDraft(query.search ?? '')
   }, [query.search])
 
-  const list = useServiceQuery((ctx) => listVendors(ctx, query), [searchParams.toString()])
+  const list = useServiceQuery(() => api.listVendors(query), [searchParams.toString()])
 
   const update = (patch: Partial<typeof query>, resetPage = true) => {
     const next = { ...query, ...patch, page: resetPage ? 1 : (patch.page ?? query.page) }
@@ -75,8 +73,8 @@ export function VendorsPage() {
   }
 
   const rows = list.data?.rows ?? []
-  const canManage = can(app.role, 'vendor.manage')
-  const canExport = can(app.role, 'export.run')
+  const canManage = app.can('vendor.manage')
+  const canExport = app.can('export.run')
 
   return (
     <div className="space-y-4">
@@ -109,7 +107,7 @@ export function VendorsPage() {
                 size="sm"
                 disabled={exportAction.pending}
                 onClick={() =>
-                  void exportAction.run((ctx) => exportVendorStatus(ctx, query), {
+                  void exportAction.run(() => api.exportVendors(query), {
                     success: (result) =>
                       `Exported ${result.rowCount} filtered vendor row${result.rowCount === 1 ? '' : 's'} to ${result.filename}.`,
                     skipRefresh: true,

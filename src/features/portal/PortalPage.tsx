@@ -1,68 +1,89 @@
-import { Link, useParams } from 'react-router'
-import { ArrowLeft, CircleHelp } from 'lucide-react'
+import { useState } from 'react'
+import { CircleHelp, LogOut } from 'lucide-react'
+import { api } from '@/api/client'
 import { useApp } from '@/app/AppProvider'
 import { useServiceQuery } from '@/app/useServiceQuery'
-import { DemoToolbar } from '@/components/layout/DemoToolbar'
 import { RequirementCard } from '@/components/RequirementCard'
-import { AccessDeniedState, ErrorState, LoadingState } from '@/components/States'
+import { ErrorState, LoadingState } from '@/components/States'
 import { ReadinessChip } from '@/components/StatusChips'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
-import { formatDate, formatDateTime } from '@/domain/dates'
-import { getVendorPortal } from '@/services/portalService'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Label } from '@/components/ui/label'
+import { formatDate, formatDateTime, todayInTimeZone } from '@/domain/dates'
 
 /**
- * Vendor portal. In the prototype the vendor context is the URL id, which is a demo
- * convenience only; the pilot resolves the portal from an authenticated vendor membership.
+ * Vendor portal. The vendor context comes from the signed-in contact's verified membership, so
+ * there is no vendor id in the URL and no document is reachable without an authorized session.
  */
 export function PortalPage() {
   const app = useApp()
-  const { vendorId = '' } = useParams()
-  const portal = useServiceQuery((ctx) => getVendorPortal(ctx, vendorId), [vendorId])
+  const [switching, setSwitching] = useState(false)
+  const portal = useServiceQuery(() => api.portal(), [app.activeVendorId])
+  const today = todayInTimeZone(new Date(), app.organization.timezone)
 
   return (
     <div className="min-h-dvh bg-muted">
-      <DemoToolbar />
       <header className="border-b bg-background">
-        <div className="mx-auto flex max-w-4xl flex-col gap-1 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mx-auto flex max-w-4xl flex-col gap-2 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-base font-semibold">Vendor document portal</p>
             <p className="text-xs text-muted-foreground">
-              {app.organization.name} · demo portal for {portal.data?.vendor.company_name ?? 'a vendor'}
+              {app.organization.name} · signed in as {app.user.display_name}
             </p>
           </div>
-          {app.role !== 'vendor_contact' ? (
-            <Button asChild variant="outline" size="sm">
-              <Link to={`/vendors/${vendorId}`}>
-                <ArrowLeft aria-hidden="true" />
-                Back to the internal vendor page
-              </Link>
+          <div className="flex flex-wrap items-center gap-3">
+            {app.vendorContexts.length > 1 ? (
+              <div className="flex items-center gap-2">
+                <Label htmlFor="portal-vendor-context" className="text-xs">
+                  Vendor
+                </Label>
+                <Select
+                  value={app.activeVendorId ?? ''}
+                  disabled={switching}
+                  onValueChange={(value) => {
+                    setSwitching(true)
+                    void api
+                      .setVendorContext(value)
+                      .then(() => app.reloadSession())
+                      .finally(() => setSwitching(false))
+                  }}
+                >
+                  <SelectTrigger id="portal-vendor-context" className="w-56">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {app.vendorContexts.map((context) => (
+                      <SelectItem key={context.id} value={context.id}>
+                        {context.company_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : null}
+            <Button variant="outline" size="sm" onClick={() => void app.signOut()}>
+              <LogOut aria-hidden="true" />
+              Sign out
             </Button>
-          ) : null}
+          </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-4xl space-y-5 px-4 py-6">
         {portal.loading && !portal.data ? <LoadingState label="Loading your checklist" rows={4} /> : null}
         {portal.error ? (
-          portal.errorCode === 'forbidden' ? (
-            <AccessDeniedState
-              message={portal.error}
-              action={
-                app.activeVendorId ? (
-                  <Button asChild variant="outline" size="sm">
-                    <Link to={`/portal/${app.activeVendorId}`}>Open my own portal</Link>
-                  </Button>
-                ) : undefined
-              }
-            />
-          ) : (
-            <ErrorState
-              title={portal.errorCode === 'not_found' ? 'Portal not found' : 'Something went wrong'}
-              message={portal.error}
-              onRetry={portal.reload}
-            />
-          )
+          <ErrorState
+            title={portal.errorCode === 'not_found' ? 'Portal not found' : 'Something went wrong'}
+            message={portal.error}
+            onRetry={portal.reload}
+          />
         ) : null}
 
         {portal.data ? (
@@ -97,7 +118,7 @@ export function PortalPage() {
                 <CircleHelp aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
                 <span>
                   <strong>Ready</strong> means your required documents have been accepted and are
-                  current. Today is {formatDate(app.demoDate)} in {app.organization.timezone}.
+                  current. Today is {formatDate(today)} in {app.organization.timezone}.
                 </span>
               </p>
 
@@ -186,9 +207,9 @@ export function PortalPage() {
             </section>
 
             <p className="pb-6 text-xs text-muted-foreground">
-              Demonstration portal. Access is granted by this URL for the demo only. A pilot release
-              requires a verified invitation and an authenticated vendor membership before any
-              document is visible.
+              You are signed in with the account created from your invitation. Only documents for
+              {' '}
+              {portal.data.vendor.company_name} are visible to you.
             </p>
           </>
         ) : null}

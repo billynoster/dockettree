@@ -1,3 +1,4 @@
+import { api } from '@/api/client'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { useApp } from '@/app/AppProvider'
@@ -25,12 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { PROPERTIES } from '@/demo/fixtures'
 import { newId } from '@/domain/ids'
-import { can } from '@/domain/permissions'
-import { inviteVendor } from '@/services/invitationService'
-import { listTemplates } from '@/services/templateService'
-import { createVendor } from '@/services/vendorService'
 import { VendorFormFields, type VendorFormValues } from './VendorFormFields'
 
 const EMPTY: VendorFormValues = {
@@ -49,7 +45,10 @@ export function VendorNewPage() {
   const [requestKey, setRequestKey] = useState(() => newId())
   const [confirmDuplicate, setConfirmDuplicate] = useState(false)
   const action = useAction()
-  const templates = useServiceQuery((ctx) => listTemplates(ctx), [])
+  const templates = useServiceQuery(() => api.listTemplates(), [])
+  // Property tags are free text; suggest the ones already used in this organization.
+  const directory = useServiceQuery(() => api.listVendors({ lifecycle: 'all', pageSize: 1 }), [])
+  const knownProperties = directory.data?.properties ?? []
 
   const dirty = JSON.stringify(values) !== JSON.stringify(EMPTY) || templateId !== 'none'
 
@@ -62,10 +61,10 @@ export function VendorNewPage() {
     return () => window.removeEventListener('beforeunload', handler)
   }, [dirty])
 
-  if (!can(app.role, 'vendor.manage')) {
+  if (!app.can('vendor.manage')) {
     return (
       <AccessDeniedState
-        message="Only an admin or coordinator can add vendors. Switch the demo role to continue."
+        message="Only an admin or coordinator can add vendors."
         action={
           <Button asChild variant="outline" size="sm">
             <Link to="/vendors">Back to vendors</Link>
@@ -79,8 +78,7 @@ export function VendorNewPage() {
 
   const save = async (invite: boolean, confirmDuplicateOverride?: boolean) => {
     const created = await action.run(
-      (ctx) =>
-        createVendor(ctx, {
+      () => api.createVendor({
           ...values,
           template_id: templateId === 'none' ? null : templateId,
           requestKey,
@@ -88,20 +86,23 @@ export function VendorNewPage() {
         }),
       {
         success: invite
-          ? 'Vendor saved. Sending the simulated invitation…'
+          ? 'Vendor saved. Creating the invitation…'
           : 'Vendor saved. No invitation has been sent yet.',
       },
     )
     if (!created) return
     if (invite) {
       await action.run(
-        (ctx) =>
-          inviteVendor(ctx, {
-            vendorId: created.vendor_id,
-            expectedContactEmail: values.contact_email.trim(),
-            requestKey: `${requestKey}:invite`,
-          }),
-        { success: `Simulated invitation queued for ${values.contact_email.trim()}.` },
+        () =>
+          api.inviteVendor(
+            created.vendor_id,
+            values.contact_email.trim(),
+            `${requestKey}:invite`,
+          ),
+        {
+          success:
+            'Invitation created. Open the vendor to copy the link or check the notification log.',
+        },
       )
     }
     navigate(`/vendors/${created.vendor_id}`)
@@ -128,7 +129,7 @@ export function VendorNewPage() {
             values={values}
             onChange={setValues}
             fieldErrors={action.fieldErrors}
-            properties={PROPERTIES}
+            properties={knownProperties}
           />
         </section>
 
@@ -217,7 +218,7 @@ export function VendorNewPage() {
             disabled={action.pending}
             onClick={() => void save(true)}
           >
-            Save and send simulated invitation
+            Save and send invitation
           </Button>
           {dirty ? (
             <AlertDialog>

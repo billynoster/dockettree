@@ -19,8 +19,7 @@ import { cn } from '@/lib/utils'
 import { formatDate } from '@/domain/dates'
 import { CURRENT_DOCUMENT_LABEL, READINESS_LABEL, SUBMISSION_STATE_LABEL } from '@/domain/readiness'
 import type { CurrentDocumentStatus, ReadinessStatus, SubmissionState } from '@/domain/types'
-import type { InvitationStatus } from '@/services/queries'
-import { INVITATION_LABEL } from '@/services/queries'
+import { INVITATION_LABEL, type InvitationStatus } from '@/domain/invitations'
 
 const base =
   'inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium whitespace-nowrap'
@@ -134,11 +133,3 @@ export function InvitationChip({ status }: { status: InvitationStatus }) {
   )
 }
 
-export function SimulatedChip({ label = 'Simulated' }: { label?: string }) {
-  return (
-    <span className={cn(base, 'border-violet-200 bg-violet-50 text-violet-800')}>
-      <Send aria-hidden="true" className="size-3.5" />
-      {label}
-    </span>
-  )
-}

@@ -1,3 +1,5 @@
+import { api } from '@/api/client'
+import type { SaveTemplateInput, TemplateItemInput } from '@/services/templateService'
 import { useState } from 'react'
 import { Archive, ArchiveRestore, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useApp } from '@/app/AppProvider'
@@ -18,15 +20,6 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { can } from '@/domain/permissions'
-import {
-  createTemplate,
-  listTemplates,
-  setTemplateArchived,
-  updateTemplate,
-  type SaveTemplateInput,
-  type TemplateItemInput,
-} from '@/services/templateService'
 
 const BLANK_ITEM: TemplateItemInput = {
   title: '',
@@ -38,11 +31,11 @@ const BLANK_ITEM: TemplateItemInput = {
 
 export function RequirementsPage() {
   const app = useApp()
-  const templates = useServiceQuery((ctx) => listTemplates(ctx), [])
+  const templates = useServiceQuery(() => api.listTemplates(), [])
   const action = useAction()
   const [editing, setEditing] = useState<{ id: string | null; input: SaveTemplateInput } | null>(null)
 
-  const canManage = can(app.role, 'template.manage')
+  const canManage = app.can('template.manage')
 
   return (
     <div className="space-y-4">
@@ -137,8 +130,7 @@ export function RequirementsPage() {
                     disabled={action.pending}
                     onClick={() =>
                       void action.run(
-                        (ctx) =>
-                          setTemplateArchived(ctx, entry.template.id, !entry.template.archived_at),
+                        () => api.setTemplateArchived(entry.template.id, !entry.template.archived_at),
                         {
                           success: entry.template.archived_at
                             ? `Restored ${entry.template.name}.`
@@ -188,10 +180,10 @@ export function RequirementsPage() {
           onClose={() => setEditing(null)}
           onSave={async (input) => {
             const result = await action.run(
-              (ctx) =>
+              () =>
                 editing.id
-                  ? updateTemplate(ctx, editing.id, input)
-                  : createTemplate(ctx, input).then(() => undefined),
+                  ? api.updateTemplate(editing.id, input)
+                  : api.createTemplate(input).then(() => undefined),
               {
                 success: editing.id
                   ? 'Template updated. Existing vendor assignments keep their snapshot.'

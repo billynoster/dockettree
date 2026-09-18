@@ -1,3 +1,4 @@
+import { api } from '@/api/client'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { ArrowRight, Check, MessageSquareWarning } from 'lucide-react'
@@ -12,8 +13,6 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { formatDate, formatDateTime } from '@/domain/dates'
-import { can } from '@/domain/permissions'
-import { getReviewDetail, reviewSubmission } from '@/services/reviewService'
 
 export function ReviewDetailPage() {
   const app = useApp()
@@ -21,7 +20,7 @@ export function ReviewDetailPage() {
   const { submissionId = '' } = useParams()
   const [reason, setReason] = useState('')
   const action = useAction()
-  const detail = useServiceQuery((ctx) => getReviewDetail(ctx, submissionId), [submissionId])
+  const detail = useServiceQuery(() => api.reviewDetail(submissionId), [submissionId])
 
   if (detail.loading && !detail.data) return <LoadingState label="Loading the submission" rows={5} />
   if (detail.error) {
@@ -36,13 +35,12 @@ export function ReviewDetailPage() {
   if (!detail.data) return null
 
   const { submission, requirement, vendor, effective, history, reviewEvents } = detail.data
-  const canDecide = can(app.role, 'submission.review')
+  const canDecide = app.can('submission.review')
   const decided = submission.state !== 'pending_review'
 
   const decide = async (decision: 'accepted' | 'changes_requested') => {
     const result = await action.run(
-      (ctx) =>
-        reviewSubmission(ctx, {
+      () => api.reviewSubmission({
           submissionId: submission.id,
           expectedVersion: submission.record_version,
           decision,
@@ -52,7 +50,7 @@ export function ReviewDetailPage() {
         success: (value) =>
           decision === 'accepted'
             ? `Accepted ${requirement.title} v${submission.version_number}. ${vendor.company_name} is now ${value.readinessStatus.replace('_', ' ')}.`
-            : `Changes requested. ${vendor.company_name} has been notified in the simulated outbox.`,
+            : `Changes requested. A correction notice for ${vendor.company_name} is in the notification log.`,
       },
     )
     if (result) {

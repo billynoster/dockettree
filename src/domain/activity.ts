@@ -1,0 +1,31 @@
+/** Human labels for activity events (requirements FR-12). */
+import type { ActivityEventType } from './types'
+
+export const ACTIVITY_TYPE_LABEL: Record<ActivityEventType, string> = {
+  vendor_created: 'Vendor added',
+  vendor_updated: 'Vendor updated',
+  vendor_archived: 'Vendor archived',
+  vendor_restored: 'Vendor restored',
+  vendor_imported: 'Vendor imported',
+  checklist_assigned: 'Checklist assigned',
+  requirement_added: 'Requirement added',
+  requirement_retired: 'Requirement retired',
+  requirement_updated: 'Requirement updated',
+  invitation_sent: 'Invitation sent',
+  invitation_revoked: 'Invitation revoked',
+  document_submitted: 'Document submitted',
+  document_submitted_on_behalf: 'Document submitted on behalf',
+  document_withdrawn: 'Submission withdrawn',
+  submission_accepted: 'Submission accepted',
+  submission_changes_requested: 'Changes requested',
+  acceptance_revoked: 'Acceptance revoked',
+  reminder_sent: 'Reminder sent',
+  template_created: 'Template created',
+  template_updated: 'Template updated',
+  template_archived: 'Template archived',
+  settings_updated: 'Settings updated',
+  invitation_accepted: 'Invitation accepted',
+  member_added: 'Member added',
+  member_updated: 'Member updated',
+  member_removed: 'Member removed',
+}

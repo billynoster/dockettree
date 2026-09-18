@@ -1,5 +1,6 @@
 import { Link } from 'react-router'
 import { ArrowRight } from 'lucide-react'
+import { api } from '@/api/client'
 import { useApp } from '@/app/AppProvider'
 import { useServiceQuery } from '@/app/useServiceQuery'
 import { ErrorState, LoadingState } from '@/components/States'
@@ -8,12 +9,11 @@ import { ExpiringSoonChip, ReadinessChip } from '@/components/StatusChips'
 import { Button } from '@/components/ui/button'
 import { formatDate, formatDateTime } from '@/domain/dates'
 import { READINESS_EXPLANATION } from '@/domain/readiness'
-import { getOverview } from '@/services/overviewService'
-import { vendorsLink } from '@/features/vendors/vendorQuery'
+import { vendorsLink } from '@/domain/vendorQuery'
 
 export function OverviewPage() {
   const app = useApp()
-  const query = useServiceQuery((ctx) => getOverview(ctx), [])
+  const query = useServiceQuery(() => api.overview(), [])
 
   if (query.loading && !query.data) return <LoadingState label="Loading the overview" rows={4} />
   if (query.error) return <ErrorState message={query.error} onRetry={query.reload} />

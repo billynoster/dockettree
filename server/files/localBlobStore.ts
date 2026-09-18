@@ -10,7 +10,11 @@ import type { BlobStore } from '@/repositories/types'
 const SAFE_KEY = /^[A-Za-z0-9/_-]+$/
 
 export class LocalBlobStore implements BlobStore {
-  constructor(private readonly root: string) {}
+  private readonly root: string
+
+  constructor(root: string) {
+    this.root = root
+  }
 
   private resolve(storageKey: string): string {
     if (!SAFE_KEY.test(storageKey) || storageKey.includes('..')) {

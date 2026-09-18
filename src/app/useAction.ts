@@ -1,8 +1,8 @@
 import { useCallback, useState } from 'react'
 import { toast } from 'sonner'
+import { UnauthenticatedError } from '@/api/client'
 import { errorMessage, isAppError, type FieldErrors } from '@/domain/errors'
-import type { ServiceContext } from '@/services/context'
-import { useApp } from './AppProvider'
+import { useApp, useSession } from './AppProvider'
 
 export interface ActionState {
   pending: boolean
@@ -14,7 +14,7 @@ export interface ActionState {
 
 export interface ActionApi extends ActionState {
   run: <T>(
-    call: (ctx: ServiceContext) => Promise<T>,
+    call: () => Promise<T>,
     options?: {
       /** Announced in a toast when the call succeeds. */
       success?: string | ((result: T) => string)
@@ -29,6 +29,7 @@ export interface ActionApi extends ActionState {
 /** Wraps a mutation: pending state, inline field errors, toast announcement and refresh. */
 export function useAction(): ActionApi {
   const app = useApp()
+  const { reload: reloadSession } = useSession()
   const [state, setState] = useState<ActionState>({
     pending: false,
     error: null,
@@ -45,7 +46,7 @@ export function useAction(): ActionApi {
     async (call, options) => {
       setState({ pending: true, error: null, fieldErrors: {}, conflict: null })
       try {
-        const result = await call(app.ctx)
+        const result = await call()
         if (!options?.skipRefresh) app.refresh()
         setState({ pending: false, error: null, fieldErrors: {}, conflict: null })
         if (options?.success) {
@@ -64,10 +65,11 @@ export function useAction(): ActionApi {
           conflict: isAppError(caught) && caught.code === 'conflict' ? message : null,
         })
         toast.error(message)
+        if (caught instanceof UnauthenticatedError) void reloadSession()
         return undefined
       }
     },
-    [app],
+    [app, reloadSession],
   )
 
   return { ...state, run, reset }

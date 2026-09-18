@@ -1,3 +1,4 @@
+import { api } from '@/api/client'
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { useAction } from '@/app/useAction'
@@ -24,8 +25,6 @@ import {
 import { IMPORT_COLUMNS, MAX_IMPORT_ROWS, type ImportValidation } from '@/domain/csv'
 import { newId } from '@/domain/ids'
 import { downloadText } from '@/lib/download'
-import { importVendors, previewImport } from '@/services/importService'
-import { listTemplates } from '@/services/templateService'
 
 const SAMPLE_CSV = `${IMPORT_COLUMNS.join(',')}
 Alder Court Cleaning,Cleaning,Ann Lee,ann.lee@example.com,Riverfront Offices;Westfield Plaza
@@ -43,7 +42,7 @@ export function ImportVendorsDialog({ trigger }: { trigger: React.ReactNode }) {
   const [requestKey, setRequestKey] = useState(() => newId())
   const preview = useAction()
   const importAction = useAction()
-  const templates = useServiceQuery((ctx) => listTemplates(ctx), [])
+  const templates = useServiceQuery(() => api.listTemplates(), [])
 
   const reset = () => {
     setFilename(null)
@@ -61,7 +60,7 @@ export function ImportVendorsDialog({ trigger }: { trigger: React.ReactNode }) {
     setText(content)
     setConfirmDuplicates(false)
     setRequestKey(newId())
-    await preview.run((ctx) => previewImport(ctx, content), {
+    await preview.run(() => api.previewImport(content), {
       skipRefresh: true,
       onSuccess: (result) => setValidation(result),
     })
@@ -237,8 +236,7 @@ export function ImportVendorsDialog({ trigger }: { trigger: React.ReactNode }) {
             disabled={blocked || importAction.pending}
             onClick={() =>
               void importAction.run(
-                (ctx) =>
-                  importVendors(ctx, {
+                () => api.importVendors({
                     text,
                     templateId: templateId === 'none' ? null : templateId,
                     requestKey,

@@ -1,36 +1,35 @@
 /**
- * Application state: storage handle, organization record, injected clock and the simulated
- * session. Components never touch storage directly; they call services through `ctx`.
+ * Application state: the authenticated session as reported by the server.
+ *
+ * Capabilities come from the server and are used only to decide which controls to show. The
+ * server re-checks every read and mutation, so a hidden control is a convenience, never a
+ * security boundary.
  */
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { INITIAL_DEMO_INSTANT, type Clock } from '@/demo/clock'
-import { ADMIN_USER_ID, COORDINATOR_USER_ID, ORGANIZATION_ID, REVIEWER_USER_ID } from '@/demo/fixtures'
-import { instantForDemoDate, todayInTimeZone } from '@/domain/dates'
+import { api, UnauthenticatedError, type SessionInfo } from '@/api/client'
 import { errorMessage } from '@/domain/errors'
-import type { DemoState, IsoDate, Organization, Role, UUID } from '@/domain/types'
-import { IndexedDbDatabase } from '@/repositories/indexeddb/database'
-import type { Database } from '@/repositories/types'
-import { ensureSeeded, resetDemoData } from '@/services/resetService'
-import { getDemoState, getOrganization, saveDemoState } from '@/services/settingsService'
-import type { ServiceContext, Session } from '@/services/context'
+import type { Capability } from '@/domain/permissions'
+import type { Organization, Role, UUID } from '@/domain/types'
 
-interface AppState {
-  db: Database
+export interface AuthenticatedApp {
+  status: 'authenticated'
+  session: SessionInfo
+  user: NonNullable<SessionInfo['user']>
   organization: Organization
-  demoState: DemoState
-  ctx: ServiceContext
-  session: Session
   role: Role
-  demoDate: IsoDate
+  capabilities: Capability[]
+  vendorContexts: { id: UUID; company_name: string }[]
   activeVendorId: UUID | null
-  /** Bumped after every mutation so queries re-read from storage. */
+  delivery: { configured: boolean; reason: string | null }
+  /** Bumped after every mutation so queries re-read from the server. */
   version: number
   refresh: () => void
-  setRole: (role: Role, vendorId?: UUID | null) => Promise<void>
-  setActiveVendor: (vendorId: UUID | null) => Promise<void>
-  setDemoDate: (date: IsoDate) => Promise<void>
-  resetDemo: () => Promise<void>
+  reloadSession: () => Promise<void>
+  signOut: () => Promise<void>
+  can: (capability: Capability) => boolean
 }
+
+interface AppState extends AuthenticatedApp {}
 
 const AppContext = createContext<AppState | null>(null)
 
@@ -40,188 +39,87 @@ export function useApp(): AppState {
   return value
 }
 
-const INTERNAL_USERS: Record<Exclude<Role, 'vendor_contact'>, { id: UUID; label: string }> = {
-  admin: { id: ADMIN_USER_ID, label: 'Dana Whitfield' },
-  coordinator: { id: COORDINATOR_USER_ID, label: 'Marcus Reyes' },
-  reviewer: { id: REVIEWER_USER_ID, label: 'Priya Raman' },
-}
-
-async function buildSession(db: Database, role: Role, vendorId: UUID | null): Promise<Session> {
-  if (role !== 'vendor_contact') {
-    return { role, userId: INTERNAL_USERS[role].id, userLabel: INTERNAL_USERS[role].label, vendorId: null }
-  }
-  const resolved = await db.read(async (uow) => {
-    if (!vendorId) return null
-    const vendor = await uow.vendors.get(vendorId)
-    if (!vendor) return null
-    const memberships = await uow.vendorMemberships.where('by_vendor', vendorId)
-    return { vendor, userId: memberships[0]?.user_id ?? `contact-${vendorId}` }
-  })
-  return {
-    role,
-    userId: resolved?.userId ?? 'unknown-vendor-contact',
-    userLabel: resolved?.vendor.contact_name ?? 'Vendor contact',
-    vendorId,
-  }
-}
-
-interface BootState {
+interface SessionState {
   status: 'loading' | 'ready' | 'error'
+  info: SessionInfo | null
   error: string | null
-  db: Database | null
-  organization: Organization | null
-  demoState: DemoState | null
-  session: Session | null
+}
+
+const SessionContext = createContext<{
+  state: SessionState
+  reload: () => Promise<void>
+} | null>(null)
+
+export function useSession() {
+  const value = useContext(SessionContext)
+  if (!value) throw new Error('useSession must be used inside AppProvider')
+  return value
 }
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [boot, setBoot] = useState<BootState>({
-    status: 'loading',
-    error: null,
-    db: null,
-    organization: null,
-    demoState: null,
-    session: null,
-  })
+  const [state, setState] = useState<SessionState>({ status: 'loading', info: null, error: null })
   const [version, setVersion] = useState(0)
 
-  const load = useCallback(async () => {
-    setBoot((current) => ({ ...current, status: 'loading', error: null }))
+  const reload = useCallback(async () => {
     try {
-      const db = await IndexedDbDatabase.open()
-      await ensureSeeded(db)
-      const [organization, demoState] = await Promise.all([
-        getOrganization(db, ORGANIZATION_ID),
-        getDemoState(db),
-      ])
-      if (!organization || !demoState) throw new Error('Demo data could not be loaded.')
-      const session = await buildSession(db, demoState.role, demoState.active_vendor_id)
-      setBoot({ status: 'ready', error: null, db, organization, demoState, session })
+      const info = await api.session()
+      setState({ status: 'ready', info, error: null })
     } catch (error) {
-      setBoot({
-        status: 'error',
-        error: errorMessage(error),
-        db: null,
-        organization: null,
-        demoState: null,
-        session: null,
-      })
+      setState({ status: 'error', info: null, error: errorMessage(error) })
     }
   }, [])
 
   useEffect(() => {
-    void load()
-  }, [load])
+    void reload()
+  }, [reload])
 
   const refresh = useCallback(() => setVersion((current) => current + 1), [])
 
-  const reloadRecords = useCallback(
-    async (db: Database) => {
-      const [organization, demoState] = await Promise.all([
-        getOrganization(db, ORGANIZATION_ID),
-        getDemoState(db),
-      ])
-      if (!organization || !demoState) return
-      const session = await buildSession(db, demoState.role, demoState.active_vendor_id)
-      setBoot((current) => ({ ...current, organization, demoState, session }))
-      refresh()
-    },
-    [refresh],
-  )
-
   const value = useMemo<AppState | null>(() => {
-    if (boot.status !== 'ready' || !boot.db || !boot.organization || !boot.demoState || !boot.session) {
+    const info = state.info
+    if (state.status !== 'ready' || !info?.authenticated || !info.user || !info.organization) {
       return null
     }
-    const db = boot.db
-    const organization = boot.organization
-    const demoState = boot.demoState
-    const session = boot.session
-    const instant = demoState.clock_instant
-    const clock: Clock = {
-      now: () => new Date(instant),
-      nowIso: () => new Date(instant).toISOString(),
-    }
-    const ctx: ServiceContext = {
-      db,
-      clock,
-      session,
-      organizationId: ORGANIZATION_ID,
-      timezone: organization.timezone,
-    }
-
-    const persist = async (next: DemoState) => {
-      await saveDemoState(db, next)
-      await reloadRecords(db)
-    }
-
+    const capabilities = info.capabilities ?? []
     return {
-      db,
-      organization,
-      demoState,
-      ctx,
-      session,
-      role: demoState.role,
-      demoDate: todayInTimeZone(new Date(instant), organization.timezone),
-      activeVendorId: demoState.active_vendor_id,
+      status: 'authenticated',
+      session: info,
+      user: info.user,
+      organization: info.organization,
+      role: info.role ?? 'coordinator',
+      capabilities,
+      vendorContexts: info.vendorContexts ?? [],
+      activeVendorId: info.activeVendorId ?? null,
+      delivery: info.delivery,
       version,
-      refresh: () => {
-        void reloadRecords(db)
+      refresh,
+      reloadSession: reload,
+      signOut: async () => {
+        await api.logout()
+        await reload()
       },
-      setRole: async (role, vendorId) => {
-        await persist({
-          ...demoState,
-          role,
-          active_user_id: role === 'vendor_contact' ? demoState.active_user_id : INTERNAL_USERS[role].id,
-          active_vendor_id: vendorId !== undefined ? vendorId : demoState.active_vendor_id,
-        })
-      },
-      setActiveVendor: async (vendorId) => {
-        await persist({ ...demoState, active_vendor_id: vendorId })
-      },
-      setDemoDate: async (date) => {
-        await persist({ ...demoState, clock_instant: instantForDemoDate(date) })
-      },
-      resetDemo: async () => {
-        await resetDemoData(db)
-        await reloadRecords(db)
-      },
+      can: (capability) => capabilities.includes(capability),
     }
-  }, [boot, reloadRecords, version])
+  }, [state, version, refresh, reload])
 
-  if (boot.status === 'loading') {
-    return (
-      <div className="flex min-h-dvh items-center justify-center p-6">
-        <p className="text-sm text-muted-foreground" role="status">
-          Loading the Vendor Readiness demo…
-        </p>
-      </div>
-    )
-  }
-
-  if (boot.status === 'error' || !value) {
-    return (
-      <div className="flex min-h-dvh items-center justify-center p-6">
-        <div className="max-w-md space-y-3 rounded-lg border border-destructive/30 bg-background p-6">
-          <h1 className="text-lg font-semibold">Local demo storage is unavailable</h1>
-          <p className="text-sm text-muted-foreground">{boot.error}</p>
-          <p className="text-sm text-muted-foreground">
-            This prototype stores records and documents in your browser with IndexedDB. Private
-            browsing modes and blocked site data can prevent it from opening.
-          </p>
-          <button
-            type="button"
-            className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground"
-            onClick={() => void load()}
-          >
-            Try again
-          </button>
-        </div>
-      </div>
-    )
-  }
-
-  return <AppContext.Provider value={value}>{children}</AppContext.Provider>
+  return (
+    <SessionContext.Provider value={{ state, reload }}>
+      {value ? <AppContext.Provider value={value}>{children}</AppContext.Provider> : children}
+    </SessionContext.Provider>
+  )
 }
 
-export { INITIAL_DEMO_INSTANT }
+/** Signs the browser out when the server reports the session has ended. */
+export function useSessionExpiry(): (error: unknown) => boolean {
+  const { reload } = useSession()
+  return useCallback(
+    (error: unknown) => {
+      if (error instanceof UnauthenticatedError) {
+        void reload()
+        return true
+      }
+      return false
+    },
+    [reload],
+  )
+}

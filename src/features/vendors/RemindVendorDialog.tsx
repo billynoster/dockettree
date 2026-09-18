@@ -1,9 +1,9 @@
+import { api } from '@/api/client'
 import { useState } from 'react'
 import { BellRing } from 'lucide-react'
 import { useAction } from '@/app/useAction'
 import { useServiceQuery } from '@/app/useServiceQuery'
 import { ErrorState, LoadingState } from '@/components/States'
-import { SimulatedChip } from '@/components/StatusChips'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -16,7 +16,6 @@ import {
 } from '@/components/ui/dialog'
 import { newId } from '@/domain/ids'
 import type { UUID } from '@/domain/types'
-import { previewReminder, sendReminder } from '@/services/reminderService'
 
 /** Manual reminder: recipients and items are shown before anything is queued. */
 export function RemindVendorDialog({
@@ -30,7 +29,7 @@ export function RemindVendorDialog({
   const [requestKey, setRequestKey] = useState(() => newId())
   const action = useAction()
   const preview = useServiceQuery(
-    (ctx) => (open ? previewReminder(ctx, vendorId) : Promise.resolve(null)),
+    () => (open ? api.previewReminder(vendorId) : Promise.resolve(null)),
     [open, vendorId],
   )
 
@@ -51,7 +50,7 @@ export function RemindVendorDialog({
           <DialogTitle>Preview the reminder</DialogTitle>
           <DialogDescription>
             Items that are only awaiting review are excluded. One manual reminder per vendor per 24
-            hours, and it uses the same daily slot as the simulated scheduled job.
+            hours, and it uses the same daily slot as the scheduled job.
           </DialogDescription>
         </DialogHeader>
 
@@ -60,7 +59,6 @@ export function RemindVendorDialog({
 
         {preview.data ? (
           <div className="space-y-3 text-sm">
-            <SimulatedChip label="Simulated email" />
             <dl className="space-y-1">
               <div className="flex gap-2">
                 <dt className="w-24 shrink-0 text-muted-foreground">Recipient</dt>
@@ -120,14 +118,14 @@ export function RemindVendorDialog({
           <Button
             disabled={action.pending || !preview.data?.canSend}
             onClick={async () => {
-              const result = await action.run((ctx) => sendReminder(ctx, vendorId, requestKey), {
+              const result = await action.run(() => api.sendReminder(vendorId, requestKey), {
                 success: (value) => value.message,
               })
               if (result) setOpen(false)
             }}
           >
             <BellRing aria-hidden="true" />
-            Queue simulated reminder
+            Send reminder
           </Button>
         </DialogFooter>
       </DialogContent>

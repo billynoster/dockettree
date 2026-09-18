@@ -11,9 +11,9 @@ import type {
   TemplateItem,
   UUID,
   Vendor,
-  VendorLifecycle,
 } from '@/domain/types'
 import { fieldErrorsFrom, vendorInputSchema, type VendorInput } from '@/domain/validation'
+import type { VendorListQuery } from '@/domain/vendorQuery'
 import { withIdempotency, type UnitOfWork } from '@/repositories/types'
 import { recordActivity } from './activityService'
 import { nowIso, requireCapability, today, type ServiceContext } from './context'
@@ -27,19 +27,6 @@ import {
   loadVendorSnapshots,
   requireOwned,
 } from './queries'
-
-export interface VendorListQuery {
-  search?: string
-  readiness?: ReadinessStatus[]
-  category?: string | null
-  property?: string | null
-  expiringSoonOnly?: boolean
-  lifecycle?: VendorLifecycle | 'all'
-  sort?: 'name' | 'next_expiration' | 'updated'
-  direction?: 'asc' | 'desc'
-  page?: number
-  pageSize?: number
-}
 
 export interface VendorRow {
   vendor: Vendor
@@ -61,6 +48,8 @@ export interface VendorListResult {
 }
 
 export const DEFAULT_PAGE_SIZE = 25
+
+export type { VendorListQuery }
 
 export async function listVendors(
   ctx: ServiceContext,

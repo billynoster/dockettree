@@ -40,10 +40,13 @@ export class ReminderScheduler {
   private lastRunByOrganization = new Map<UUID, string>()
   private running = false
 
-  constructor(
-    private readonly db: Database,
-    private readonly clock: Clock,
-  ) {}
+  private readonly db: Database
+  private readonly clock: Clock
+
+  constructor(db: Database, clock: Clock) {
+    this.db = db
+    this.clock = clock
+  }
 
   /** Runs the job for every organization whose local clock has reached 09:00 today. */
   async runDue(): Promise<SchedulerRunSummary[]> {
