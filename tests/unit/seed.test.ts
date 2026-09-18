@@ -1,6 +1,6 @@
 /** Seed assertions for the exact distribution required by requirements section 10. */
 import { beforeAll, describe, expect, it } from 'vitest'
-import { SEED_EXPECTATIONS, vendorIdFor } from '@/demo/fixtures'
+import { SEED_EXPECTATIONS, vendorIdFor } from '../../server/seed/sampleData'
 import { listReviewQueue } from '@/services/reviewService'
 import { getOverview } from '@/services/overviewService'
 import { getVendorSnapshot, listVendors } from '@/services/vendorService'

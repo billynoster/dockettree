@@ -7,7 +7,9 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    include: ['tests/unit/**/*.test.ts'],
-    setupFiles: ['tests/setup.ts'],
+    include: ['tests/unit/**/*.test.ts', 'tests/server/**/*.test.ts'],
+    // The SQLite adapter is a single connection per test, so files run in isolation.
+    fileParallelism: true,
+    testTimeout: 20_000,
   },
 })

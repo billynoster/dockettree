@@ -267,13 +267,7 @@ export async function createVendor(
         record_version: 1,
       }
       await uow.vendors.put(vendor)
-      await uow.vendorMemberships.put({
-        id: newId(),
-        organization_id: ctx.organizationId,
-        vendor_id: vendor.id,
-        user_id: newId(),
-        verified_at: null,
-      })
+      // No vendor membership yet: one is created when a contact redeems an invitation.
       await recordActivity(uow, ctx, {
         vendor_id: vendor.id,
         event_type: 'vendor_created',

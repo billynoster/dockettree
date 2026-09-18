@@ -45,8 +45,11 @@ sessionRoutes.get(
     if (!principal || !organization) {
       return { ...base, authenticated: false as const }
     }
+    // The caller's own organization, which is not necessarily the first one on this server.
+    const ownOrganization = await deps.db.read((uow) => uow.organizations.get(principal.organizationId))
     return {
       ...base,
+      organizationName: ownOrganization?.name ?? base.organizationName,
       authenticated: true as const,
       user: {
         id: principal.user.id,
@@ -56,7 +59,7 @@ sessionRoutes.get(
       },
       role: principal.role,
       capabilities: capabilitiesFor(principal.role),
-      organization,
+      organization: ownOrganization ?? organization,
       vendorContexts: principal.vendorContexts,
       activeVendorId: principal.vendorId,
       managesPasswords: deps.identityProvider.managesPasswords,

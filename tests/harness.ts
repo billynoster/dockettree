@@ -1,24 +1,42 @@
-import { INITIAL_DEMO_INSTANT } from '@/demo/clock'
+/**
+ * Test harness: the real SQLite adapter and local file store on a temporary directory, the
+ * real service layer, and a clock pinned to the seed instant so date-boundary assertions are
+ * deterministic. Business rules are therefore exercised exactly as the server runs them.
+ */
+import { mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import path from 'node:path'
+import { fixedClock } from '@/domain/clock'
+import type { IsoDate, Role, UUID } from '@/domain/types'
+import type { Database } from '@/repositories/types'
+import type { ServiceContext } from '@/services/context'
+import { SqliteDatabase } from '../server/db/sqliteDatabase'
+import { LocalBlobStore } from '../server/files/localBlobStore'
+import { AppError } from '@/domain/errors'
+import { hashToken, newToken } from '../server/auth/tokens'
 import {
   ADMIN_USER_ID,
   COORDINATOR_USER_ID,
   DEFAULT_TIMEZONE,
   ORGANIZATION_ID,
   REVIEWER_USER_ID,
-  seedDatabase,
+  seedSampleData,
   vendorIdFor,
-} from '@/demo/fixtures'
-import { instantForDemoDate } from '@/domain/dates'
-import type { IsoDate, Role, UUID } from '@/domain/types'
-import { IndexedDbDatabase } from '@/repositories/indexeddb/database'
-import type { ServiceContext } from '@/services/context'
+} from '../server/seed/sampleData'
 
-let databaseCounter = 0
+/** The sample dataset is written relative to this day, and so are the test expectations. */
+export const TEST_TODAY: IsoDate = '2026-09-17'
+const TEST_INSTANT = `${TEST_TODAY}T12:00:00.000Z`
 
 export interface Harness {
   ctx: ServiceContext
-  setDemoDate(date: IsoDate): void
+  db: Database
+  dataDir: string
+  /** Moves the clock, exactly as the passage of real time would. */
+  setToday(date: IsoDate): void
   actAs(role: Role, vendorId?: UUID | null): void
+  /** An admin context on the same data, for reads the acting role may not perform. */
+  admin(): ServiceContext
   close(): void
 }
 
@@ -29,12 +47,32 @@ const ACTORS: Record<Role, { id: UUID; label: string }> = {
   vendor_contact: { id: 'vendor-contact-user', label: 'Vendor contact' },
 }
 
-export async function createHarness(role: Role = 'admin'): Promise<Harness> {
-  databaseCounter += 1
-  const db = await IndexedDbDatabase.open(`vendor-readiness-test-${databaseCounter}`)
-  await seedDatabase(db, new Date(INITIAL_DEMO_INSTANT))
+/** A fast stand-in for scrypt: seeded accounts never sign in during service tests. */
+const fastHash = async (password: string) => `scrypt$test$${password}`
 
-  let instant = INITIAL_DEMO_INSTANT
+export function createDatabase(): { db: SqliteDatabase; dataDir: string } {
+  const dataDir = mkdtempSync(path.join(tmpdir(), 'docksy-test-'))
+  const db = new SqliteDatabase({
+    file: path.join(dataDir, 'test.sqlite'),
+    blobs: new LocalBlobStore(path.join(dataDir, 'uploads')),
+  })
+  return { db, dataDir }
+}
+
+export async function seedForTests(db: Database, now = new Date(TEST_INSTANT)): Promise<void> {
+  await seedSampleData(db, now, {
+    hashPassword: fastHash,
+    hashToken,
+    staffPassword: 'test-staff-password',
+    vendorPassword: 'test-vendor-password',
+  })
+}
+
+export async function createHarness(role: Role = 'admin'): Promise<Harness> {
+  const { db, dataDir } = createDatabase()
+  await seedForTests(db)
+
+  let instant = TEST_INSTANT
   const ctx: ServiceContext = {
     db,
     clock: {
@@ -53,8 +91,23 @@ export async function createHarness(role: Role = 'admin'): Promise<Harness> {
 
   return {
     ctx,
-    setDemoDate(date) {
-      instant = instantForDemoDate(date)
+    db,
+    dataDir,
+    setToday(date) {
+      instant = `${date}T12:00:00.000Z`
+      ctx.clock = fixedClock(instant)
+    },
+    admin() {
+      return {
+        ...ctx,
+        clock: fixedClock(instant),
+        session: {
+          role: 'admin',
+          userId: ACTORS.admin.id,
+          userLabel: ACTORS.admin.label,
+          vendorId: null,
+        },
+      }
     },
     actAs(nextRole, vendorId = null) {
       ctx.session = {
@@ -66,11 +119,26 @@ export async function createHarness(role: Role = 'admin'): Promise<Harness> {
     },
     close() {
       db.close()
+      rmSync(dataDir, { recursive: true, force: true })
     },
   }
 }
 
-export { vendorIdFor }
+export { vendorIdFor, ORGANIZATION_ID, DEFAULT_TIMEZONE }
+
+/** Real token factory: the invitation token is random and only its hash is stored. */
+export const testTokens = { create: newToken, hash: hashToken }
+
+export const testHasher = {
+  hash: fastHash,
+  assertPolicy: (password: string, field = 'password') => {
+    if (password.length < 12) {
+      throw new AppError('validation', 'Choose a longer password.', {
+        fieldErrors: { [field]: 'Use at least 12 characters.' },
+      })
+    }
+  },
+}
 
 export function samplePdfFile(name = 'sample.pdf'): File {
   const pdf = '%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n'

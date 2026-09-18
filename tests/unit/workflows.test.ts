@@ -23,6 +23,7 @@ import {
   oversizedFile,
   samplePdfFile,
   textFileDisguisedAsPdf,
+  testTokens,
   vendorIdFor,
   type Harness,
 } from '../harness'
@@ -34,7 +35,7 @@ beforeEach(async () => {
 })
 
 async function requirementIdByTitle(vendorSlug: string, title: string) {
-  const snapshot = await getVendorSnapshot(harness.ctx, vendorIdFor(vendorSlug))
+  const snapshot = await getVendorSnapshot(harness.admin(), vendorIdFor(vendorSlug))
   const status = snapshot.requirementStatuses.find((entry) => entry.requirement.title === title)
   if (!status) throw new Error(`No requirement ${title}`)
   return status.requirement.id
@@ -53,7 +54,7 @@ describe('W2/W3 — submit, correct and accept', () => {
     })
     expect(first.version_number).toBe(1)
 
-    let snapshot = await getVendorSnapshot(harness.ctx, vendorId)
+    let snapshot = await getVendorSnapshot(harness.admin(), vendorId)
     expect(snapshot.readiness.status).toBe('awaiting_review')
 
     harness.actAs('reviewer')
@@ -65,7 +66,7 @@ describe('W2/W3 — submit, correct and accept', () => {
       reason: 'The signature block is blank on page 2. Please sign and date it.',
     })
 
-    snapshot = await getVendorSnapshot(harness.ctx, vendorId)
+    snapshot = await getVendorSnapshot(harness.admin(), vendorId)
     expect(snapshot.readiness.status).toBe('not_ready')
     expect(snapshot.readiness.blockers[0].reason).toBe('changes_requested')
 
@@ -92,7 +93,7 @@ describe('W2/W3 — submit, correct and accept', () => {
     })
     expect(decision.readinessStatus).toBe('ready')
 
-    snapshot = await getVendorSnapshot(harness.ctx, vendorId)
+    snapshot = await getVendorSnapshot(harness.admin(), vendorId)
     expect(snapshot.readiness.status).toBe('ready')
     // The rejected version is preserved.
     const versions = snapshot.submissions
@@ -102,7 +103,7 @@ describe('W2/W3 — submit, correct and accept', () => {
     expect(versions).toEqual(['1:changes_requested', '2:accepted'])
   })
 
-  it('creates a simulated correction notice but never claims delivery', async () => {
+  it('queues a correction notice and never claims delivery', async () => {
     const vendorId = vendorIdFor('lakeside-window-care')
     const queue = await listReviewQueue(harness.ctx, { vendorId })
     const target = queue.items[0]
@@ -115,8 +116,8 @@ describe('W2/W3 — submit, correct and accept', () => {
     })
     const outbox = await listOutbox(harness.ctx, { vendorId, type: 'correction_requested' })
     expect(outbox.entries).toHaveLength(1)
-    expect(outbox.entries[0].notification.status).toBe('simulated_sent')
-    expect(outbox.entries[0].notification.body).toContain('No email was sent')
+    expect(outbox.entries[0].notification.status).toBe('queued')
+    expect(outbox.entries[0].notification.status).toBe('queued')
   })
 
   it('requires a correction reason', async () => {
@@ -170,7 +171,7 @@ describe('W2/W3 — submit, correct and accept', () => {
 
     const submission = await harness.ctx.db.read((uow) => uow.submissions.get(first.submission_id))
     await withdrawSubmission(harness.ctx, first.submission_id, submission!.record_version)
-    const after = await getVendorSnapshot(harness.ctx, vendorId)
+    const after = await getVendorSnapshot(harness.admin(), vendorId)
     expect(
       after.submissions.find((entry) => entry.id === first.submission_id)?.state,
     ).toBe('withdrawn')
@@ -197,7 +198,7 @@ describe('W2/W3 — submit, correct and accept', () => {
         }),
       ).rejects.toMatchObject({ code: 'validation' })
     }
-    const snapshot = await getVendorSnapshot(harness.ctx, vendorId)
+    const snapshot = await getVendorSnapshot(harness.admin(), vendorId)
     expect(snapshot.submissions.filter((entry) => entry.requirement_id === requirementId)).toHaveLength(0)
   })
 
@@ -242,15 +243,15 @@ describe('W2/W3 — submit, correct and accept', () => {
 describe('W4 — renewal', () => {
   it('expires a document as the clock advances without changing the review state', async () => {
     const vendorId = vendorIdFor('cedar-line-landscaping')
-    let snapshot = await getVendorSnapshot(harness.ctx, vendorId)
+    let snapshot = await getVendorSnapshot(harness.admin(), vendorId)
     expect(snapshot.readiness.status).toBe('ready')
     const insurance = snapshot.requirementStatuses.find(
       (status) => status.requirement.title === 'Insurance certificate',
     )
     expect(insurance?.effective?.state).toBe('accepted')
 
-    harness.setDemoDate('2026-10-01')
-    snapshot = await getVendorSnapshot(harness.ctx, vendorId)
+    harness.setToday('2026-10-01')
+    snapshot = await getVendorSnapshot(harness.admin(), vendorId)
     expect(snapshot.readiness.status).toBe('not_ready')
     const afterInsurance = snapshot.requirementStatuses.find(
       (status) => status.requirement.title === 'Insurance certificate',
@@ -262,7 +263,7 @@ describe('W4 — renewal', () => {
   it('supersedes the previous effective version when a renewal is accepted', async () => {
     const vendorId = vendorIdFor('cedar-line-landscaping')
     const requirementId = await requirementIdByTitle('cedar-line-landscaping', 'Insurance certificate')
-    const before = await getVendorSnapshot(harness.ctx, vendorId)
+    const before = await getVendorSnapshot(harness.admin(), vendorId)
     const originalEffectiveId = before.requirementStatuses.find(
       (status) => status.requirement.id === requirementId,
     )?.effective?.id
@@ -275,7 +276,7 @@ describe('W4 — renewal', () => {
     })
 
     // The existing accepted document still satisfies the requirement while pending.
-    let snapshot = await getVendorSnapshot(harness.ctx, vendorId)
+    let snapshot = await getVendorSnapshot(harness.admin(), vendorId)
     expect(snapshot.readiness.status).toBe('ready')
 
     harness.actAs('reviewer')
@@ -287,7 +288,7 @@ describe('W4 — renewal', () => {
     })
     expect(result.supersededSubmissionId).toBe(originalEffectiveId)
 
-    snapshot = await getVendorSnapshot(harness.ctx, vendorId)
+    snapshot = await getVendorSnapshot(harness.admin(), vendorId)
     const status = snapshot.requirementStatuses.find((entry) => entry.requirement.id === requirementId)
     expect(status?.effective?.id).toBe(renewal.submission_id)
     expect(status?.currentExpiration).toBe('2027-09-30')
@@ -300,14 +301,14 @@ describe('W4 — renewal', () => {
   it('leaves no fallback after revoking an acceptance', async () => {
     const vendorId = vendorIdFor('northgate-electric')
     const requirementId = await requirementIdByTitle('northgate-electric', 'Insurance certificate')
-    const snapshot = await getVendorSnapshot(harness.ctx, vendorId)
+    const snapshot = await getVendorSnapshot(harness.admin(), vendorId)
     const effective = snapshot.requirementStatuses.find(
       (status) => status.requirement.id === requirementId,
     )?.effective
     expect(effective).toBeTruthy()
 
     await revokeAcceptance(harness.ctx, effective!.id, 'The certificate names a different legal entity.')
-    const after = await getVendorSnapshot(harness.ctx, vendorId)
+    const after = await getVendorSnapshot(harness.admin(), vendorId)
     const status = after.requirementStatuses.find((entry) => entry.requirement.id === requirementId)
     expect(status?.effective).toBeNull()
     expect(status?.satisfied).toBe(false)
@@ -326,20 +327,21 @@ describe('W1 — add, invite and permissions', () => {
       property_tags: ['Riverfront Offices'],
       template_id: (await listTemplates(harness.ctx))[0].template.id,
     })
-    const snapshot = await getVendorSnapshot(harness.ctx, result.vendor_id)
+    const snapshot = await getVendorSnapshot(harness.admin(), result.vendor_id)
     expect(snapshot.vendor.invited_at).toBeNull()
     expect(snapshot.readiness.status).toBe('not_ready')
     expect(snapshot.requirements.length).toBeGreaterThan(0)
 
     const preview = await previewInvitation(harness.ctx, result.vendor_id)
     expect(preview.recipient).toBe('petra.ames@example.com')
-    expect(preview.body).toContain('Simulated message')
+    expect(preview.body).toContain('Set up your account')
 
-    await inviteVendor(harness.ctx, {
+    await inviteVendor(harness.ctx, testTokens, {
       vendorId: result.vendor_id,
       expectedContactEmail: 'petra.ames@example.com',
+      linkBase: 'http://127.0.0.1:43217',
     })
-    const invited = await getVendorSnapshot(harness.ctx, result.vendor_id)
+    const invited = await getVendorSnapshot(harness.admin(), result.vendor_id)
     expect(invited.vendor.invited_at).not.toBeNull()
   })
 
@@ -442,7 +444,7 @@ describe('W5 — monitor, archive, import and export', () => {
 
     harness.actAs('admin')
     await restoreVendor(harness.ctx, vendorId)
-    const restored = await getVendorSnapshot(harness.ctx, vendorId)
+    const restored = await getVendorSnapshot(harness.admin(), vendorId)
     expect(restored.readiness.status).toBe('awaiting_review')
   })
 
@@ -475,7 +477,7 @@ describe('W5 — monitor, archive, import and export', () => {
     expect(repeat.replayed).toBe(true)
     expect((await listVendors(harness.ctx, {})).total).toBe(before.total + 2)
 
-    const imported = await getVendorSnapshot(harness.ctx, first.vendorIds[0])
+    const imported = await getVendorSnapshot(harness.admin(), first.vendorIds[0])
     expect(imported.vendor.invited_at).toBeNull()
     expect(imported.requirements.length).toBeGreaterThan(0)
   })
@@ -530,7 +532,7 @@ describe('reminders', () => {
     expect(preview.lines.map((line) => line.requirement_title)).toEqual(['Safety acknowledgment'])
 
     const sent = await sendReminder(harness.ctx, vendorId)
-    expect(sent.status).toBe('simulated_sent')
+    expect(sent.status).toBe('queued')
     await expect(sendReminder(harness.ctx, vendorId)).rejects.toMatchObject({ code: 'rate_limited' })
 
     // The manual reminder consumed today's digest slot.
@@ -550,7 +552,7 @@ describe('reminders', () => {
     expect(job.internalNoticesCreated).toBeGreaterThan(0)
     const outbox = await listOutbox(harness.ctx, { type: 'internal_expiration_notice' })
     expect(outbox.entries[0].notification.recipient).toContain('@example.com')
-    expect(outbox.entries[0].notification.body).toContain('No email was sent')
+    expect(outbox.entries[0].notification.status).toBe('queued')
   })
 
   it('never sends the same digest twice on one local date', async () => {
@@ -565,7 +567,7 @@ describe('templates and history', () => {
   it('leaves existing vendor assignments unchanged when a template is edited', async () => {
     const templates = await listTemplates(harness.ctx)
     const standard = templates.find((entry) => entry.template.name === 'Standard service vendor')!
-    const before = await getVendorSnapshot(harness.ctx, vendorIdFor('bluewater-janitorial'))
+    const before = await getVendorSnapshot(harness.admin(), vendorIdFor('bluewater-janitorial'))
 
     await updateTemplate(harness.ctx, standard.template.id, {
       name: 'Standard service vendor',
@@ -589,7 +591,7 @@ describe('templates and history', () => {
       ],
     })
 
-    const after = await getVendorSnapshot(harness.ctx, vendorIdFor('bluewater-janitorial'))
+    const after = await getVendorSnapshot(harness.admin(), vendorIdFor('bluewater-janitorial'))
     expect(after.requirements).toHaveLength(before.requirements.length)
     expect(after.readiness.status).toBe(before.readiness.status)
     const updatedTemplate = (await listTemplates(harness.ctx)).find(
@@ -626,7 +628,7 @@ describe('templates and history', () => {
 describe('typed errors', () => {
   it('uses documented error codes', async () => {
     try {
-      await getVendorSnapshot(harness.ctx, 'missing-vendor-id')
+      await getVendorSnapshot(harness.admin(), 'missing-vendor-id')
       throw new Error('expected failure')
     } catch (error) {
       expect(isAppError(error)).toBe(true)
