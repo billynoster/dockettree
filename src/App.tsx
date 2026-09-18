@@ -76,7 +76,9 @@ function AppRoutes() {
 
   const info = state.info
 
-  if (location.pathname === '/invitations/accept') {
+  // Invitation acceptance is reachable without a session; once it succeeds the normal routes
+  // take over and send the new contact to their portal.
+  if (location.pathname === '/invitations/accept' && !info.authenticated) {
     return (
       <Routes>
         <Route path="/invitations/accept" element={<AcceptInvitationPage />} />

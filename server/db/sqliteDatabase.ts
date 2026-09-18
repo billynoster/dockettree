@@ -6,6 +6,7 @@
  * event) is atomic and can never interleave with another writer. Document bytes live on
  * disk; blobs written inside a transaction that later rolls back are deleted again.
  */
+import { AsyncLocalStorage } from 'node:async_hooks'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import BetterSqlite3 from 'better-sqlite3'
@@ -96,10 +97,23 @@ class TrackedBlobStore implements BlobStore {
   }
 }
 
+/** Work in progress for the current async context: the open write transaction, if any. */
+interface WriteScope {
+  blobs: TrackedBlobStore
+}
+
 export class SqliteDatabase implements Database {
+  /** Write connection: owns every transaction, one at a time. */
   private readonly sql: BetterSqlite3.Database
+  /**
+   * Read connection. Reads therefore never block on a write and never observe another
+   * request's uncommitted rows, and a transaction left open by a write cannot pin an old
+   * snapshot for readers.
+   */
+  private readonly readSql: BetterSqlite3.Database
   private readonly blobs: BlobStore
   private queue: Promise<unknown> = Promise.resolve()
+  private readonly scope = new AsyncLocalStorage<WriteScope>()
 
   constructor(options: { file: string; blobs: BlobStore }) {
     this.blobs = options.blobs
@@ -109,9 +123,18 @@ export class SqliteDatabase implements Database {
       this.sql.pragma('foreign_keys = ON')
       this.sql.pragma('busy_timeout = 5000')
       this.sql.exec(readFileSync(SCHEMA_PATH, 'utf8'))
+      // Not opened read-only: a reader still has to be able to rebuild the WAL index.
+      this.readSql = new BetterSqlite3(options.file)
+      this.readSql.pragma('busy_timeout = 5000')
+      this.readSql.pragma('foreign_keys = ON')
     } catch (error) {
       wrapError(error)
     }
+  }
+
+  /** The write connection inside a transaction, the read connection otherwise. */
+  private connection(): BetterSqlite3.Database {
+    return this.scope.getStore() ? this.sql : this.readSql
   }
 
   private collection<T>(name: TableName): Collection<T> {
@@ -134,14 +157,17 @@ export class SqliteDatabase implements Database {
 
     return {
       get: async (id) =>
-        fromRow<T>(spec, this.sql.prepare(`SELECT * FROM ${spec.table} WHERE ${spec.key} = ?`).get(id) as Row),
+        fromRow<T>(
+          spec,
+          this.connection().prepare(`SELECT * FROM ${spec.table} WHERE ${spec.key} = ?`).get(id) as Row,
+        ),
       getAll: async () =>
-        (this.sql.prepare(`SELECT * FROM ${spec.table}`).all() as Row[]).map(
+        (this.connection().prepare(`SELECT * FROM ${spec.table}`).all() as Row[]).map(
           (row) => fromRow<T>(spec, row) as T,
         ),
       where: async (index, key) => {
         const column = resolveColumn(index)
-        const rows = this.sql
+        const rows = this.connection()
           .prepare(`SELECT * FROM ${spec.table} WHERE ${column} = ?`)
           .all(key) as Row[]
         return rows.map((row) => fromRow<T>(spec, row) as T)
@@ -157,7 +183,11 @@ export class SqliteDatabase implements Database {
         this.sql.prepare(`DELETE FROM ${spec.table} WHERE ${spec.key} = ?`).run(id)
       },
       count: async () =>
-        Number((this.sql.prepare(`SELECT COUNT(*) AS total FROM ${spec.table}`).get() as { total: number }).total),
+        Number(
+          (this.connection().prepare(`SELECT COUNT(*) AS total FROM ${spec.table}`).get() as {
+            total: number
+          }).total,
+        ),
     }
   }
 
@@ -184,7 +214,7 @@ export class SqliteDatabase implements Database {
     } as UnitOfWork
   }
 
-  /** Serializes every unit of work so a transaction is never interleaved. */
+  /** Serializes write transactions so two of them never interleave on the connection. */
   private enqueue<T>(task: () => Promise<T>): Promise<T> {
     const result = this.queue.then(task, task)
     this.queue = result.then(
@@ -194,22 +224,46 @@ export class SqliteDatabase implements Database {
     return result
   }
 
+  /**
+   * Reads never block and never see another request's uncommitted rows: they use the read
+   * connection unless they are inside this context's own write transaction.
+   */
   async read<T>(work: (uow: UnitOfWork) => Promise<T>): Promise<T> {
-    return await this.enqueue(async () => {
+    const scope = this.scope.getStore()
+    try {
+      return await work(this.unitOfWork(scope?.blobs ?? this.blobs))
+    } catch (error) {
+      return wrapError(error)
+    }
+  }
+
+  /**
+   * One write == one `BEGIN IMMEDIATE … COMMIT` on the write connection, serialized so two
+   * transactions never interleave. A write nested inside another joins the open transaction
+   * instead of waiting for it, so composed use cases still commit atomically.
+   */
+  async write<T>(work: (uow: UnitOfWork) => Promise<T>): Promise<T> {
+    const nested = this.scope.getStore()
+    if (nested) {
       try {
-        return await work(this.unitOfWork(this.blobs))
+        return await work(this.unitOfWork(nested.blobs))
       } catch (error) {
         return wrapError(error)
       }
-    })
-  }
+    }
 
-  async write<T>(work: (uow: UnitOfWork) => Promise<T>): Promise<T> {
     return await this.enqueue(async () => {
       const tracked = new TrackedBlobStore(this.blobs)
+      // Self-heal: a previous transaction that never finished must not poison this one.
+      if (this.sql.inTransaction) {
+        console.warn('[docksy] rolling back a transaction that was left open')
+        this.sql.exec('ROLLBACK')
+      }
       this.sql.exec('BEGIN IMMEDIATE')
       try {
-        const result = await work(this.unitOfWork(tracked))
+        const result = await this.scope.run({ blobs: tracked }, () =>
+          work(this.unitOfWork(tracked)),
+        )
         this.sql.exec('COMMIT')
         return result
       } catch (error) {
@@ -240,6 +294,7 @@ export class SqliteDatabase implements Database {
   }
 
   close(): void {
+    this.readSql.close()
     this.sql.close()
   }
 

@@ -1,15 +1,21 @@
-import { expect, test } from '@playwright/test'
-import { gotoApp, samplePdfBuffer, setRole } from './helpers'
+import { expect, test } from './fixtures'
+import {
+  COORDINATOR,
+  IRONWOOD_CONTACT,
+  VENDOR_PASSWORD,
+  samplePdfBuffer,
+  signIn,
+  signInAsStaff,
+} from './helpers'
 
 test.describe('W1 add vendor', () => {
   test('saves a vendor without inviting, then invites separately', async ({ page }) => {
-    await gotoApp(page, '/vendors/new')
+    await signInAsStaff(page, COORDINATOR, '/vendors/new')
     await page.locator('#vendor-company_name').fill('Beacon Hill Glass')
     await page.getByLabel('Service category').click()
     await page.getByRole('option', { name: 'Window care' }).click()
     await page.locator('#vendor-contact_name').fill('Petra Ames')
     await page.locator('#vendor-contact_email').fill('petra.ames@example.com')
-    await page.getByRole('checkbox', { name: 'Riverfront Offices' }).click()
 
     await page.getByLabel('Checklist template').click()
     await page.getByRole('option', { name: /Standard service vendor/ }).click()
@@ -21,20 +27,22 @@ test.describe('W1 add vendor', () => {
     await expect(page.getByText('Not invited')).toBeVisible()
     await expect(page.getByText('Not ready').first()).toBeVisible()
 
-    await page.getByRole('button', { name: 'Send invitation' }).click()
+    await page.getByRole('button', { name: 'Send invitation', exact: true }).click()
     const dialog = page.getByRole('dialog')
     await expect(dialog).toContainText('petra.ames@example.com')
-    await expect(dialog).toContainText('Simulated message')
-    await dialog.getByRole('button', { name: 'Send simulated invitation' }).click()
-    await expect(page.getByText(/Simulated invitation queued/)).toBeVisible()
-    await expect(page.getByText('Invitation sent')).toBeVisible()
+    await dialog.getByRole('button', { name: 'Send invitation' }).click()
+    await expect(dialog.getByText('Invitation created')).toBeVisible()
+    await expect(dialog.locator('p.font-mono')).toContainText('/invitations/accept?token=')
+    await dialog.getByRole('button', { name: 'Done' }).click()
+    await expect(page.getByText('Invitation sent').first()).toBeVisible()
 
-    await page.goto('/demo/outbox?type=invitation')
+    await page.goto('/notifications?type=invitation')
     await expect(page.getByText('Beacon Hill Glass').first()).toBeVisible()
+    await expect(page.getByText('Queued').first()).toBeVisible()
   })
 
   test('validates required fields inline and preserves entered values', async ({ page }) => {
-    await gotoApp(page, '/vendors/new')
+    await signInAsStaff(page, COORDINATOR, '/vendors/new')
     await page.locator('#vendor-company_name').fill('Half Filled Vendor')
     await page.locator('#vendor-contact_email').fill('not-an-email')
     await page.getByRole('button', { name: 'Save vendor', exact: true }).click()
@@ -46,7 +54,7 @@ test.describe('W1 add vendor', () => {
   })
 
   test('warns about a duplicate company name until it is confirmed', async ({ page }) => {
-    await gotoApp(page, '/vendors/new')
+    await signInAsStaff(page, COORDINATOR, '/vendors/new')
     await page.locator('#vendor-company_name').fill('ironwood pest control')
     await page.getByLabel('Service category').click()
     await page.getByRole('option', { name: 'Pest control' }).click()
@@ -60,7 +68,7 @@ test.describe('W1 add vendor', () => {
   })
 
   test('confirms before discarding unsaved changes', async ({ page }) => {
-    await gotoApp(page, '/vendors/new')
+    await signInAsStaff(page, COORDINATOR, '/vendors/new')
     await page.locator('#vendor-company_name').fill('Unsaved Vendor')
     await page.getByRole('button', { name: 'Cancel' }).click()
     await expect(page.getByRole('alertdialog')).toContainText('Discard this vendor?')
@@ -72,26 +80,17 @@ test.describe('W1 add vendor', () => {
   })
 
   test('completes a portal upload using the keyboard only', async ({ page }) => {
-    await gotoApp(page, '/vendors?q=Ironwood&lifecycle=all')
-    const href = await page
-      .getByRole('link', { name: 'Ironwood Pest Control' })
-      .first()
-      .getAttribute('href')
-    const vendorId = href!.split('/').pop()!
-    await setRole(page, 'Vendor contact', 'Ironwood Pest Control')
-    await page.goto(`/portal/${vendorId}`)
+    await signIn(page, IRONWOOD_CONTACT, VENDOR_PASSWORD)
 
     const card = page
       .locator('li')
-      .filter({ has: page.getByRole('heading', { name: 'Safety acknowledgment' }) })
+      .filter({ has: page.getByRole('heading', { name: 'Company brochure' }) })
       .first()
-    // Open the upload dialog with the keyboard.
-    await card.getByRole('button', { name: 'Submit document' }).focus()
+    await card.getByRole('button', { name: /Submit (document|replacement)/ }).focus()
     await page.keyboard.press('Enter')
     const dialog = page.getByRole('dialog')
     await expect(dialog).toBeVisible()
 
-    // The file input is reachable by keyboard; set the file, then submit with Enter.
     await dialog.locator('#submit-file').focus()
     await expect(dialog.locator('#submit-file')).toBeFocused()
     await dialog.locator('#submit-file').setInputFiles({

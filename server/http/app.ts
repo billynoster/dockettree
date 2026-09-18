@@ -12,6 +12,7 @@ import { loadPrincipal, type AppDependencies, type AppEnv } from './context'
 import { adminRoutes } from './routes/admin'
 import { documentRoutes } from './routes/documents'
 import { sessionRoutes } from './routes/session'
+import { testingRoutes } from './routes/testing'
 import { vendorRoutes } from './routes/vendors'
 
 const CLIENT_DIR = path.resolve(process.cwd(), 'dist')
@@ -34,6 +35,9 @@ export function createApp(deps: AppDependencies): Hono<AppEnv> {
   app.route('/api', vendorRoutes)
   app.route('/api', documentRoutes)
   app.route('/api', adminRoutes)
+  if (process.env.DOCKSY_ENABLE_TEST_RESET === 'true') {
+    app.route('/api', testingRoutes)
+  }
 
   app.get('/api/health', (c) => c.json({ status: 'ok' }))
 

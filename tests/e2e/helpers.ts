@@ -1,7 +1,7 @@
 import { expect, type Page } from '@playwright/test'
 
-/** Minimal valid PDF so uploads exercise real bytes and content sniffing. */
-export function samplePdfBuffer(label = 'E2E sample document'): Buffer {
+/** Minimal valid PDF so uploads exercise real bytes and server-side content sniffing. */
+export function samplePdfBuffer(label = 'End-to-end sample document'): Buffer {
   const content = `BT /F1 14 Tf 60 700 Td (${label}) Tj ET`
   const objects = [
     '<< /Type /Catalog /Pages 2 0 R >>',
@@ -25,29 +25,37 @@ export function samplePdfBuffer(label = 'E2E sample document'): Buffer {
 
 export const IRONWOOD = 'Ironwood Pest Control'
 export const CEDAR_LINE = 'Cedar Line Landscaping'
+export const STAFF_PASSWORD = 'cedar-grove-staff-2026'
+export const VENDOR_PASSWORD = 'cedar-grove-vendor-2026'
 
-export async function gotoApp(page: Page, path = '/overview') {
+export const ADMIN = 'dana.whitfield@example.com'
+export const COORDINATOR = 'marcus.reyes@example.com'
+export const REVIEWER = 'priya.raman@example.com'
+export const IRONWOOD_CONTACT = 'damon.frazier@example.com'
+export const CEDAR_LINE_CONTACT = 'rosa.delgado@example.com'
+
+/** Date offset from today, so expectations never depend on a fixed calendar day. */
+export function dateFromToday(days: number): string {
+  const value = new Date(Date.now() + days * 86_400_000)
+  return value.toISOString().slice(0, 10)
+}
+
+export async function signIn(page: Page, email: string, password: string) {
+  await page.goto('/login')
+  await page.getByLabel('Email').fill(email)
+  await page.getByLabel('Password').fill(password)
+  await page.getByRole('button', { name: 'Sign in' }).click()
+  await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible()
+}
+
+export async function signOut(page: Page) {
+  await page.getByRole('button', { name: 'Sign out' }).click()
+  await expect(page.getByRole('button', { name: 'Sign in' })).toBeVisible()
+}
+
+export async function signInAsStaff(page: Page, email = COORDINATOR, path = '/overview') {
+  await signIn(page, email, STAFF_PASSWORD)
   await page.goto(path)
-  await expect(page.getByRole('region', { name: 'Demo tools', exact: true })).toBeVisible()
-}
-
-export async function setRole(
-  page: Page,
-  role: 'Admin' | 'Coordinator' | 'Reviewer' | 'Vendor contact',
-  vendorName?: string,
-) {
-  await page.getByLabel('Demo role').click()
-  await page.getByRole('option', { name: role, exact: true }).click()
-  if (role === 'Vendor contact' && vendorName) {
-    await page.getByLabel('Vendor context').click()
-    await page.getByRole('option', { name: vendorName, exact: true }).click()
-  }
-  await expect(page.getByLabel('Demo role')).toContainText(role)
-}
-
-export async function setDemoDate(page: Page, date: string) {
-  await page.locator('#demo-date').fill(date)
-  await expect(page.locator('#demo-date')).toHaveValue(date)
 }
 
 /** Open a vendor detail page by company name via the directory search. */
@@ -57,23 +65,37 @@ export async function openVendor(page: Page, companyName: string) {
   await expect(page.getByRole('heading', { level: 1, name: companyName })).toBeVisible()
 }
 
+export async function vendorIdOf(page: Page, companyName: string) {
+  await page.goto(`/vendors?q=${encodeURIComponent(companyName)}&lifecycle=all`)
+  const href = await page.getByRole('link', { name: companyName }).first().getAttribute('href')
+  return href!.split('/').pop()!
+}
+
 export async function submitDocumentFromPortal(
   page: Page,
   requirementTitle: string,
   options: { expiration?: string; issue?: string; label?: string } = {},
 ) {
-  const card = page.locator('li').filter({ has: page.getByRole('heading', { name: requirementTitle }) }).first()
+  const card = page
+    .locator('li')
+    .filter({ has: page.getByRole('heading', { name: requirementTitle }) })
+    .first()
   await card.getByRole('button', { name: /Submit (document|replacement)/ }).click()
   const dialog = page.getByRole('dialog')
-  await dialog
-    .locator('#submit-file')
-    .setInputFiles({
-      name: 'sample-upload.pdf',
-      mimeType: 'application/pdf',
-      buffer: samplePdfBuffer(options.label ?? requirementTitle),
-    })
+  await dialog.locator('#submit-file').setInputFiles({
+    name: 'sample-upload.pdf',
+    mimeType: 'application/pdf',
+    buffer: samplePdfBuffer(options.label ?? requirementTitle),
+  })
   if (options.issue) await dialog.locator('#submit-issue').fill(options.issue)
   if (options.expiration) await dialog.locator('#submit-expiration').fill(options.expiration)
   await dialog.getByRole('button', { name: 'Submit for review' }).click()
   await expect(page.getByRole('dialog')).toBeHidden()
+}
+
+export async function openReview(page: Page, vendorName: string, requirementTitle?: string) {
+  await page.goto('/review')
+  let rows = page.locator('li').filter({ hasText: vendorName })
+  if (requirementTitle) rows = rows.filter({ hasText: requirementTitle })
+  await rows.getByRole('link', { name: /Open (review|submission)/ }).first().click()
 }

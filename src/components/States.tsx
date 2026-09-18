@@ -103,7 +103,7 @@ export function AccessDeniedState({
   return (
     <Panel
       icon={<Lock aria-hidden="true" className="size-6" />}
-      title="Not available for this demo role"
+      title="Not available for your role"
       description={message}
       action={action}
     />
