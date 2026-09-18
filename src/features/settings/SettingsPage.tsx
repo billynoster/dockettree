@@ -77,6 +77,7 @@ export function SettingsPage() {
           <AccessDeniedState message="Only an admin can change organization settings." />
         ) : null}
         <form
+          noValidate
           className="space-y-4"
           onSubmit={(event) => {
             event.preventDefault()

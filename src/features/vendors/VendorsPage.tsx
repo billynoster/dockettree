@@ -48,6 +48,12 @@ export function VendorsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const query = parseVendorQuery(searchParams)
   const [searchDraft, setSearchDraft] = useState(query.search ?? '')
+  // Filters stay expanded on desktop and collapse into a labeled panel on narrow screens.
+  const [filtersOpen, setFiltersOpen] = useState(
+    () =>
+      hasActiveFilters(query) ||
+      (typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches),
+  )
   const exportAction = useAction()
 
   useEffect(() => {
@@ -121,7 +127,8 @@ export function VendorsPage() {
 
       <details
         className="rounded-lg border bg-background"
-        open={hasActiveFilters(query) || undefined}
+        open={filtersOpen}
+        onToggle={(event) => setFiltersOpen((event.currentTarget as HTMLDetailsElement).open)}
       >
         <summary className="cursor-pointer px-4 py-3 text-sm font-medium">
           Search and filters

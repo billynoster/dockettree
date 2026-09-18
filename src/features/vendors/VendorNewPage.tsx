@@ -77,14 +77,14 @@ export function VendorNewPage() {
 
   const selectedTemplate = (templates.data ?? []).find((entry) => entry.template.id === templateId)
 
-  const save = async (invite: boolean) => {
+  const save = async (invite: boolean, confirmDuplicateOverride?: boolean) => {
     const created = await action.run(
       (ctx) =>
         createVendor(ctx, {
           ...values,
           template_id: templateId === 'none' ? null : templateId,
           requestKey,
-          confirmDuplicate,
+          confirmDuplicate: confirmDuplicateOverride ?? confirmDuplicate,
         }),
       {
         success: invite
@@ -115,6 +115,7 @@ export function VendorNewPage() {
       />
 
       <form
+        noValidate
         className="space-y-6"
         onSubmit={(event) => {
           event.preventDefault()
@@ -192,7 +193,7 @@ export function VendorNewPage() {
               size="sm"
               onClick={() => {
                 setConfirmDuplicate(true)
-                void save(false)
+                void save(false, true)
               }}
             >
               Save as a separate vendor record

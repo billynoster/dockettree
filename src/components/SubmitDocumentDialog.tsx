@@ -255,7 +255,7 @@ export function SubmitDocumentDialog({
             </div>
           ) : null}
 
-          {action.error ? (
+          {action.error && Object.keys(action.fieldErrors).length === 0 ? (
             <div className="space-y-2 rounded-md border border-destructive/40 bg-destructive/5 p-3">
               <p className="text-sm text-destructive">{action.error}</p>
               <Button type="button" variant="outline" size="sm" onClick={() => void submit()}>

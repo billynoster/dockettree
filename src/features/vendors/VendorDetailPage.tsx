@@ -442,6 +442,7 @@ function VendorDetailsForm({
 
   return (
     <form
+      noValidate
       className="space-y-4 rounded-lg border bg-background p-4"
       onSubmit={(event) => {
         event.preventDefault()
