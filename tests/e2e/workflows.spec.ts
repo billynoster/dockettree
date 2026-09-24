@@ -39,7 +39,7 @@ test.describe('overview and directory', () => {
     await expect(page).toHaveURL(/readiness=not_ready/)
     await expect(page.getByText('Showing 1–3 of 3 vendors')).toBeVisible()
 
-    await page.getByRole('button', { name: 'Clear all' }).click()
+    await page.getByRole('button', { name: 'Clear filters' }).click()
     await expect(page.getByText('Showing 1–10 of 10 vendors')).toBeVisible()
   })
 
@@ -51,7 +51,7 @@ test.describe('overview and directory', () => {
     await expect(page.getByRole('link', { name: IRONWOOD, exact: true }).first()).toBeVisible()
     await expect(page.getByText('Showing 1–1 of 1 vendor')).toBeVisible()
 
-    await page.getByRole('button', { name: 'Clear all' }).click()
+    await page.getByRole('button', { name: 'Clear filters' }).click()
     await page.getByRole('button', { name: 'Ready', exact: true }).click()
     await expect(page.getByText('Showing 1–4 of 4 vendors')).toBeVisible()
     await page.getByRole('button', { name: 'Expiring soon', exact: true }).click()

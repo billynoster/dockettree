@@ -92,11 +92,12 @@ First Playwright run only: `npx playwright install chromium --with-deps`.
 Last full run on this branch:
 
 ```
-npm run typecheck   →  clean (TypeScript 6, strict, client + server)
-npm run build       →  clean
-npm test            →  11 files, 108 tests passed
-npm run e2e         →  33 tests passed (chromium, 1440×900 and 390×780)
-npx oxlint          →  no errors (warnings only: shadcn/ui fast-refresh and set-state-in-effect)
+npm run typecheck              →  clean (TypeScript 6, strict, client + server)
+npm run build                  →  clean
+npm test                       →  11 files, 108 tests passed
+npm run e2e                    →  33 tests passed (chromium, 1440×900 and 390×780)
+npx oxlint                     →  no errors (warnings only: shadcn/ui fast-refresh and set-state-in-effect)
+node scripts/check-contrast.mjs → 39/39 token contrast pairs pass
 ```
 
 **Domain and service tests** (`tests/unit`) run the real service layer against the real SQLite
@@ -193,86 +194,102 @@ values; `tests/server/layering.test.ts` enforces that boundary.
 
 ### Interface design decisions
 
-The requirements fix the calculations, permissions and states; they do not fix how the product
-looks or behaves. These are the choices made on top of them. Nothing here changes a rule in
-sections 3–5.
+The requirements fix the calculations, permissions and states; they do not fix how the product looks
+or behaves. These are the choices made on top of them. Nothing here changes a rule in sections 3–5.
 
-**Colour and surfaces.** One saturated action colour (blue) on a cool near-white canvas with white
-panels. Every status colour is a token triple — surface, border, text — exposed as the
-`tone-ok | tone-info | tone-warn | tone-danger | tone-neutral | tone-brand` classes in
-`src/index.css`, so a status can only be recoloured in one place and each tone keeps a checked text
-contrast on its own surface. No component references a Tailwind palette colour directly. There are
-exactly two elevation steps, resting and floating, so "raised" still means something.
+The interface is a design system rather than a set of screen styles: tokens, then atoms, then
+molecules, then page templates. A feature file never declares a colour, a font size or a border — it
+composes primitives. The full inventory and the reasoning are written up for humans in
+`docs/design-system.md` and `docs/visual-style.md` in the project workspace.
 
-**Status is never colour alone.** Every chip is tone plus icon plus text (requirements section 6).
-The coloured edge on a requirement card and the dot on a readiness tile echo the chip beside them
-and carry nothing on their own, so the screens stay readable in greyscale.
+**Warm paper, not glass.** Three warm paper levels — a cream page, a warm-white panel, a recessed
+step — with a warm near-black ink ramp. Nothing is `#ffffff`, nothing is `#000000`, and no neutral
+carries more than 0.016 chroma, which is the point past which cream turns beige. All of it is
+declared once in OKLCH in `src/index.css`.
 
-**No dark mode in V1.** The tokens are in place for it, but shipping a second theme means checking
-every status tone twice; the effort went into the light theme instead. This is a deliberate gap, not
-an oversight.
+**The primary action is ink, not the accent.** Filled buttons are espresso, which leaves the four
+status hues as the only chromatic colour in the product, so a filled control can never be misread as
+a status. Clay (a burnt sienna) is the single rationed accent: links, focus rings, active navigation
+and the brand mark.
 
-**Numbers.** Tabular figures are on for the whole document, so counts and dates do not reflow as
-they change. "3 / 3" style meters draw discrete ticks rather than a continuous bar, because the
-number of outstanding items is small and countable.
+**Four status hues, deliberately spread.** Crimson (16°) for Not ready, amber (80°) for Expiring
+soon, olive-green (142°) for Ready and one cool hue (248°) for Awaiting review. Each is a token
+triple — tinted surface, border, text — plus a solid for dots and meters. A screen picks a tone, never
+a colour. Status is always tone plus icon plus text, so it survives greyscale.
 
-**Timestamps.** Operations staff scan for recency, so lists show a relative label ("4 days ago")
-with the exact organization-local value in the `title` and for screen readers. Activity is the
-exception: it is an audit log, so it shows the absolute timestamp. One shared minute tick updates
-every relative label, so a screen left open overnight does not still claim something just happened.
+**Contrast is measured, not asserted.** `node scripts/check-contrast.mjs` reads the OKLCH values out
+of `src/index.css`, converts them to sRGB and checks 39 pairs: body ink at AAA on all three papers,
+metadata and every tone's chip text at 4.5:1, and every solid fill, input boundary and focus ring at
+3:1. It exits non-zero on failure, so a token cannot be nudged for looks unnoticed.
 
-**Navigation.** Seven flat links read as an undifferentiated list, so the sidebar is grouped into
-Operations, Records and Configuration. Below 1024 px the sidebar becomes a drawer rather than a
-horizontally scrolling strip, which previously hid Notifications, Activity and Settings off the
-right edge of a phone. Sign out moved into an account menu with the signed-in identity and role;
-the drawer keeps a direct button because it has room for one.
+**Type is Fraunces plus Hanken Grotesk**, both variable and installed from npm — no font service, no
+API key, versions pinned in the lockfile. Fraunces was chosen for its `SOFT` axis, which rounds the
+terminals without changing the letterforms and is the literal softness lever the direction asks for;
+it runs at `SOFT 40` with `WONK 0`, because the wonk axis is what would make it boutique rather than
+enterprise. Hanken Grotesk holds up at the 13px this product lives at and ships equal-width figures
+by default, which a readiness table needs. IBM Plex Mono 400 appears only on machine values a person
+may need to copy. The eleven `.type-*` classes are the whole scale; the serif is used only at the
+start of a page or a moment — page titles, dialog titles, empty and error headings — and never for a
+number, because figures must align in a column.
 
-**Server-state signals.** When SMTP is not configured, the banner explaining it is dismissible for
-the session, but an "Email paused" chip stays in the header and links to the notification log. The
-condition can be acknowledged, never silently forgotten.
+**Soft, but not pill.** A panel is rounder than the controls inside it (18px panels, 10px buttons and
+fields); only chips and toggles are fully round. Depth is borders first and shadow second, in three
+steps, each a stack of very low-opacity warm shadows — no pure-black shadow anywhere.
 
-**Focus and keyboard.** Controls built on the shadcn primitives keep their own focus ring; every
-other interactive element (links, disclosure buttons, sortable table headers, filter chips) gets a
-two-pixel outline from one global rule, so nothing can be focused invisibly. After a route change
-focus moves to the content region so keyboard and screen-reader users start at the new page instead
-of at the top of the navigation they just used — it is a container, not a control, so it does not
-draw a box. `/` focuses the vendor search. The skip link is the first tab stop on every page.
+**No dark mode in V1.** The tokens support it, but a second theme means re-checking every status tone
+twice; the effort went into getting one theme right. Deliberate gap, not an oversight.
+
+**Navigation.** Seven flat links became three groups (Operations / Records / Configuration). Below
+1024px the sidebar becomes a drawer rather than a horizontally scrolling strip, which previously hid
+Notifications, Activity and Settings off the right edge of a phone. Sign out moved into an account
+menu showing identity and role.
+
+**Server-state signals.** When SMTP is not configured, the one-line banner explaining it is
+dismissible for the session, but an "Email paused" chip stays in the header and links to the
+notification log. The condition can be acknowledged, never silently forgotten.
+
+**Focus and keyboard.** Controls built on the shadcn primitives keep their own ring; everything else
+takes one global 2px clay outline, so nothing can be focused invisibly. After a route change focus
+moves to the content region — it is a container, not a control, so it does not draw a box. `/` focuses
+the vendor search, and the skip link is the first tab stop on every page. One residual risk is
+recorded: the clay focus ring and the crimson invalid border are both warm, 32° apart; the invalid
+state also renders a message and `aria-invalid`.
 
 **Rows are links.** Attention rows, review-queue rows and mobile vendor cards are a single link
 covering the visible row, so the pointer target matches what is drawn and the keyboard gets one stop
 per record. The desktop vendor table also responds to a click anywhere on the row, layered on top of
 a real link on the company name, which is what assistive technology follows.
 
-**Filtering.** Vendor search applies as you type (350 ms debounce) and still writes to the URL, so a
-shared link reproduces the exact result set. Readiness became `aria-pressed` toggle chips instead of
-a checkbox grid; category, property tag and lifecycle fold behind "More" because they are used far
-less often; everything currently applied is shown as a removable pill above the results.
+**Filtering.** Vendor search applies as you type (350ms debounce) and still writes to the URL, so a
+shared link reproduces the exact result set. Readiness is `aria-pressed` toggle chips whose pressed
+fill is ink rather than a status hue; category, property tag and lifecycle fold behind "More";
+everything applied is shown as a removable pill. All four filtering screens compose the same
+`Toolbar`, so "Clear filters" means the same thing everywhere.
 
-**Read-only roles** see the real fields, disabled, with one inline line explaining why, instead of a
-full-width lock panel above them. The lock panel is reserved for a surface with no alternative
-content, such as the review decision box.
+**Read-only roles** see the real fields, disabled, with one inline line explaining why. The
+full-width lock panel is reserved for a surface with no alternative content, such as the review
+decision box.
 
 **Review screen.** The document pane is pinned while the right rail scrolls, and the decision box is
-the first thing in that rail. A reviewer who has to scroll away from the file to reach the buttons
-is a reviewer who can accept the wrong document.
+the first thing in that rail. A reviewer who has to scroll away from the file to reach the buttons is
+a reviewer who can accept the wrong document.
 
 **Vendor portal** leads with one answer — what is still needed — before any per-document detail,
-because a vendor contact opens it perhaps twice a year and is not a trained operator.
+because a vendor contact opens it perhaps twice a year and is not a trained operator. Its progress bar
+is ink while work remains and green once everything is accepted; a clay bar read as a warning.
 
-**Loading and error states.** Skeletons mirror the layout that replaces them (a table skeleton for
-the vendor table, tiles for the overview) so nothing jumps when data lands, and they sweep rather
-than blink. The pre-session screen draws the chrome it is about to fill instead of a spinner.
+**Loading and error states.** Skeletons mirror the layout that replaces them and sweep rather than
+blink. The pre-session screen draws the chrome it is about to fill instead of a spinner.
 
-**Motion** is used only to explain a state change: content arriving, a row responding to the
-pointer, a disclosure opening. Nothing loops except the loading sweep, nothing moves more than a few
-pixels, and `prefers-reduced-motion` removes all of it.
+**Motion** is one easing curve and two durations (140ms for a control answering the pointer, 240ms for
+something arriving). Nothing loops except the loading sweep, and `prefers-reduced-motion` removes all
+of it.
 
-**Passwords** have a reveal toggle everywhere they are entered, because they are usually typed from
-a note an administrator handed over.
+**Passwords** have a reveal toggle everywhere they are entered, because they are usually typed from a
+note an administrator handed over.
 
-**Unauthenticated screens** (sign in, first-run setup, invitation acceptance) share a split layout:
-a brand column explaining what the product is beside the form on desktop, collapsing to one line of
-context on a phone, so someone who has never seen this product knows what they are signing in to.
+**Unauthenticated screens** share a split layout: a brand column explaining what the product is
+beside the form on desktop, collapsing to one line of context on a phone.
 
 `scripts/shots.mjs` captures the whole product at 1440 px and 390 px for design review:
 `node scripts/shots.mjs <output-dir> [filename-prefix]` against a running dev server.
