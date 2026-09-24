@@ -21,6 +21,12 @@ async function login(page, [email, password]) {
   await page.locator('#login-email').fill(email)
   await page.locator('#login-password').fill(password)
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  // The click only fires a fetch, so wait for the authenticated chrome rather than load state.
+  await page
+    .getByRole('button', { name: 'Account menu' })
+    .or(page.getByRole('button', { name: 'Sign out' }))
+    .first()
+    .waitFor()
   await page.waitForLoadState('networkidle')
 }
 
@@ -59,7 +65,9 @@ async function run() {
 
     // First vendor detail.
     await page.goto(`${BASE}/vendors`, { waitUntil: 'networkidle' })
-    const vendorLink = page.locator('a[href^="/vendors/"]:not([href="/vendors/new"])').first()
+    const vendorLink = page
+      .locator('a[href^="/vendors/"]:not([href="/vendors/new"]):visible')
+      .first()
     await vendorLink.click()
     await page.waitForLoadState('networkidle')
     await shoot(page, 'vendor-detail', vp.name)

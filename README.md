@@ -93,10 +93,10 @@ Last full run on this branch:
 
 ```
 npm run typecheck   →  clean (TypeScript 6, strict, client + server)
-npm run build       →  clean (678 kB JS / 202 kB gzip)
+npm run build       →  clean
 npm test            →  11 files, 108 tests passed
 npm run e2e         →  33 tests passed (chromium, 1440×900 and 390×780)
-npx oxlint          →  no errors (5 warnings: shadcn/ui fast-refresh and set-state-in-effect)
+npx oxlint          →  no errors (warnings only: shadcn/ui fast-refresh and set-state-in-effect)
 ```
 
 **Domain and service tests** (`tests/unit`) run the real service layer against the real SQLite
@@ -190,6 +190,92 @@ values; `tests/server/layering.test.ts` enforces that boundary.
 - **Sample data**: never loaded automatically; `npm run db:seed` is explicit.
 - **Deployment**: single process, single organization per install in practice (the data model and
   tests support several, and each administrator only ever sees their own).
+
+### Interface design decisions
+
+The requirements fix the calculations, permissions and states; they do not fix how the product
+looks or behaves. These are the choices made on top of them. Nothing here changes a rule in
+sections 3–5.
+
+**Colour and surfaces.** One saturated action colour (blue) on a cool near-white canvas with white
+panels. Every status colour is a token triple — surface, border, text — exposed as the
+`tone-ok | tone-info | tone-warn | tone-danger | tone-neutral | tone-brand` classes in
+`src/index.css`, so a status can only be recoloured in one place and each tone keeps a checked text
+contrast on its own surface. No component references a Tailwind palette colour directly. There are
+exactly two elevation steps, resting and floating, so "raised" still means something.
+
+**Status is never colour alone.** Every chip is tone plus icon plus text (requirements section 6).
+The coloured edge on a requirement card and the dot on a readiness tile echo the chip beside them
+and carry nothing on their own, so the screens stay readable in greyscale.
+
+**No dark mode in V1.** The tokens are in place for it, but shipping a second theme means checking
+every status tone twice; the effort went into the light theme instead. This is a deliberate gap, not
+an oversight.
+
+**Numbers.** Tabular figures are on for the whole document, so counts and dates do not reflow as
+they change. "3 / 3" style meters draw discrete ticks rather than a continuous bar, because the
+number of outstanding items is small and countable.
+
+**Timestamps.** Operations staff scan for recency, so lists show a relative label ("4 days ago")
+with the exact organization-local value in the `title` and for screen readers. Activity is the
+exception: it is an audit log, so it shows the absolute timestamp. One shared minute tick updates
+every relative label, so a screen left open overnight does not still claim something just happened.
+
+**Navigation.** Seven flat links read as an undifferentiated list, so the sidebar is grouped into
+Operations, Records and Configuration. Below 1024 px the sidebar becomes a drawer rather than a
+horizontally scrolling strip, which previously hid Notifications, Activity and Settings off the
+right edge of a phone. Sign out moved into an account menu with the signed-in identity and role;
+the drawer keeps a direct button because it has room for one.
+
+**Server-state signals.** When SMTP is not configured, the banner explaining it is dismissible for
+the session, but an "Email paused" chip stays in the header and links to the notification log. The
+condition can be acknowledged, never silently forgotten.
+
+**Focus and keyboard.** Controls built on the shadcn primitives keep their own focus ring; every
+other interactive element (links, disclosure buttons, sortable table headers, filter chips) gets a
+two-pixel outline from one global rule, so nothing can be focused invisibly. After a route change
+focus moves to the content region so keyboard and screen-reader users start at the new page instead
+of at the top of the navigation they just used — it is a container, not a control, so it does not
+draw a box. `/` focuses the vendor search. The skip link is the first tab stop on every page.
+
+**Rows are links.** Attention rows, review-queue rows and mobile vendor cards are a single link
+covering the visible row, so the pointer target matches what is drawn and the keyboard gets one stop
+per record. The desktop vendor table also responds to a click anywhere on the row, layered on top of
+a real link on the company name, which is what assistive technology follows.
+
+**Filtering.** Vendor search applies as you type (350 ms debounce) and still writes to the URL, so a
+shared link reproduces the exact result set. Readiness became `aria-pressed` toggle chips instead of
+a checkbox grid; category, property tag and lifecycle fold behind "More" because they are used far
+less often; everything currently applied is shown as a removable pill above the results.
+
+**Read-only roles** see the real fields, disabled, with one inline line explaining why, instead of a
+full-width lock panel above them. The lock panel is reserved for a surface with no alternative
+content, such as the review decision box.
+
+**Review screen.** The document pane is pinned while the right rail scrolls, and the decision box is
+the first thing in that rail. A reviewer who has to scroll away from the file to reach the buttons
+is a reviewer who can accept the wrong document.
+
+**Vendor portal** leads with one answer — what is still needed — before any per-document detail,
+because a vendor contact opens it perhaps twice a year and is not a trained operator.
+
+**Loading and error states.** Skeletons mirror the layout that replaces them (a table skeleton for
+the vendor table, tiles for the overview) so nothing jumps when data lands, and they sweep rather
+than blink. The pre-session screen draws the chrome it is about to fill instead of a spinner.
+
+**Motion** is used only to explain a state change: content arriving, a row responding to the
+pointer, a disclosure opening. Nothing loops except the loading sweep, nothing moves more than a few
+pixels, and `prefers-reduced-motion` removes all of it.
+
+**Passwords** have a reveal toggle everywhere they are entered, because they are usually typed from
+a note an administrator handed over.
+
+**Unauthenticated screens** (sign in, first-run setup, invitation acceptance) share a split layout:
+a brand column explaining what the product is beside the form on desktop, collapsing to one line of
+context on a phone, so someone who has never seen this product knows what they are signing in to.
+
+`scripts/shots.mjs` captures the whole product at 1440 px and 390 px for design review:
+`node scripts/shots.mjs <output-dir> [filename-prefix]` against a running dev server.
 
 ## Known limitations
 
