@@ -252,6 +252,12 @@ h3 {
     outline-offset: 2px;
 }
 
+/*
+ * The content region is focused programmatically after navigation so keyboard users land on the
+ * new page. It is a container, not a control, so it announces itself without drawing a box.
+ */
+main:focus,
+main:focus-visible,
 [data-slot='button']:focus-visible,
 [data-slot='input']:focus-visible,
 [data-slot='textarea']:focus-visible,

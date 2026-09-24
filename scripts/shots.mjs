@@ -18,9 +18,9 @@ const VIEWPORTS = [
 
 async function login(page, [email, password]) {
   await page.goto(`${BASE}/login`, { waitUntil: 'networkidle' })
-  await page.getByLabel('Email').fill(email)
-  await page.getByLabel('Password').fill(password)
-  await page.getByRole('button', { name: /sign in/i }).click()
+  await page.locator('#login-email').fill(email)
+  await page.locator('#login-password').fill(password)
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   await page.waitForLoadState('networkidle')
 }
 

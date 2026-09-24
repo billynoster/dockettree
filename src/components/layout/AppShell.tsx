@@ -12,6 +12,7 @@ import {
   Settings,
   ShieldCheck,
   Users,
+  X,
 } from 'lucide-react'
 import { api } from '@/api/client'
 import { useApp } from '@/app/AppProvider'
@@ -78,6 +79,8 @@ const PAGE_TITLES: { prefix: string; title: string }[] = [
   { prefix: '/activity', title: 'Activity' },
   { prefix: '/settings', title: 'Settings' },
 ]
+
+const NOTICE_KEY = 'vr.deliveryNoticeDismissed'
 
 function initials(name: string): string {
   return name
@@ -164,6 +167,11 @@ export function AppShell() {
   const queue = useServiceQuery(() => api.reviewQueue(), [])
   const [signingOut, setSigningOut] = useState(false)
   const [navOpen, setNavOpen] = useState(false)
+  // Dismissing the delivery notice only hides the banner: the "Email paused" chip in the header
+  // stays, so the condition is never silently forgotten, and a new session shows the banner again.
+  const [noticeDismissed, setNoticeDismissed] = useState(
+    () => typeof sessionStorage !== 'undefined' && sessionStorage.getItem(NOTICE_KEY) === '1',
+  )
   const mainRef = useRef<HTMLElement>(null)
   const firstRender = useRef(true)
   const pendingCount = queue.data?.total ?? null
@@ -189,6 +197,11 @@ export function AppShell() {
   const signOut = () => {
     setSigningOut(true)
     void app.signOut().finally(() => setSigningOut(false))
+  }
+
+  const dismissNotice = () => {
+    setNoticeDismissed(true)
+    sessionStorage.setItem(NOTICE_KEY, '1')
   }
 
   return (
@@ -312,8 +325,21 @@ export function AppShell() {
           tabIndex={-1}
           className="min-w-0 flex-1 space-y-5 outline-none lg:space-y-6"
         >
-          {app.delivery.configured ? null : (
-            <InlineNotice tone="warn" title="Email delivery is not configured on this server">
+          {app.delivery.configured || noticeDismissed ? null : (
+            <InlineNotice
+              tone="warn"
+              title="Email delivery is not configured on this server"
+              action={
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Dismiss for this session"
+                  onClick={dismissNotice}
+                >
+                  <X aria-hidden="true" />
+                </Button>
+              }
+            >
               Invitations and reminders are saved and shown as queued, and no message is sent.{' '}
               <Link to="/notifications">Open the notification log</Link> to read the exact content.
             </InlineNotice>
