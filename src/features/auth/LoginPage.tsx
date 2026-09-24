@@ -1,11 +1,14 @@
 import { useState } from 'react'
-import { LogIn } from 'lucide-react'
+import { LoaderCircle, LogIn } from 'lucide-react'
 import { api } from '@/api/client'
 import { useSession } from '@/app/AppProvider'
+import { PasswordField } from '@/components/PasswordField'
+import { InlineNotice } from '@/components/States'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { errorMessage, isAppError } from '@/domain/errors'
+import { AuthLayout } from './AuthLayout'
 
 /** Email and password sign-in for staff and vendor contacts. */
 export function LoginPage() {
@@ -32,12 +35,21 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-muted px-4 py-10">
-      <div className="w-full max-w-sm space-y-6 rounded-lg border bg-background p-6 shadow-sm">
-        <div className="space-y-1">
-          <h1 className="text-lg font-semibold tracking-tight">Vendor Readiness</h1>
+    <AuthLayout
+      organizationName={state.info?.organizationName}
+      points={[
+        'See which vendors are ready to work today, and exactly what is missing for the ones that are not.',
+        'Vendors upload insurance and agreements themselves; you review, accept or send them back.',
+        'Every decision, reminder and document version is recorded and cannot be edited after the fact.',
+      ]}
+    >
+      <div className="space-y-6">
+        <div className="space-y-1.5">
+          <h1 className="text-xl font-semibold tracking-tight">Sign in</h1>
           <p className="text-sm text-muted-foreground">
-            {state.info?.organizationName ?? 'Sign in to continue.'}
+            {state.info?.organizationName
+              ? `Continue to ${state.info.organizationName}.`
+              : 'Continue to your vendor documents.'}
           </p>
         </div>
 
@@ -49,52 +61,59 @@ export function LoginPage() {
             void submit()
           }}
         >
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <Label htmlFor="login-email">Email</Label>
             <Input
               id="login-email"
               type="email"
+              inputMode="email"
               autoComplete="username"
               autoFocus
+              className="h-9"
               value={email}
               aria-invalid={Boolean(fieldErrors.email)}
+              aria-describedby={fieldErrors.email ? 'login-email-error' : undefined}
               onChange={(event) => setEmail(event.target.value)}
             />
-            {fieldErrors.email ? <p className="text-sm text-destructive">{fieldErrors.email}</p> : null}
-          </div>
-
-          <div className="space-y-1">
-            <Label htmlFor="login-password">Password</Label>
-            <Input
-              id="login-password"
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              aria-invalid={Boolean(fieldErrors.password)}
-              onChange={(event) => setPassword(event.target.value)}
-            />
-            {fieldErrors.password ? (
-              <p className="text-sm text-destructive">{fieldErrors.password}</p>
+            {fieldErrors.email ? (
+              <p id="login-email-error" className="text-sm text-destructive">
+                {fieldErrors.email}
+              </p>
             ) : null}
           </div>
 
+          <PasswordField
+            id="login-password"
+            label="Password"
+            value={password}
+            onChange={setPassword}
+            error={fieldErrors.password}
+          />
+
           {error && Object.keys(fieldErrors).length === 0 ? (
-            <p role="alert" className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
+            <InlineNotice tone="danger" role="alert">
               {error}
-            </p>
+            </InlineNotice>
           ) : null}
 
-          <Button type="submit" className="w-full" disabled={pending}>
-            <LogIn aria-hidden="true" />
+          <Button type="submit" size="lg" className="w-full" disabled={pending}>
+            {pending ? (
+              <LoaderCircle aria-hidden="true" className="animate-spin" />
+            ) : (
+              <LogIn aria-hidden="true" />
+            )}
             {pending ? 'Signing in…' : 'Sign in'}
           </Button>
         </form>
 
-        <p className="text-xs text-muted-foreground">
-          {state.info?.signInHint ?? 'Use the email and password your administrator gave you.'} If you
-          were invited as a vendor contact, open the link in your invitation to set a password first.
-        </p>
+        <div className="space-y-2 border-t pt-4 text-xs leading-relaxed text-muted-foreground">
+          <p>{state.info?.signInHint ?? 'Use the email and password your administrator gave you.'}</p>
+          <p>
+            Invited as a vendor contact? Open the link in your invitation email to choose a password
+            first.
+          </p>
+        </div>
       </div>
-    </div>
+    </AuthLayout>
   )
 }

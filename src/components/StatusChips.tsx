@@ -1,6 +1,9 @@
 /**
  * Semantic status chips: colour plus an icon plus text, so status never depends on colour
  * alone (requirements section 6 accessibility acceptance criteria).
+ *
+ * Colour comes from the `tone-*` token classes rather than literal palette utilities, so the
+ * whole product recolours from one place and every tone keeps its checked text contrast.
  */
 import {
   Archive,
@@ -21,15 +24,54 @@ import { CURRENT_DOCUMENT_LABEL, READINESS_LABEL, SUBMISSION_STATE_LABEL } from 
 import type { CurrentDocumentStatus, ReadinessStatus, SubmissionState } from '@/domain/types'
 import { INVITATION_LABEL, type InvitationStatus } from '@/domain/invitations'
 
-const base =
-  'inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium whitespace-nowrap'
+export type ChipTone = 'ok' | 'info' | 'warn' | 'danger' | 'neutral' | 'brand'
 
-const READINESS_STYLE: Record<ReadinessStatus, string> = {
-  ready: 'border-emerald-200 bg-emerald-50 text-emerald-800',
-  awaiting_review: 'border-sky-200 bg-sky-50 text-sky-800',
-  not_ready: 'border-rose-200 bg-rose-50 text-rose-800',
-  unconfigured: 'border-slate-200 bg-slate-100 text-slate-700',
-  archived: 'border-slate-200 bg-slate-100 text-slate-600',
+const TONE_CLASS: Record<ChipTone, string> = {
+  ok: 'tone-ok',
+  info: 'tone-info',
+  warn: 'tone-warn',
+  danger: 'tone-danger',
+  neutral: 'tone-neutral',
+  brand: 'tone-brand',
+}
+
+/** Shared chip shell. `sm` is for dense table cells, `default` for headers and detail pages. */
+export function Chip({
+  tone,
+  icon: Icon,
+  children,
+  size = 'default',
+  className,
+}: {
+  tone: ChipTone
+  icon?: typeof CheckCircle2
+  children: React.ReactNode
+  size?: 'sm' | 'default'
+  className?: string
+}) {
+  return (
+    <span
+      className={cn(
+        'inline-flex w-fit items-center gap-1.5 rounded-full border font-medium whitespace-nowrap',
+        size === 'sm' ? 'px-1.5 py-px text-[0.6875rem]' : 'px-2 py-0.5 text-xs',
+        TONE_CLASS[tone],
+        className,
+      )}
+    >
+      {Icon ? (
+        <Icon aria-hidden="true" className={size === 'sm' ? 'size-3' : 'size-3.5'} />
+      ) : null}
+      {children}
+    </span>
+  )
+}
+
+const READINESS_TONE: Record<ReadinessStatus, ChipTone> = {
+  ready: 'ok',
+  awaiting_review: 'info',
+  not_ready: 'danger',
+  unconfigured: 'neutral',
+  archived: 'neutral',
 }
 
 const READINESS_ICON: Record<ReadinessStatus, typeof CheckCircle2> = {
@@ -42,35 +84,40 @@ const READINESS_ICON: Record<ReadinessStatus, typeof CheckCircle2> = {
 
 export function ReadinessChip({
   status,
+  size,
   className,
 }: {
   status: ReadinessStatus
+  size?: 'sm' | 'default'
   className?: string
 }) {
-  const Icon = READINESS_ICON[status]
   return (
-    <span className={cn(base, READINESS_STYLE[status], className)}>
-      <Icon aria-hidden="true" className="size-3.5" />
+    <Chip tone={READINESS_TONE[status]} icon={READINESS_ICON[status]} size={size} className={className}>
       {READINESS_LABEL[status]}
-    </span>
+    </Chip>
   )
 }
 
-export function ExpiringSoonChip({ nextExpiration }: { nextExpiration?: string | null }) {
+export function ExpiringSoonChip({
+  nextExpiration,
+  size,
+}: {
+  nextExpiration?: string | null
+  size?: 'sm' | 'default'
+}) {
   return (
-    <span className={cn(base, 'border-amber-300 bg-amber-50 text-amber-900')}>
-      <CalendarClock aria-hidden="true" className="size-3.5" />
+    <Chip tone="warn" icon={CalendarClock} size={size}>
       Expiring soon
       {nextExpiration ? <span className="font-normal">· {formatDate(nextExpiration)}</span> : null}
-    </span>
+    </Chip>
   )
 }
 
-const DOCUMENT_STYLE: Record<CurrentDocumentStatus, string> = {
-  accepted: 'border-emerald-200 bg-emerald-50 text-emerald-800',
-  expiring_soon: 'border-amber-300 bg-amber-50 text-amber-900',
-  expired: 'border-rose-200 bg-rose-50 text-rose-800',
-  none: 'border-slate-200 bg-slate-100 text-slate-700',
+const DOCUMENT_TONE: Record<CurrentDocumentStatus, ChipTone> = {
+  accepted: 'ok',
+  expiring_soon: 'warn',
+  expired: 'danger',
+  none: 'neutral',
 }
 
 const DOCUMENT_ICON: Record<CurrentDocumentStatus, typeof CheckCircle2> = {
@@ -81,38 +128,42 @@ const DOCUMENT_ICON: Record<CurrentDocumentStatus, typeof CheckCircle2> = {
 }
 
 export function CurrentDocumentChip({ status }: { status: CurrentDocumentStatus }) {
-  const Icon = DOCUMENT_ICON[status]
   return (
-    <span className={cn(base, DOCUMENT_STYLE[status])}>
-      <Icon aria-hidden="true" className="size-3.5" />
+    <Chip tone={DOCUMENT_TONE[status]} icon={DOCUMENT_ICON[status]}>
       {CURRENT_DOCUMENT_LABEL[status]}
-    </span>
+    </Chip>
   )
 }
 
-const SUBMISSION_STYLE: Record<SubmissionState, string> = {
-  pending_review: 'border-sky-200 bg-sky-50 text-sky-800',
-  accepted: 'border-emerald-200 bg-emerald-50 text-emerald-800',
-  changes_requested: 'border-rose-200 bg-rose-50 text-rose-800',
-  withdrawn: 'border-slate-200 bg-slate-100 text-slate-700',
-  superseded: 'border-slate-200 bg-slate-100 text-slate-700',
-  revoked: 'border-rose-200 bg-rose-50 text-rose-800',
+const SUBMISSION_TONE: Record<SubmissionState, ChipTone> = {
+  pending_review: 'info',
+  accepted: 'ok',
+  changes_requested: 'danger',
+  withdrawn: 'neutral',
+  superseded: 'neutral',
+  revoked: 'danger',
 }
 
-export function SubmissionStateChip({ state }: { state: SubmissionState }) {
+export function SubmissionStateChip({
+  state,
+  size,
+}: {
+  state: SubmissionState
+  size?: 'sm' | 'default'
+}) {
   return (
-    <span className={cn(base, SUBMISSION_STYLE[state])}>
+    <Chip tone={SUBMISSION_TONE[state]} size={size}>
       {SUBMISSION_STATE_LABEL[state]}
-    </span>
+    </Chip>
   )
 }
 
-const INVITATION_STYLE: Record<InvitationStatus, string> = {
-  not_invited: 'border-slate-200 bg-slate-100 text-slate-700',
-  invited: 'border-sky-200 bg-sky-50 text-sky-800',
-  accepted: 'border-emerald-200 bg-emerald-50 text-emerald-800',
-  expired: 'border-amber-300 bg-amber-50 text-amber-900',
-  revoked: 'border-slate-200 bg-slate-100 text-slate-700',
+const INVITATION_TONE: Record<InvitationStatus, ChipTone> = {
+  not_invited: 'neutral',
+  invited: 'info',
+  accepted: 'ok',
+  expired: 'warn',
+  revoked: 'neutral',
 }
 
 const INVITATION_ICON: Record<InvitationStatus, typeof MailCheck> = {
@@ -124,12 +175,9 @@ const INVITATION_ICON: Record<InvitationStatus, typeof MailCheck> = {
 }
 
 export function InvitationChip({ status }: { status: InvitationStatus }) {
-  const Icon = INVITATION_ICON[status]
   return (
-    <span className={cn(base, INVITATION_STYLE[status])}>
-      <Icon aria-hidden="true" className="size-3.5" />
+    <Chip tone={INVITATION_TONE[status]} icon={INVITATION_ICON[status]}>
       {INVITATION_LABEL[status]}
-    </span>
+    </Chip>
   )
 }
-

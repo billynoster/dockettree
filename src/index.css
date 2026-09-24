@@ -128,35 +128,269 @@
     @apply font-sans;
     }
 }
-/* Vendor Readiness: one restrained blue action color on light neutral surfaces. */
+/*
+ * Vendor Readiness design tokens.
+ *
+ * The product is an operations console people keep open all day, so the palette is a cool
+ * near-grey canvas, white surfaces, and exactly one saturated action colour. Every status colour
+ * is a token triple (surface / border / text) rather than a literal Tailwind palette class, so a
+ * status can only be recoloured in one place and the text contrast stays checked.
+ */
 :root {
-    --primary: oklch(0.52 0.17 256);
-    --primary-foreground: oklch(0.99 0 0);
-    --ring: oklch(0.52 0.17 256);
-    --radius: 0.5rem;
+    /* Neutrals carry a trace of blue so white surfaces read as paper, not as a hole. */
+    --background: oklch(0.982 0.0025 255);
+    --foreground: oklch(0.21 0.018 260);
+    --card: oklch(1 0 0);
+    --card-foreground: var(--foreground);
+    --popover: oklch(1 0 0);
+    --popover-foreground: var(--foreground);
+    --muted: oklch(0.968 0.004 255);
+    --muted-foreground: oklch(0.486 0.016 258);
+    --accent: oklch(0.958 0.008 258);
+    --accent-foreground: oklch(0.28 0.02 260);
+    --secondary: oklch(0.966 0.005 255);
+    --secondary-foreground: oklch(0.26 0.02 260);
+    --border: oklch(0.912 0.005 258);
+    --input: oklch(0.896 0.006 258);
+
+    --primary: oklch(0.505 0.152 256);
+    --primary-foreground: oklch(0.99 0.002 255);
+    --primary-hover: oklch(0.45 0.152 256);
+    --primary-subtle: oklch(0.962 0.024 256);
+    --primary-subtle-border: oklch(0.885 0.055 256);
+    --primary-subtle-foreground: oklch(0.42 0.135 256);
+
+    --destructive: oklch(0.545 0.195 22);
+    --ring: oklch(0.545 0.13 256);
+
+    --radius: 0.625rem;
+
+    /* Status tones. Text values are held above 4.5:1 on their own surface. */
+    --tone-ok-surface: oklch(0.963 0.032 158);
+    --tone-ok-border: oklch(0.875 0.062 158);
+    --tone-ok-foreground: oklch(0.415 0.088 158);
+    --tone-ok-solid: oklch(0.57 0.113 158);
+
+    --tone-info-surface: oklch(0.966 0.028 244);
+    --tone-info-border: oklch(0.876 0.058 244);
+    --tone-info-foreground: oklch(0.432 0.116 250);
+    --tone-info-solid: oklch(0.575 0.132 250);
+
+    --tone-warn-surface: oklch(0.972 0.042 88);
+    --tone-warn-border: oklch(0.858 0.095 82);
+    --tone-warn-foreground: oklch(0.44 0.105 70);
+    --tone-warn-solid: oklch(0.7 0.15 72);
+
+    --tone-danger-surface: oklch(0.965 0.025 20);
+    --tone-danger-border: oklch(0.878 0.055 20);
+    --tone-danger-foreground: oklch(0.45 0.153 20);
+    --tone-danger-solid: oklch(0.575 0.19 22);
+
+    --tone-neutral-surface: oklch(0.958 0.005 258);
+    --tone-neutral-border: oklch(0.898 0.006 258);
+    --tone-neutral-foreground: oklch(0.42 0.015 258);
+    --tone-neutral-solid: oklch(0.6 0.012 258);
+
+    /* Two elevation steps only: resting surfaces and things floating over them. */
+    --shadow-surface: 0 1px 2px -1px oklch(0.21 0.018 260 / 0.06), 0 1px 3px oklch(0.21 0.018 260 / 0.04);
+    --shadow-raised: 0 1px 2px -1px oklch(0.21 0.018 260 / 0.08), 0 4px 12px -4px oklch(0.21 0.018 260 / 0.1);
+    --shadow-overlay: 0 12px 32px -12px oklch(0.21 0.018 260 / 0.28), 0 2px 8px -2px oklch(0.21 0.018 260 / 0.12);
+
+    --header-height: 3.5rem;
+}
+
+@theme inline {
+    --color-primary-hover: var(--primary-hover);
+    --color-primary-subtle: var(--primary-subtle);
+    --color-primary-subtle-border: var(--primary-subtle-border);
+    --color-primary-subtle-foreground: var(--primary-subtle-foreground);
+    --color-tone-ok: var(--tone-ok-solid);
+    --color-tone-info: var(--tone-info-solid);
+    --color-tone-warn: var(--tone-warn-solid);
+    --color-tone-danger: var(--tone-danger-solid);
+    --color-tone-neutral: var(--tone-neutral-solid);
+    --shadow-surface: var(--shadow-surface);
+    --shadow-raised: var(--shadow-raised);
+    --shadow-overlay: var(--shadow-overlay);
 }
 
 html {
     font-size: 16px;
+    scroll-behavior: smooth;
 }
 
 body {
-    background-color: var(--muted);
+    background-color: var(--background);
     color: var(--foreground);
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* Lining, equal-width figures everywhere: counts and dates must not reflow as they change. */
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'cv11', 'ss01';
+    letter-spacing: -0.006em;
 }
 
-/* Visible focus for keyboard users on every interactive element. */
+h1,
+h2,
+h3 {
+    letter-spacing: -0.017em;
+    text-wrap: balance;
+}
+
+::selection {
+    background-color: var(--primary-subtle-border);
+    color: var(--foreground);
+}
+
+/*
+ * Keyboard focus. Controls built on the shadcn primitives draw their own ring; everything else
+ * (links, disclosure summaries, table headers, custom rows) gets the same two-pixel outline so no
+ * interactive element can be silently focused.
+ */
 :focus-visible {
-    outline: 2px solid var(--primary);
+    outline: 2px solid var(--ring);
     outline-offset: 2px;
 }
 
+[data-slot='button']:focus-visible,
+[data-slot='input']:focus-visible,
+[data-slot='textarea']:focus-visible,
+[data-slot='select-trigger']:focus-visible,
+[data-slot='checkbox']:focus-visible,
+[data-slot='tabs-trigger']:focus-visible,
+[data-slot='badge']:focus-visible {
+    outline: none;
+}
+
+@layer components {
+    /* Resting surface: one border, one hairline shadow. Used for every panel and card. */
+    .surface {
+        background-color: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-xl);
+        box-shadow: var(--shadow-surface);
+    }
+
+    .surface-raised {
+        background-color: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-xl);
+        box-shadow: var(--shadow-raised);
+    }
+
+    /* Status tones. A chip or panel picks a tone and inherits all three values at once. */
+    .tone-ok {
+        background-color: var(--tone-ok-surface);
+        border-color: var(--tone-ok-border);
+        color: var(--tone-ok-foreground);
+    }
+
+    .tone-info {
+        background-color: var(--tone-info-surface);
+        border-color: var(--tone-info-border);
+        color: var(--tone-info-foreground);
+    }
+
+    .tone-warn {
+        background-color: var(--tone-warn-surface);
+        border-color: var(--tone-warn-border);
+        color: var(--tone-warn-foreground);
+    }
+
+    .tone-danger {
+        background-color: var(--tone-danger-surface);
+        border-color: var(--tone-danger-border);
+        color: var(--tone-danger-foreground);
+    }
+
+    .tone-neutral {
+        background-color: var(--tone-neutral-surface);
+        border-color: var(--tone-neutral-border);
+        color: var(--tone-neutral-foreground);
+    }
+
+    .tone-brand {
+        background-color: var(--primary-subtle);
+        border-color: var(--primary-subtle-border);
+        color: var(--primary-subtle-foreground);
+    }
+}
+
+/*
+ * Motion is only used to explain a change of state: content arriving, a row responding to the
+ * pointer, a panel opening. Nothing loops and nothing moves more than a few pixels.
+ */
+@keyframes vr-rise {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@keyframes vr-sweep {
+    from {
+        background-position: 200% 0;
+    }
+    to {
+        background-position: -200% 0;
+    }
+}
+
+.animate-rise {
+    animation: vr-rise 220ms cubic-bezier(0.22, 0.9, 0.3, 1) both;
+}
+
+/* Skeletons sweep rather than blink, which reads as "still loading" instead of "broken". */
+[data-slot='skeleton'] {
+    animation: none;
+    background-image: linear-gradient(
+        90deg,
+        var(--muted) 0%,
+        var(--muted) 35%,
+        oklch(0.99 0.002 255) 50%,
+        var(--muted) 65%,
+        var(--muted) 100%
+    );
+    background-size: 200% 100%;
+    animation: vr-sweep 1.6s linear infinite;
+}
+
+/* Thin, low-contrast scrollbars so dense tables do not gain a heavy chrome edge. */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--input) transparent;
+}
+
+*::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+*::-webkit-scrollbar-thumb {
+    background-color: var(--input);
+    border: 3px solid transparent;
+    border-radius: 999px;
+    background-clip: content-box;
+}
+
 @media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
+
     *,
     *::before,
     *::after {
         animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
         transition-duration: 0.001ms !important;
+    }
+
+    [data-slot='skeleton'] {
+        background-image: none;
     }
 }

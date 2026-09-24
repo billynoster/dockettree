@@ -1,8 +1,10 @@
 import { BrowserRouter, Link, Navigate, Route, Routes, useLocation } from 'react-router'
+import { RotateCcw, ServerCrash } from 'lucide-react'
 import { AppProvider, useApp, useSession } from '@/app/AppProvider'
-import { AppShell } from '@/components/layout/AppShell'
+import { AppShell, BrandMark } from '@/components/layout/AppShell'
 import { EmptyState } from '@/components/States'
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Toaster } from '@/components/ui/sonner'
 import { ActivityPage } from '@/features/activity/ActivityPage'
 import { AcceptInvitationPage } from '@/features/auth/AcceptInvitationPage'
@@ -23,7 +25,7 @@ function NotFoundPage() {
   return (
     <EmptyState
       title="Page not found"
-      description="That route does not exist."
+      description="That address does not match any screen in Vendor Readiness. It may have been renamed, or the record may have been archived."
       action={
         <Button asChild size="sm">
           <Link to="/overview">Go to the overview</Link>
@@ -33,12 +35,37 @@ function NotFoundPage() {
   )
 }
 
+/**
+ * First paint, before the server has answered who is signed in. It draws the chrome it is about
+ * to fill rather than a spinner, so the page does not visibly rearrange once the session lands.
+ */
 function Loading() {
   return (
-    <div className="flex min-h-dvh items-center justify-center p-6">
-      <p className="text-sm text-muted-foreground" role="status">
+    <div className="min-h-dvh">
+      <p className="sr-only" role="status">
         Loading Vendor Readiness…
       </p>
+      <header className="flex h-14 items-center gap-2.5 border-b bg-card px-4">
+        <BrandMark />
+        <span className="text-sm font-semibold">Vendor Readiness</span>
+      </header>
+      <div className="mx-auto flex max-w-[1600px] gap-8 px-4 py-8" aria-hidden="true">
+        <div className="hidden w-52 shrink-0 space-y-2 lg:block">
+          {[64, 48, 72, 56, 44].map((width, index) => (
+            <Skeleton key={index} className="h-8" style={{ width: `${width}%` }} />
+          ))}
+        </div>
+        <div className="min-w-0 flex-1 space-y-4">
+          <Skeleton className="h-7 w-48" />
+          <Skeleton className="h-4 w-80" />
+          <div className="grid gap-3 pt-2 sm:grid-cols-2 xl:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <Skeleton key={index} className="h-24 rounded-xl" />
+            ))}
+          </div>
+          <Skeleton className="h-64 rounded-xl" />
+        </div>
+      </div>
     </div>
   )
 }
@@ -46,14 +73,20 @@ function Loading() {
 function ServerUnavailable({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
     <div className="flex min-h-dvh items-center justify-center p-6">
-      <div className="max-w-md space-y-3 rounded-lg border border-destructive/30 bg-background p-6">
-        <h1 className="text-lg font-semibold">The server is not reachable</h1>
-        <p className="text-sm text-muted-foreground">{message}</p>
-        <p className="text-sm text-muted-foreground">
-          Vendor Readiness keeps every record on its own server. Check that the API process is
-          running, then try again.
-        </p>
+      <div className="surface w-full max-w-md space-y-4 p-6" role="alert">
+        <span className="tone-danger flex size-10 items-center justify-center rounded-full border">
+          <ServerCrash aria-hidden="true" className="size-5" />
+        </span>
+        <div className="space-y-2">
+          <h1 className="text-lg font-semibold">The server is not reachable</h1>
+          <p className="text-sm text-muted-foreground">{message}</p>
+          <p className="text-sm text-muted-foreground">
+            Vendor Readiness keeps every record on its own server, so nothing is shown until that
+            server answers. Check that the API process is running, then try again.
+          </p>
+        </div>
         <Button size="sm" onClick={onRetry}>
+          <RotateCcw aria-hidden="true" />
           Try again
         </Button>
       </div>
@@ -148,12 +181,12 @@ export default function App() {
       <AppProvider>
         <a
           href="#main"
-          className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded focus:bg-background focus:px-3 focus:py-2 focus:text-sm focus:shadow"
+          className="sr-only focus:not-sr-only focus:surface focus:fixed focus:top-2 focus:left-2 focus:z-100 focus:px-3 focus:py-2 focus:text-sm focus:font-medium"
         >
           Skip to main content
         </a>
         <AppRoutes />
-        <Toaster position="bottom-right" richColors closeButton />
+        <Toaster position="bottom-right" richColors closeButton expand={false} gap={10} />
       </AppProvider>
     </BrowserRouter>
   )
