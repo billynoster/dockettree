@@ -88,12 +88,12 @@ export function DocumentPreview({
   if (!state.url) return null
 
   return (
-    <div className="space-y-2">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="flex items-center gap-2 text-sm">
-          <FileText aria-hidden="true" className="size-4 text-muted-foreground" />
+    <div className="space-y-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/40 px-3 py-2">
+        <p className="flex min-w-0 items-center gap-2 text-sm">
+          <FileText aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
           <span className="font-medium break-all">{state.filename}</span>
-          <span className="text-muted-foreground">
+          <span className="shrink-0 text-xs text-muted-foreground">
             {state.mime} · {formatBytes(state.size)}
           </span>
         </p>
@@ -106,13 +106,13 @@ export function DocumentPreview({
         <iframe
           src={state.url}
           title={`Document preview: ${state.filename}`}
-          className={`w-full rounded-md border bg-white ${height}`}
+          className={`w-full rounded-lg border bg-white ${height}`}
         />
       ) : (
         <img
           src={state.url}
           alt={`Document preview: ${state.filename}`}
-          className={`w-full rounded-md border bg-white object-contain ${height}`}
+          className={`w-full rounded-lg border bg-white object-contain ${height}`}
         />
       )}
     </div>

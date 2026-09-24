@@ -3,6 +3,8 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { useAction } from '@/app/useAction'
 import { useServiceQuery } from '@/app/useServiceQuery'
+import { InlineNotice } from '@/components/States'
+import { FILE_INPUT_CLASS } from '@/components/SubmitDocumentDialog'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -92,13 +94,13 @@ export function ImportVendorsDialog({ trigger }: { trigger: React.ReactNode }) {
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <Label htmlFor="import-file">CSV file</Label>
             <input
               id="import-file"
               type="file"
               accept=".csv,text/csv"
-              className="block w-full rounded-md border border-input bg-background p-2 text-sm file:mr-3 file:rounded file:border-0 file:bg-muted file:px-2 file:py-1 file:text-sm"
+              className={FILE_INPUT_CLASS}
               onChange={(event) => {
                 const file = event.target.files?.[0]
                 if (file) void handleFile(file)
@@ -118,10 +120,10 @@ export function ImportVendorsDialog({ trigger }: { trigger: React.ReactNode }) {
             </Button>
           </div>
 
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <Label htmlFor="import-template">Checklist for every imported vendor</Label>
             <Select value={templateId} onValueChange={setTemplateId}>
-              <SelectTrigger id="import-template">
+              <SelectTrigger id="import-template" className="h-9 w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -138,9 +140,9 @@ export function ImportVendorsDialog({ trigger }: { trigger: React.ReactNode }) {
           </div>
 
           {validation?.fileError ? (
-            <p className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
+            <InlineNotice tone="danger" role="alert">
               {validation.fileError}
-            </p>
+            </InlineNotice>
           ) : null}
 
           {validation && !validation.fileError ? (
@@ -153,8 +155,8 @@ export function ImportVendorsDialog({ trigger }: { trigger: React.ReactNode }) {
               </p>
 
               {validation.issues.length > 0 ? (
-                <div className="max-h-40 overflow-y-auto rounded-md border border-destructive/40 bg-destructive/5 p-3">
-                  <ul className="space-y-1 text-sm text-destructive">
+                <div className="tone-danger max-h-40 overflow-y-auto rounded-lg border p-3">
+                  <ul className="space-y-1 text-sm">
                     {validation.issues.map((issue, index) => (
                       <li key={`${issue.row}-${issue.column}-${index}`}>
                         Row {issue.row}, {issue.column}: {issue.message}
@@ -164,7 +166,7 @@ export function ImportVendorsDialog({ trigger }: { trigger: React.ReactNode }) {
                 </div>
               ) : null}
 
-              <div className="overflow-x-auto rounded-md border">
+              <div className="overflow-x-auto rounded-lg border">
                 <table className="w-full text-left text-sm">
                   <caption className="px-3 py-2 text-xs text-muted-foreground">
                     First {Math.min(10, validation.candidates.length)} rows
@@ -185,7 +187,7 @@ export function ImportVendorsDialog({ trigger }: { trigger: React.ReactNode }) {
                         <td className="px-3 py-2">
                           {candidate.company_name || <span className="text-destructive">missing</span>}
                           {candidate.duplicateOf ? (
-                            <span className="block text-xs text-amber-700">
+                            <span className="block text-xs text-tone-warn">
                               Duplicates {candidate.duplicateOf}
                             </span>
                           ) : null}
@@ -205,13 +207,13 @@ export function ImportVendorsDialog({ trigger }: { trigger: React.ReactNode }) {
               </div>
 
               {validation.duplicateWarnings.length > 0 ? (
-                <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 p-3">
+                <div className="tone-warn flex items-start gap-2 rounded-lg border p-3">
                   <Checkbox
                     id="confirm-duplicates"
                     checked={confirmDuplicates}
                     onCheckedChange={(checked) => setConfirmDuplicates(checked === true)}
                   />
-                  <Label htmlFor="confirm-duplicates" className="font-normal text-amber-900">
+                  <Label htmlFor="confirm-duplicates" className="font-normal">
                     {validation.duplicateWarnings.length} row
                     {validation.duplicateWarnings.length === 1 ? '' : 's'} duplicate an existing
                     company name. I confirm these are separate vendor records.
@@ -222,9 +224,9 @@ export function ImportVendorsDialog({ trigger }: { trigger: React.ReactNode }) {
           ) : null}
 
           {importAction.error ? (
-            <p className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
+            <InlineNotice tone="danger" role="alert">
               {importAction.error}
-            </p>
+            </InlineNotice>
           ) : null}
         </div>
 

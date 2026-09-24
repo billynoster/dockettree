@@ -5,7 +5,9 @@ import { useApp } from '@/app/AppProvider'
 import { useAction } from '@/app/useAction'
 import { useServiceQuery } from '@/app/useServiceQuery'
 import { PageHeader } from '@/components/PageHeader'
-import { AccessDeniedState } from '@/components/States'
+import { Section, SectionBody, SectionHeader } from '@/components/Section'
+import { AccessDeniedState, InlineNotice } from '@/components/States'
+import { Chip } from '@/components/StatusChips'
 import { Button } from '@/components/ui/button'
 import {
   AlertDialog,
@@ -109,36 +111,44 @@ export function VendorNewPage() {
   }
 
   return (
-    <div className="max-w-3xl space-y-5">
+    <div className="animate-rise max-w-3xl space-y-5">
       <PageHeader
+        back={{ label: 'All vendors', to: '/vendors' }}
         title="Add vendor"
-        description="Saving and inviting are separate actions. You can save a vendor now and invite later."
+        description="Saving and inviting are separate actions, so you can create the record now and invite the contact once you have confirmed their email."
       />
 
       <form
         noValidate
-        className="space-y-6"
+        className="space-y-5"
         onSubmit={(event) => {
           event.preventDefault()
           void save(false)
         }}
       >
-        <section className="space-y-4 rounded-lg border bg-background p-4">
-          <h2 className="text-sm font-semibold">Vendor details</h2>
-          <VendorFormFields
-            values={values}
-            onChange={setValues}
-            fieldErrors={action.fieldErrors}
-            properties={knownProperties}
-          />
-        </section>
+        <Section>
+          <SectionHeader title="Vendor details" border />
+          <SectionBody className="pt-4">
+            <VendorFormFields
+              values={values}
+              onChange={setValues}
+              fieldErrors={action.fieldErrors}
+              properties={knownProperties}
+            />
+          </SectionBody>
+        </Section>
 
-        <section className="space-y-3 rounded-lg border bg-background p-4">
-          <h2 className="text-sm font-semibold">Document checklist</h2>
-          <div className="space-y-1">
+        <Section>
+          <SectionHeader
+            title="Document checklist"
+            description="Optional now. The checklist decides which documents the vendor is asked for."
+            border
+          />
+          <SectionBody className="space-y-3 pt-4">
+          <div className="space-y-1.5">
             <Label htmlFor="new-vendor-template">Checklist template</Label>
             <Select value={templateId} onValueChange={setTemplateId}>
-              <SelectTrigger id="new-vendor-template">
+              <SelectTrigger id="new-vendor-template" className="h-9 w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -158,21 +168,27 @@ export function VendorNewPage() {
           </div>
 
           {selectedTemplate ? (
-            <div className="rounded-md border bg-muted/40 p-3">
+            <div className="space-y-2 rounded-lg border bg-muted/40 p-3">
               <p className="text-sm font-medium">
                 Requirements copied to this vendor (snapshot of version{' '}
                 {selectedTemplate.template.version})
               </p>
-              <ul className="mt-2 space-y-2 text-sm">
+              <ul className="space-y-2 text-sm">
                 {selectedTemplate.items.map((item) => (
                   <li key={item.id}>
-                    <span className="font-medium">{item.title}</span>{' '}
-                    <span className="text-muted-foreground">
-                      · {item.required ? 'Required' : 'Optional'}
-                      {item.expiration_required ? ' · expiration date required' : ''}
-                      {item.collect_issue_date ? ' · issue date collected' : ''}
+                    <span className="flex flex-wrap items-center gap-2">
+                      <span className="font-medium">{item.title}</span>
+                      <Chip tone={item.required ? 'brand' : 'neutral'} size="sm">
+                        {item.required ? 'Required' : 'Optional'}
+                      </Chip>
+                      <span className="text-xs text-muted-foreground">
+                        {item.expiration_required ? 'Expiration date required' : 'No expiration'}
+                        {item.collect_issue_date ? ' · issue date collected' : ''}
+                      </span>
                     </span>
-                    <p className="text-xs text-muted-foreground">{item.instructions}</p>
+                    <p className="text-xs leading-relaxed text-muted-foreground">
+                      {item.instructions}
+                    </p>
                   </li>
                 ))}
               </ul>
@@ -183,15 +199,17 @@ export function VendorNewPage() {
               assigned.
             </p>
           )}
-        </section>
+          </SectionBody>
+        </Section>
 
         {action.conflict ? (
-          <div className="space-y-2 rounded-md border border-amber-300 bg-amber-50 p-3">
-            <p className="text-sm text-amber-900">{action.conflict}</p>
+          <InlineNotice tone="warn" title="A vendor with this name already exists">
+            <p>{action.conflict}</p>
             <Button
               type="button"
               variant="outline"
               size="sm"
+              className="mt-2"
               onClick={() => {
                 setConfirmDuplicate(true)
                 void save(false, true)
@@ -199,16 +217,16 @@ export function VendorNewPage() {
             >
               Save as a separate vendor record
             </Button>
-          </div>
+          </InlineNotice>
         ) : null}
 
         {action.error && !action.conflict ? (
-          <p className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
+          <InlineNotice tone="danger" role="alert">
             {action.error}
-          </p>
+          </InlineNotice>
         ) : null}
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="surface flex flex-wrap items-center gap-2 p-3">
           <Button type="submit" disabled={action.pending}>
             Save vendor
           </Button>

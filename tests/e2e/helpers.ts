@@ -42,15 +42,32 @@ export function dateFromToday(days: number): string {
 
 export async function signIn(page: Page, email: string, password: string) {
   await page.goto('/login')
-  await page.getByLabel('Email').fill(email)
-  await page.getByLabel('Password').fill(password)
-  await page.getByRole('button', { name: 'Sign in' }).click()
-  await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible()
+  await page.locator('#login-email').fill(email)
+  await page.locator('#login-password').fill(password)
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await expect(signOutControl(page)).toBeVisible()
+}
+
+/**
+ * Staff sign out from the account menu in the header; the vendor portal keeps a direct button
+ * because it has no other chrome. This resolves whichever of the two is on screen.
+ */
+function signOutControl(page: Page) {
+  return page
+    .getByRole('button', { name: 'Account menu' })
+    .or(page.getByRole('button', { name: 'Sign out' }))
+    .first()
 }
 
 export async function signOut(page: Page) {
-  await page.getByRole('button', { name: 'Sign out' }).click()
-  await expect(page.getByRole('button', { name: 'Sign in' })).toBeVisible()
+  const accountMenu = page.getByRole('button', { name: 'Account menu' })
+  if (await accountMenu.isVisible()) {
+    await accountMenu.click()
+    await page.getByRole('menuitem', { name: 'Sign out' }).click()
+  } else {
+    await page.getByRole('button', { name: 'Sign out' }).click()
+  }
+  await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible()
 }
 
 export async function signInAsStaff(page: Page, email = COORDINATOR, path = '/overview') {
@@ -97,5 +114,11 @@ export async function openReview(page: Page, vendorName: string, requirementTitl
   await page.goto('/review')
   let rows = page.locator('li').filter({ hasText: vendorName })
   if (requirementTitle) rows = rows.filter({ hasText: requirementTitle })
-  await rows.getByRole('link', { name: /Open (review|submission)/ }).first().click()
+  await rows.locator('a[href^="/review/"]').first().click()
+}
+
+/** The first pending submission in the queue, whatever it is. */
+export async function openFirstReview(page: Page) {
+  await page.goto('/review')
+  await page.locator('a[href^="/review/"]').first().click()
 }

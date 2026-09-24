@@ -37,10 +37,11 @@ export function VendorFormFields({
 
   return (
     <div className="grid gap-4 sm:grid-cols-2">
-      <div className="space-y-1 sm:col-span-2">
+      <div className="space-y-1.5 sm:col-span-2">
         <Label htmlFor={field('company_name')}>Company name</Label>
         <Input
           id={field('company_name')}
+          className="h-9"
           value={values.company_name}
           required
           aria-invalid={Boolean(fieldErrors.company_name)}
@@ -54,7 +55,7 @@ export function VendorFormFields({
         ) : null}
       </div>
 
-      <div className="space-y-1">
+      <div className="space-y-1.5">
         <Label htmlFor={field('category')}>Service category</Label>
         <Select
           value={values.category}
@@ -62,6 +63,7 @@ export function VendorFormFields({
         >
           <SelectTrigger
             id={field('category')}
+            className="h-9 w-full"
             aria-invalid={Boolean(fieldErrors.category)}
             aria-describedby={fieldErrors.category ? errorId('category') : undefined}
           >
@@ -82,10 +84,11 @@ export function VendorFormFields({
         ) : null}
       </div>
 
-      <div className="space-y-1">
+      <div className="space-y-1.5">
         <Label htmlFor={field('contact_name')}>Primary contact name</Label>
         <Input
           id={field('contact_name')}
+          className="h-9"
           value={values.contact_name}
           required
           aria-invalid={Boolean(fieldErrors.contact_name)}
@@ -99,11 +102,12 @@ export function VendorFormFields({
         ) : null}
       </div>
 
-      <div className="space-y-1 sm:col-span-2">
+      <div className="space-y-1.5 sm:col-span-2">
         <Label htmlFor={field('contact_email')}>Primary contact email</Label>
         <Input
           id={field('contact_email')}
           type="email"
+          className="h-9"
           value={values.contact_email}
           required
           aria-invalid={Boolean(fieldErrors.contact_email)}
@@ -124,11 +128,11 @@ export function VendorFormFields({
       </div>
 
       <fieldset className="space-y-2 sm:col-span-2">
-        <legend className="text-sm font-medium">Property tags (optional)</legend>
+        <legend className="mb-1 text-sm font-medium">Property tags (optional)</legend>
         <p className="text-xs text-muted-foreground">
           Tags are for filtering only. Document requirements are organization-wide.
         </p>
-        <div className="flex flex-wrap gap-4">
+        <div className="flex flex-wrap gap-x-5 gap-y-2.5 pt-1">
           {properties.map((property) => (
             <div key={property} className="flex items-center gap-2">
               <Checkbox

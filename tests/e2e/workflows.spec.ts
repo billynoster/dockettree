@@ -10,6 +10,7 @@ import {
   REVIEWER,
   VENDOR_PASSWORD,
   dateFromToday,
+  openFirstReview,
   openReview,
   openVendor,
   samplePdfBuffer,
@@ -31,35 +32,36 @@ test.describe('overview and directory', () => {
     await expect(page.getByRole('link', { name: /^Awaiting review 2/ })).toBeVisible()
     await expect(page.getByRole('link', { name: /^Not ready 3/ })).toBeVisible()
     await expect(page.getByRole('link', { name: /^Unconfigured 1/ })).toBeVisible()
-    await expect(page.getByText('Expiring soon (secondary, overlapping count)')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Expiring soon' })).toBeVisible()
     await expect(page.getByRole('link', { name: 'Open review queue' })).toBeVisible()
 
     await page.getByRole('link', { name: /^Not ready 3/ }).click()
     await expect(page).toHaveURL(/readiness=not_ready/)
-    await expect(page.getByText('3 vendors match these filters')).toBeVisible()
+    await expect(page.getByText('Showing 1–3 of 3 vendors')).toBeVisible()
 
-    await page.getByRole('button', { name: 'Clear filters' }).click()
-    await expect(page.getByText('10 vendors match these filters')).toBeVisible()
+    await page.getByRole('button', { name: 'Clear all' }).click()
+    await expect(page.getByText('Showing 1–10 of 10 vendors')).toBeVisible()
   })
 
   test('search, combined filters and archived visibility behave', async ({ page }) => {
     await signInAsStaff(page, COORDINATOR, '/vendors')
+    // Search applies as you type; the URL still carries it so the link is reproducible.
     await page.getByLabel('Search company, contact or email').fill('DAMON.FRAZIER@EXAMPLE.COM')
-    await page.getByRole('button', { name: 'Search' }).click()
-    await expect(page.getByRole('link', { name: IRONWOOD, exact: true })).toBeVisible()
-    await expect(page.getByText('1 vendor matches these filters')).toBeVisible()
+    await expect(page).toHaveURL(/q=DAMON/)
+    await expect(page.getByRole('link', { name: IRONWOOD, exact: true }).first()).toBeVisible()
+    await expect(page.getByText('Showing 1–1 of 1 vendor')).toBeVisible()
 
-    await page.getByRole('button', { name: 'Clear filters' }).click()
-    await page.getByRole('checkbox', { name: 'Ready', exact: true }).click()
-    await expect(page.getByText('4 vendors match these filters')).toBeVisible()
-    await page.getByRole('checkbox', { name: 'Expiring soon only' }).click()
-    await expect(page.getByText('2 vendors match these filters')).toBeVisible()
+    await page.getByRole('button', { name: 'Clear all' }).click()
+    await page.getByRole('button', { name: 'Ready', exact: true }).click()
+    await expect(page.getByText('Showing 1–4 of 4 vendors')).toBeVisible()
+    await page.getByRole('button', { name: 'Expiring soon', exact: true }).click()
+    await expect(page.getByText('Showing 1–2 of 2 vendors')).toBeVisible()
 
     await page.goto('/vendors')
     await expect(page.getByRole('link', { name: 'Copperfield Locksmiths' })).toHaveCount(0)
     await page.goto('/vendors?lifecycle=archived')
-    await expect(page.getByRole('link', { name: 'Copperfield Locksmiths' })).toBeVisible()
-    await expect(page.getByText('2 vendors match these filters')).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Copperfield Locksmiths' }).first()).toBeVisible()
+    await expect(page.getByText('Showing 1–2 of 2 vendors')).toBeVisible()
   })
 })
 
@@ -110,18 +112,20 @@ test.describe('W2/W3 submit, correct, accept', () => {
 
     await openVendor(page, IRONWOOD)
     await expect(page.getByText('Ready', { exact: true }).first()).toBeVisible()
-    await expect(page.getByText('3 of 3 required items satisfied')).toBeVisible()
+    await expect(page.getByText('required items satisfied')).toBeVisible()
+    await expect(page.getByText('3 / 3').first()).toBeVisible()
 
     await page.reload()
-    await expect(page.getByText('3 of 3 required items satisfied')).toBeVisible()
+    await expect(page.getByText('required items satisfied')).toBeVisible()
+    await expect(page.getByText('3 / 3').first()).toBeVisible()
 
     // Both versions remain in history.
     const safetyCard = page
       .locator('li')
       .filter({ has: page.getByRole('heading', { name: 'Safety acknowledgment' }) })
       .first()
-    await safetyCard.getByText('Version history (2)').click()
-    const versions = safetyCard.locator('details ul li')
+    await safetyCard.getByRole('button', { name: 'Version history (2)' }).click()
+    const versions = safetyCard.locator('ul li')
     await expect(versions).toHaveCount(2)
     await expect(versions.first()).toContainText('v2')
     await expect(versions.first()).toContainText('Accepted')
@@ -148,8 +152,8 @@ test.describe('W2/W3 submit, correct, accept', () => {
 
   test('a coordinator cannot decide a review', async ({ page }) => {
     await signInAsStaff(page, COORDINATOR, '/review')
-    await expect(page.getByText(/only an admin or reviewer can decide/i)).toBeVisible()
-    await page.getByRole('link', { name: /Open (review|submission)/ }).first().click()
+    await expect(page.getByText(/read this queue but not decide/i)).toBeVisible()
+    await page.locator('a[href^="/review/"]').first().click()
     await expect(page.getByText('Not available for your role')).toBeVisible()
   })
 
@@ -313,8 +317,8 @@ test.describe('W5 monitor, remind, import, export, archive', () => {
 
 test.describe('accessibility and responsiveness', () => {
   test('a review decision can be completed with the keyboard only', async ({ page }) => {
-    await signInAsStaff(page, REVIEWER, '/review')
-    await page.getByRole('link', { name: /Open (review|submission)/ }).first().click()
+    await signInAsStaff(page, REVIEWER)
+    await openFirstReview(page)
     await page.locator('#review-reason').focus()
     await page.keyboard.type('Keyboard-only correction request for the verification pass.')
     await page.keyboard.press('Tab')
@@ -340,7 +344,7 @@ test.describe('accessibility and responsiveness', () => {
     await page.setViewportSize({ width: 390, height: 780 })
     await signInAsStaff(page, COORDINATOR, '/vendors')
     await expect(page.getByRole('table')).toBeHidden()
-    await expect(page.getByRole('link', { name: 'Open vendor' }).first()).toBeVisible()
+    await expect(page.getByRole('link', { name: IRONWOOD }).first()).toBeVisible()
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
     )

@@ -4,7 +4,6 @@ import {
   COORDINATOR,
   IRONWOOD,
   IRONWOOD_CONTACT,
-  STAFF_PASSWORD,
   VENDOR_PASSWORD,
   openVendor,
   signIn,
@@ -17,8 +16,8 @@ import {
 test.describe('authentication', () => {
   test('an unauthenticated visitor is sent to sign in and cannot reach any data', async ({ page }) => {
     await page.goto('/overview')
-    await expect(page.getByRole('button', { name: 'Sign in' })).toBeVisible()
-    await expect(page.getByText('Cedar Grove Property Operations')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible()
+    await expect(page.getByText('Cedar Grove Property Operations').first()).toBeVisible()
 
     const api = await page.request.get('/api/overview')
     expect(api.status()).toBe(401)
@@ -26,18 +25,18 @@ test.describe('authentication', () => {
 
   test('a wrong password shows an inline error and no session', async ({ page }) => {
     await page.goto('/login')
-    await page.getByLabel('Email').fill(ADMIN)
-    await page.getByLabel('Password').fill('not-the-password')
-    await page.getByRole('button', { name: 'Sign in' }).click()
+    await page.locator('#login-email').fill(ADMIN)
+    await page.locator('#login-password').fill('not-the-password')
+    await page.getByRole('button', { name: 'Sign in', exact: true }).click()
     await expect(page.getByText('Check the email and password and try again.')).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Sign out' })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Account menu' })).toHaveCount(0)
   })
 
   test('signing out ends the session for protected pages', async ({ page }) => {
     await signInAsStaff(page)
     await signOut(page)
     await page.goto('/vendors')
-    await expect(page.getByRole('button', { name: 'Sign in' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible()
   })
 
   test('a vendor contact only ever sees their own portal', async ({ page }) => {
@@ -72,7 +71,7 @@ test.describe('invitation to portal', () => {
     await signOut(page)
 
     await page.goto(link.replace(/^https?:\/\/[^/]+/, ''))
-    await expect(page.getByText('Willow Creek Signage')).toBeVisible()
+    await expect(page.getByText('Willow Creek Signage').first()).toBeVisible()
     await page.getByLabel('Your name').fill('Beatriz Ortiz')
     await page.getByLabel('Choose a password').fill('willow-creek-password')
     await page.getByRole('button', { name: /Create account/ }).click()

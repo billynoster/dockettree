@@ -5,7 +5,7 @@ import { api } from '@/api/client'
 import { useApp } from '@/app/AppProvider'
 import { useAction } from '@/app/useAction'
 import { useServiceQuery } from '@/app/useServiceQuery'
-import { ErrorState, LoadingState } from '@/components/States'
+import { ErrorState, InlineNotice, LoadingState } from '@/components/States'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -68,7 +68,9 @@ export function InviteVendorDialog({
 
         {acceptUrl ? (
           <div className="space-y-3 text-sm">
-            <p className="break-all rounded-md border bg-muted/40 p-3 font-mono text-xs">{acceptUrl}</p>
+            <p className="rounded-lg border bg-muted/40 p-3 font-mono text-xs break-all">
+              {acceptUrl}
+            </p>
             <Button
               variant="outline"
               size="sm"
@@ -114,21 +116,21 @@ export function InviteVendorDialog({
                   {preview.data.body}
                 </pre>
                 {preview.data.revokesPreviousInvitation ? (
-                  <p className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+                  <InlineNotice tone="warn">
                     Sending again revokes the previous unaccepted invitation link.
-                  </p>
+                  </InlineNotice>
                 ) : null}
                 {preview.data.alreadyHasAccount ? (
-                  <p className="rounded-md border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+                  <InlineNotice tone="info">
                     This email already has an account. Accepting the invitation will add this vendor
                     to it.
-                  </p>
+                  </InlineNotice>
                 ) : null}
                 {preview.data.requiredItemTitles.length === 0 ? (
-                  <p className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+                  <InlineNotice tone="warn">
                     This vendor has no required items yet. Assign a checklist so the invitation
                     explains what to send.
-                  </p>
+                  </InlineNotice>
                 ) : null}
               </div>
             ) : null}
@@ -136,9 +138,9 @@ export function InviteVendorDialog({
         )}
 
         {action.error ? (
-          <p className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
+          <InlineNotice tone="danger" role="alert">
             {action.error}
-          </p>
+          </InlineNotice>
         ) : null}
 
         <DialogFooter>

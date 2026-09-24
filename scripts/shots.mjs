@@ -59,11 +59,13 @@ async function run() {
 
     // First vendor detail.
     await page.goto(`${BASE}/vendors`, { waitUntil: 'networkidle' })
-    const firstVendor = page.getByRole('link', { name: /open vendor|^[A-Z]/ })
-    await page.locator('a[href^="/vendors/"]').first().click()
+    const vendorLink = page.locator('a[href^="/vendors/"]:not([href="/vendors/new"])').first()
+    await vendorLink.click()
     await page.waitForLoadState('networkidle')
     await shoot(page, 'vendor-detail', vp.name)
-    void firstVendor
+
+    await page.goto(`${BASE}/vendors/new`, { waitUntil: 'networkidle' })
+    await shoot(page, 'vendor-new', vp.name)
 
     // First review item, if any.
     await page.goto(`${BASE}/review`, { waitUntil: 'networkidle' })

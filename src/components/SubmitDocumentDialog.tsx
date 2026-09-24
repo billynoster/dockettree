@@ -3,7 +3,9 @@ import { Upload } from 'lucide-react'
 import { api } from '@/api/client'
 import { useApp } from '@/app/AppProvider'
 import { useAction } from '@/app/useAction'
+import { InlineNotice } from '@/components/States'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
   Dialog,
   DialogContent,
@@ -24,6 +26,14 @@ import {
   MAX_UPLOAD_BYTES,
   validateSubmissionDates,
 } from '@/domain/validation'
+
+/**
+ * Shared styling for the two native file inputs in the product. The control stays a real
+ * `input[type=file]` rather than a hidden input behind a styled label, so the keyboard, screen
+ * readers and the browser's own file dialog all behave exactly as people expect.
+ */
+export const FILE_INPUT_CLASS =
+  'block w-full cursor-pointer rounded-lg border border-dashed border-input bg-muted/40 p-3 text-sm transition-colors hover:border-primary/40 hover:bg-muted file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-card file:px-2.5 file:py-1 file:text-sm file:font-medium file:shadow-surface aria-invalid:border-destructive'
 
 /**
  * Upload form for one requirement. Validation runs before anything is stored, progress is
@@ -126,7 +136,7 @@ export function SubmitDocumentDialog({
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <Label htmlFor="submit-file">Document file</Label>
             <input
               id="submit-file"
@@ -134,7 +144,7 @@ export function SubmitDocumentDialog({
               accept="application/pdf,image/png,image/jpeg"
               aria-invalid={Boolean(fieldErrors.file)}
               aria-describedby={fieldErrors.file ? 'submit-file-error' : 'submit-file-hint'}
-              className="block w-full rounded-md border border-input bg-background p-2 text-sm file:mr-3 file:rounded file:border-0 file:bg-muted file:px-2 file:py-1 file:text-sm"
+              className={FILE_INPUT_CLASS}
               onChange={(event) => {
                 setFile(event.target.files?.[0] ?? null)
                 setLocalErrors({})
@@ -158,15 +168,15 @@ export function SubmitDocumentDialog({
           </div>
 
           {requirement.collect_issue_date ? (
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <Label htmlFor="submit-issue">Issue date shown on the document</Label>
-              <input
+              <Input
                 id="submit-issue"
                 type="date"
+                className="h-9"
                 value={issueDate}
                 aria-invalid={Boolean(fieldErrors.issue_date)}
                 aria-describedby={fieldErrors.issue_date ? 'submit-issue-error' : undefined}
-                className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
                 onChange={(event) => setIssueDate(event.target.value)}
               />
               {fieldErrors.issue_date ? (
@@ -178,18 +188,18 @@ export function SubmitDocumentDialog({
           ) : null}
 
           {requirement.expiration_required ? (
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <Label htmlFor="submit-expiration">Expiration date shown on the document</Label>
-              <input
+              <Input
                 id="submit-expiration"
                 type="date"
+                className="h-9"
                 value={expirationDate}
                 required
                 aria-invalid={Boolean(fieldErrors.expiration_date)}
                 aria-describedby={
                   fieldErrors.expiration_date ? 'submit-expiration-error' : 'submit-expiration-hint'
                 }
-                className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
                 onChange={(event) => setExpirationDate(event.target.value)}
               />
               {fieldErrors.expiration_date ? (
@@ -205,15 +215,11 @@ export function SubmitDocumentDialog({
             </div>
           ) : null}
 
-          {dateCheck.warning ? (
-            <p className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
-              {dateCheck.warning}
-            </p>
-          ) : null}
+          {dateCheck.warning ? <InlineNotice tone="warn">{dateCheck.warning}</InlineNotice> : null}
 
           {progress > 0 ? (
-            <div className="space-y-1">
-              <Progress value={progress} />
+            <div className="space-y-1.5">
+              <Progress value={progress} className="h-1.5" />
               <p className="text-xs text-muted-foreground" role="status">
                 {progress < 95 ? `Uploading… ${progress}%` : 'Validating and storing the document…'}
               </p>
@@ -221,12 +227,18 @@ export function SubmitDocumentDialog({
           ) : null}
 
           {action.error && Object.keys(action.fieldErrors).length === 0 ? (
-            <div className="space-y-2 rounded-md border border-destructive/40 bg-destructive/5 p-3">
-              <p className="text-sm text-destructive">{action.error}</p>
-              <Button type="button" variant="outline" size="sm" onClick={() => void submit()}>
+            <InlineNotice tone="danger" role="alert">
+              <p>{action.error}</p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-2"
+                onClick={() => void submit()}
+              >
                 Retry submission
               </Button>
-            </div>
+            </InlineNotice>
           ) : null}
         </div>
 

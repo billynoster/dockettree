@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { BellRing } from 'lucide-react'
 import { useAction } from '@/app/useAction'
 import { useServiceQuery } from '@/app/useServiceQuery'
-import { ErrorState, LoadingState } from '@/components/States'
+import { ErrorState, InlineNotice, LoadingState } from '@/components/States'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -89,7 +89,7 @@ export function RemindVendorDialog({
             ) : null}
 
             {preview.data.internalLines.length > 0 ? (
-              <div className="rounded-md border bg-muted/40 p-3">
+              <div className="rounded-lg border bg-muted/40 p-3">
                 <p className="font-medium">
                   Internal notice to {preview.data.internalRecipient}
                 </p>
@@ -104,9 +104,7 @@ export function RemindVendorDialog({
             ) : null}
 
             {preview.data.blockedReason ? (
-              <p className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
-                {preview.data.blockedReason}
-              </p>
+              <InlineNotice tone="warn">{preview.data.blockedReason}</InlineNotice>
             ) : null}
           </div>
         ) : null}
