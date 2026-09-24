@@ -1,18 +1,20 @@
 import { api } from '@/api/client'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
-import { ArrowRight, Check, MessageSquareWarning } from 'lucide-react'
+import { ArrowRight, Check, LoaderCircle, MessageSquareWarning } from 'lucide-react'
 import { useApp } from '@/app/AppProvider'
 import { useAction } from '@/app/useAction'
 import { useServiceQuery } from '@/app/useServiceQuery'
 import { DocumentPreview } from '@/components/DocumentPreview'
 import { PageHeader } from '@/components/PageHeader'
-import { AccessDeniedState, ErrorState, LoadingState } from '@/components/States'
-import { SubmissionStateChip } from '@/components/StatusChips'
+import { KeyValueList, Section, SectionHeader } from '@/components/Section'
+import { AccessDeniedState, ErrorState, InlineNotice, LoadingState } from '@/components/States'
+import { Chip, SubmissionStateChip } from '@/components/StatusChips'
+import { Timestamp } from '@/components/Timestamp'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { formatDate, formatDateTime } from '@/domain/dates'
+import { formatDate } from '@/domain/dates'
 
 export function ReviewDetailPage() {
   const app = useApp()
@@ -22,7 +24,7 @@ export function ReviewDetailPage() {
   const action = useAction()
   const detail = useServiceQuery(() => api.reviewDetail(submissionId), [submissionId])
 
-  if (detail.loading && !detail.data) return <LoadingState label="Loading the submission" rows={5} />
+  if (detail.loading && !detail.data) return <LoadingState label="Loading the submission" rows={4} />
   if (detail.error) {
     return (
       <ErrorState
@@ -40,7 +42,8 @@ export function ReviewDetailPage() {
 
   const decide = async (decision: 'accepted' | 'changes_requested') => {
     const result = await action.run(
-      () => api.reviewSubmission({
+      () =>
+        api.reviewSubmission({
           submissionId: submission.id,
           expectedVersion: submission.record_version,
           decision,
@@ -64,200 +67,228 @@ export function ReviewDetailPage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="animate-rise space-y-4">
       <PageHeader
-        title={`Review: ${requirement.title}`}
+        back={{ label: 'Review queue', to: '/review' }}
+        title={requirement.title}
         description={
           <>
             <Link
               to={`/vendors/${vendor.id}`}
-              className="text-primary underline-offset-4 hover:underline"
+              className="font-medium text-primary underline-offset-4 hover:underline"
             >
               {vendor.company_name}
             </Link>{' '}
             · version {submission.version_number} · submitted{' '}
-            {formatDateTime(submission.submitted_at, app.organization.timezone)} by{' '}
+            <Timestamp value={submission.submitted_at} timezone={app.organization.timezone} /> by{' '}
             {submission.submitted_by_label}
             {submission.submitted_on_behalf ? ' (on behalf of the vendor)' : ''}
           </>
         }
-        actions={
-          <Button asChild variant="outline" size="sm">
-            <Link to="/review">Back to queue</Link>
-          </Button>
+        meta={
+          <>
+            <SubmissionStateChip state={submission.state} />
+            <Chip tone={requirement.required ? 'brand' : 'neutral'}>
+              {requirement.required ? 'Required' : 'Optional'}
+            </Chip>
+          </>
         }
       />
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-        <section className="rounded-lg border bg-background p-4">
-          <h2 className="mb-3 text-sm font-semibold">Submitted document</h2>
-          <DocumentPreview submissionId={submission.id} height="h-[520px]" />
-        </section>
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:items-start">
+        {/*
+         * The document stays pinned while the right rail scrolls: a reviewer reads the file and the
+         * checklist instructions together, and losing the page while scrolling to the decision is
+         * the main way a wrong decision happens.
+         */}
+        <Section className="p-4 lg:sticky lg:top-[calc(var(--header-height)+1.5rem)]">
+          <h2 className="mb-3 text-[0.9375rem] font-semibold">Submitted document</h2>
+          <DocumentPreview submissionId={submission.id} height="h-[32rem]" />
+        </Section>
 
         <div className="space-y-4">
-          <section className="space-y-3 rounded-lg border bg-background p-4">
-            <h2 className="text-sm font-semibold">Checklist instructions</h2>
-            <p className="text-sm text-muted-foreground">{requirement.instructions}</p>
-            <dl className="space-y-1 text-sm">
-              <div className="flex justify-between gap-2">
-                <dt className="text-muted-foreground">Requirement</dt>
-                <dd>{requirement.required ? 'Required' : 'Optional'}</dd>
-              </div>
-              <div className="flex justify-between gap-2">
-                <dt className="text-muted-foreground">Expiration policy</dt>
-                <dd>{requirement.expiration_required ? 'Expiration required' : 'No expiration'}</dd>
-              </div>
-              <div className="flex justify-between gap-2">
-                <dt className="text-muted-foreground">Issue date entered</dt>
-                <dd>{formatDate(submission.issue_date)}</dd>
-              </div>
-              <div className="flex justify-between gap-2">
-                <dt className="text-muted-foreground">Expiration entered</dt>
-                <dd>{formatDate(submission.expiration_date)}</dd>
-              </div>
-              <div className="flex justify-between gap-2">
-                <dt className="text-muted-foreground">Current state</dt>
-                <dd>
-                  <SubmissionStateChip state={submission.state} />
-                </dd>
-              </div>
-            </dl>
-            <p className="text-xs text-muted-foreground">
+          <Section>
+            <SectionHeader title="Decision" border />
+            <div className="space-y-3 p-4">
+              {!canDecide ? (
+                <AccessDeniedState message="Only an admin or reviewer can accept a submission or request changes." />
+              ) : decided ? (
+                <InlineNotice tone="neutral" title="Already decided">
+                  This submission is {submission.state.replace('_', ' ')}. Decisions are append-only,
+                  so they cannot be replaced — ask the vendor for a new version instead.
+                </InlineNotice>
+              ) : (
+                <>
+                  {detail.data.blockedAcceptReason ? (
+                    <InlineNotice tone="warn" title="Accepting is blocked">
+                      {detail.data.blockedAcceptReason}
+                    </InlineNotice>
+                  ) : null}
+                  <div className="space-y-1.5">
+                    <Label htmlFor="review-reason">
+                      Correction reason{' '}
+                      <span className="font-normal text-muted-foreground">
+                        (required to request changes)
+                      </span>
+                    </Label>
+                    <Textarea
+                      id="review-reason"
+                      rows={4}
+                      value={reason}
+                      placeholder="Explain exactly what the vendor must change, for example: page 2 is missing the signature date."
+                      aria-invalid={Boolean(action.fieldErrors.reason)}
+                      aria-describedby={action.fieldErrors.reason ? 'review-reason-error' : undefined}
+                      onChange={(event) => setReason(event.target.value)}
+                    />
+                    {action.fieldErrors.reason ? (
+                      <p id="review-reason-error" className="text-sm text-destructive">
+                        {action.fieldErrors.reason}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        The vendor sees this text verbatim, so name the page and the field.
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <Button
+                      className="flex-1"
+                      disabled={action.pending || !detail.data.canAccept}
+                      onClick={() => void decide('accepted')}
+                    >
+                      {action.pending ? (
+                        <LoaderCircle aria-hidden="true" className="animate-spin" />
+                      ) : (
+                        <Check aria-hidden="true" />
+                      )}
+                      Accept
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      disabled={action.pending}
+                      onClick={() => void decide('changes_requested')}
+                    >
+                      <MessageSquareWarning aria-hidden="true" />
+                      Request changes
+                    </Button>
+                  </div>
+                  {action.error ? (
+                    <InlineNotice tone="danger" role="alert">
+                      {action.error}
+                    </InlineNotice>
+                  ) : null}
+                </>
+              )}
+              {detail.data.nextPendingSubmissionId ? (
+                <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3">
+                  <p className="text-xs text-muted-foreground">
+                    {decided || !canDecide
+                      ? 'Another submission is waiting.'
+                      : 'After a decision you move straight to the next pending submission.'}
+                  </p>
+                  <Button asChild variant="ghost" size="sm">
+                    <Link to={`/review/${detail.data.nextPendingSubmissionId}`}>
+                      Skip to next
+                      <ArrowRight aria-hidden="true" />
+                    </Link>
+                  </Button>
+                </div>
+              ) : null}
+            </div>
+          </Section>
+
+          <Section className="space-y-3 p-4">
+            <div className="space-y-1">
+              <h2 className="text-[0.9375rem] font-semibold">Checklist instructions</h2>
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                {requirement.instructions}
+              </p>
+            </div>
+            <KeyValueList
+              columns={2}
+              items={[
+                {
+                  label: 'Expiration policy',
+                  value: requirement.expiration_required ? 'Expiration required' : 'No expiration',
+                },
+                { label: 'Issue date entered', value: formatDate(submission.issue_date) },
+                { label: 'Expiration entered', value: formatDate(submission.expiration_date) },
+                {
+                  label: 'Current state',
+                  value: <SubmissionStateChip state={submission.state} size="sm" />,
+                },
+              ]}
+            />
+            <p className="border-t pt-3 text-xs text-muted-foreground">
               Dates come from the vendor's submission. Reviewers cannot edit them; request changes
               instead.
             </p>
-          </section>
+          </Section>
 
           {effective && effective.id !== submission.id ? (
-            <section className="space-y-2 rounded-lg border bg-background p-4">
-              <h2 className="text-sm font-semibold">Currently effective version</h2>
+            <Section className="space-y-2 p-4">
+              <h2 className="text-[0.9375rem] font-semibold">Currently effective version</h2>
               <p className="text-sm">
                 Version {effective.version_number}
                 {effective.expiration_date
                   ? ` · expires ${formatDate(effective.expiration_date)}`
                   : ' · no expiration'}
               </p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs leading-relaxed text-muted-foreground">
                 Accepting this submission supersedes version {effective.version_number} in one
                 transaction. The old file and its decisions stay in history.
               </p>
-            </section>
+            </Section>
           ) : null}
 
           {detail.data.lastCorrectionReason ? (
-            <section className="rounded-lg border border-rose-200 bg-rose-50 p-4">
-              <h2 className="text-sm font-semibold text-rose-900">Previous correction request</h2>
-              <p className="mt-1 text-sm text-rose-900">{detail.data.lastCorrectionReason}</p>
-            </section>
+            <InlineNotice tone="danger" title="Previous correction request">
+              {detail.data.lastCorrectionReason}
+            </InlineNotice>
           ) : null}
 
-          <section className="space-y-3 rounded-lg border bg-background p-4">
-            <h2 className="text-sm font-semibold">Decision</h2>
-            {!canDecide ? (
-              <AccessDeniedState message="Only an admin or reviewer can accept a submission or request changes." />
-            ) : decided ? (
-              <p className="text-sm text-muted-foreground">
-                This submission was already decided ({submission.state.replace('_', ' ')}). Decisions
-                are append-only and cannot be replaced.
-              </p>
-            ) : (
-              <>
-                {detail.data.blockedAcceptReason ? (
-                  <p className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
-                    {detail.data.blockedAcceptReason}
-                  </p>
-                ) : null}
-                <div className="space-y-1">
-                  <Label htmlFor="review-reason">
-                    Correction reason (required to request changes)
-                  </Label>
-                  <Textarea
-                    id="review-reason"
-                    rows={4}
-                    value={reason}
-                    placeholder="Explain exactly what the vendor must change, for example: page 2 is missing the signature date."
-                    aria-invalid={Boolean(action.fieldErrors.reason)}
-                    aria-describedby={action.fieldErrors.reason ? 'review-reason-error' : undefined}
-                    onChange={(event) => setReason(event.target.value)}
-                  />
-                  {action.fieldErrors.reason ? (
-                    <p id="review-reason-error" className="text-sm text-destructive">
-                      {action.fieldErrors.reason}
-                    </p>
-                  ) : null}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    disabled={action.pending || !detail.data.canAccept}
-                    onClick={() => void decide('accepted')}
-                  >
-                    <Check aria-hidden="true" />
-                    Accept
-                  </Button>
-                  <Button
-                    variant="outline"
-                    disabled={action.pending}
-                    onClick={() => void decide('changes_requested')}
-                  >
-                    <MessageSquareWarning aria-hidden="true" />
-                    Request changes
-                  </Button>
-                </div>
-                {action.error ? (
-                  <p className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
-                    {action.error}
-                  </p>
-                ) : null}
-                {detail.data.nextPendingSubmissionId ? (
-                  <p className="text-xs text-muted-foreground">
-                    After a decision you move straight to the next pending submission.
-                  </p>
-                ) : null}
-              </>
-            )}
-            {detail.data.nextPendingSubmissionId ? (
-              <Button asChild variant="ghost" size="sm">
-                <Link to={`/review/${detail.data.nextPendingSubmissionId}`}>
-                  Skip to next pending
-                  <ArrowRight aria-hidden="true" />
-                </Link>
-              </Button>
-            ) : null}
-          </section>
-
           {history.length > 0 ? (
-            <section className="rounded-lg border bg-background p-4">
-              <h2 className="text-sm font-semibold">Prior versions</h2>
-              <ul className="mt-2 space-y-2 text-sm">
+            <Section>
+              <SectionHeader title="Prior versions" level="h2" border />
+              <ul className="divide-y">
                 {history.map((entry) => (
-                  <li key={entry.id} className="flex flex-wrap items-center gap-2">
-                    <span className="font-medium">v{entry.version_number}</span>
-                    <SubmissionStateChip state={entry.state} />
-                    <span className="text-muted-foreground">
-                      {formatDateTime(entry.submitted_at, app.organization.timezone)}
-                    </span>
+                  <li key={entry.id} className="flex flex-wrap items-center gap-2 px-4 py-2.5 text-sm">
+                    <span className="font-medium tabular-nums">v{entry.version_number}</span>
+                    <SubmissionStateChip state={entry.state} size="sm" />
+                    <Timestamp
+                      value={entry.submitted_at}
+                      timezone={app.organization.timezone}
+                      className="text-xs text-muted-foreground"
+                    />
                   </li>
                 ))}
               </ul>
-            </section>
+            </Section>
           ) : null}
 
           {reviewEvents.length > 0 ? (
-            <section className="rounded-lg border bg-background p-4">
-              <h2 className="text-sm font-semibold">Decisions on this version</h2>
-              <ul className="mt-2 space-y-2 text-sm">
+            <Section>
+              <SectionHeader title="Decisions on this version" level="h2" border />
+              <ul className="divide-y">
                 {reviewEvents.map((event) => (
-                  <li key={event.id}>
-                    <span className="font-medium">{event.decision.replace('_', ' ')}</span> by{' '}
-                    {event.actor_label} ·{' '}
-                    {formatDateTime(event.created_at, app.organization.timezone)}
+                  <li key={event.id} className="px-4 py-2.5 text-sm">
+                    <p>
+                      <span className="font-medium">{event.decision.replace('_', ' ')}</span> by{' '}
+                      {event.actor_label} ·{' '}
+                      <Timestamp
+                        value={event.created_at}
+                        timezone={app.organization.timezone}
+                        className="text-muted-foreground"
+                      />
+                    </p>
                     {event.reason ? (
-                      <span className="block text-muted-foreground">{event.reason}</span>
+                      <p className="mt-1 border-l-2 pl-2.5 text-muted-foreground">{event.reason}</p>
                     ) : null}
                   </li>
                 ))}
               </ul>
-            </section>
+            </Section>
           ) : null}
         </div>
       </div>

@@ -1,15 +1,34 @@
 import { api } from '@/api/client'
 import { useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router'
-import { Archive, ArchiveRestore, BellRing, Save, Send } from 'lucide-react'
+import {
+  Archive,
+  ArchiveRestore,
+  BellRing,
+  CheckCircle2,
+  CircleAlert,
+  Plus,
+  Save,
+  Send,
+} from 'lucide-react'
 import { useApp } from '@/app/AppProvider'
 import { useAction } from '@/app/useAction'
 import { useServiceQuery } from '@/app/useServiceQuery'
 import { PageHeader } from '@/components/PageHeader'
 import { ReasonDialog } from '@/components/ReasonDialog'
 import { RequirementCard } from '@/components/RequirementCard'
-import { AccessDeniedState, ErrorState, LoadingState } from '@/components/States'
+import { RequirementMeter } from '@/components/Metrics'
+import { KeyValueList, Section } from '@/components/Section'
+import { Timestamp } from '@/components/Timestamp'
 import {
+  AccessDeniedState,
+  EmptyState,
+  ErrorState,
+  InlineNotice,
+  LoadingState,
+} from '@/components/States'
+import {
+  Chip,
   ExpiringSoonChip,
   InvitationChip,
   ReadinessChip,
@@ -63,14 +82,25 @@ export function VendorDetailPage() {
   )
 
   return (
-    <div className="space-y-5">
+    <div className="animate-rise space-y-5">
       <PageHeader
+        back={{ label: 'All vendors', to: '/vendors' }}
         title={vendor.company_name}
         description={
           <>
             {vendor.category}
             {vendor.property_tags.length > 0 ? ` · ${vendor.property_tags.join(', ')}` : ''} ·{' '}
             {vendor.contact_name} ({vendor.contact_email})
+          </>
+        }
+        meta={
+          <>
+            <ReadinessChip status={readiness.status} />
+            {readiness.expiringSoon ? (
+              <ExpiringSoonChip nextExpiration={readiness.nextExpiration} />
+            ) : null}
+            <InvitationChip status={invitation.status} />
+            {vendor.lifecycle === 'archived' ? <Chip tone="neutral">Archived</Chip> : null}
           </>
         }
         actions={
@@ -140,62 +170,73 @@ export function VendorDetailPage() {
         }
       />
 
-      <section className="space-y-3 rounded-lg border bg-background p-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <ReadinessChip status={readiness.status} />
-          {readiness.expiringSoon ? (
-            <ExpiringSoonChip nextExpiration={readiness.nextExpiration} />
+      {vendor.lifecycle === 'archived' ? (
+        <InlineNotice tone="neutral" title="This vendor is archived">
+          Archived {formatDateTime(vendor.archived_at, app.organization.timezone)}.{' '}
+          {vendor.archive_reason} Documents and history are kept, and portal uploads are disabled
+          until the vendor is restored.
+        </InlineNotice>
+      ) : null}
+
+      <Section className="grid gap-5 p-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-8">
+        <div className="space-y-3">
+          <div className="flex items-baseline gap-3">
+            <RequirementMeter
+              satisfied={readiness.requiredSatisfied}
+              total={readiness.requiredTotal}
+              className="text-base"
+            />
+            <span className="text-sm text-muted-foreground">required items satisfied</span>
+          </div>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            {READINESS_EXPLANATION[readiness.status]}
+          </p>
+
+          {readiness.blockers.length > 0 ? (
+            <div className="space-y-1.5">
+              <h2 className="text-[0.8125rem] font-semibold">
+                What is blocking readiness ({readiness.blockers.length})
+              </h2>
+              <ul className="space-y-1 text-sm">
+                {readiness.blockers.map((blocker) => (
+                  <li key={blocker.requirement_id} className="flex gap-2">
+                    <CircleAlert
+                      aria-hidden="true"
+                      className="mt-0.5 size-3.5 shrink-0 text-tone-danger"
+                    />
+                    {blocker.label}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : readiness.status === 'ready' ? (
+            <p className="flex items-center gap-2 text-sm font-medium text-tone-ok">
+              <CheckCircle2 aria-hidden="true" className="size-4" />
+              No blockers. Every required document is accepted and current.
+            </p>
           ) : null}
-          <InvitationChip status={invitation.status} />
-          <span className="text-sm text-muted-foreground">
-            {readiness.requiredSatisfied} of {readiness.requiredTotal} required items satisfied
-          </span>
         </div>
-        <p className="text-sm text-muted-foreground">{READINESS_EXPLANATION[readiness.status]}</p>
 
-        {vendor.lifecycle === 'archived' ? (
-          <p className="rounded-md border border-slate-300 bg-slate-100 p-3 text-sm text-slate-800">
-            Archived {formatDateTime(vendor.archived_at, app.organization.timezone)}.{' '}
-            {vendor.archive_reason}
-          </p>
-        ) : null}
-
-        {readiness.blockers.length > 0 ? (
-          <div>
-            <h2 className="text-sm font-semibold">
-              Blockers ({readiness.blockers.length})
-            </h2>
-            <ul className="mt-1 list-inside list-disc space-y-1 text-sm">
-              {readiness.blockers.map((blocker) => (
-                <li key={blocker.requirement_id}>{blocker.label}</li>
-              ))}
-            </ul>
-          </div>
-        ) : readiness.status === 'ready' ? (
-          <p className="text-sm text-emerald-800">
-            No blockers. Every required document is accepted and current.
-          </p>
-        ) : null}
-
-        <dl className="grid gap-x-6 gap-y-1 text-sm sm:grid-cols-2">
-          <div className="flex gap-2">
-            <dt className="text-muted-foreground">Next required expiration</dt>
-            <dd>{formatDate(readiness.nextExpiration)}</dd>
-          </div>
-          <div className="flex gap-2">
-            <dt className="text-muted-foreground">Invitation sent</dt>
-            <dd>{formatDateTime(vendor.invited_at, app.organization.timezone)}</dd>
-          </div>
-          <div className="flex gap-2">
-            <dt className="text-muted-foreground">Last reminder</dt>
-            <dd>{formatDateTime(lastReminderAt, app.organization.timezone)}</dd>
-          </div>
-          <div className="flex gap-2">
-            <dt className="text-muted-foreground">Record updated</dt>
-            <dd>{formatDateTime(vendor.updated_at, app.organization.timezone)}</dd>
-          </div>
-        </dl>
-      </section>
+        <KeyValueList
+          items={[
+            { label: 'Next required expiration', value: formatDate(readiness.nextExpiration) },
+            {
+              label: 'Invitation sent',
+              value: (
+                <Timestamp value={vendor.invited_at} timezone={app.organization.timezone} />
+              ),
+            },
+            {
+              label: 'Last reminder',
+              value: <Timestamp value={lastReminderAt} timezone={app.organization.timezone} />,
+            },
+            {
+              label: 'Record updated',
+              value: <Timestamp value={vendor.updated_at} timezone={app.organization.timezone} />,
+            },
+          ]}
+        />
+      </Section>
 
       <Tabs
         value={tab}
@@ -205,10 +246,16 @@ export function VendorDetailPage() {
           setSearchParams(next, { replace: true })
         }}
       >
-        <TabsList>
-          <TabsTrigger value="requirements">Requirements</TabsTrigger>
+        <TabsList variant="line" className="mb-1 border-b pb-0">
+          <TabsTrigger value="requirements">
+            Requirements
+            <span className="text-muted-foreground tabular-nums">{activeRequirements.length}</span>
+          </TabsTrigger>
           <TabsTrigger value="details">Details</TabsTrigger>
-          <TabsTrigger value="activity">Activity</TabsTrigger>
+          <TabsTrigger value="activity">
+            Activity
+            <span className="text-muted-foreground tabular-nums">{activity.length}</span>
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="requirements" className="space-y-4">
@@ -228,8 +275,8 @@ export function VendorDetailPage() {
                 ))}
               </ul>
               {retiredRequirements.length > 0 ? (
-                <details className="rounded-lg border bg-background p-4">
-                  <summary className="cursor-pointer text-sm font-medium">
+                <details className="surface p-4">
+                  <summary className="cursor-pointer rounded text-sm font-medium">
                     Retired requirements ({retiredRequirements.length})
                   </summary>
                   <ul className="mt-3 space-y-3">
@@ -266,20 +313,37 @@ export function VendorDetailPage() {
         </TabsContent>
 
         <TabsContent value="activity">
-          <ul className="divide-y rounded-lg border bg-background">
-            {activity.map((event) => (
-              <li key={event.id} className="px-4 py-3">
-                <p className="text-sm">{event.summary}</p>
-                {event.reason ? (
-                  <p className="mt-1 text-sm text-muted-foreground">Reason: {event.reason}</p>
-                ) : null}
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {event.actor_label} · {event.actor_role} ·{' '}
-                  {formatDateTime(event.created_at, app.organization.timezone)}
-                </p>
-              </li>
-            ))}
-          </ul>
+          {activity.length === 0 ? (
+            <EmptyState
+              title="No activity for this vendor yet"
+              description="Adding requirements, sending an invitation and every submission or decision will appear here."
+            />
+          ) : (
+            <Section>
+              <ol className="divide-y">
+                {activity.map((event) => (
+                  <li key={event.id} className="px-4 py-3">
+                    <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
+                      <p className="min-w-0 text-sm">{event.summary}</p>
+                      <Timestamp
+                        value={event.created_at}
+                        timezone={app.organization.timezone}
+                        className="shrink-0 text-xs text-muted-foreground"
+                      />
+                    </div>
+                    {event.reason ? (
+                      <p className="mt-1 border-l-2 pl-2.5 text-sm text-muted-foreground">
+                        {event.reason}
+                      </p>
+                    ) : null}
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {event.actor_label} · {event.actor_role}
+                    </p>
+                  </li>
+                ))}
+              </ol>
+            </Section>
+          )}
         </TabsContent>
       </Tabs>
     </div>
@@ -310,19 +374,21 @@ function AssignChecklistPanel({
   }
 
   return (
-    <section className="space-y-3 rounded-lg border bg-background p-4">
-      <h2 className="text-sm font-semibold">
-        {compact ? 'Add another checklist' : 'Assign a document checklist'}
-      </h2>
-      <p className="text-sm text-muted-foreground">
-        Assigning copies the template's current items onto this vendor. Later template edits never
-        change this vendor's requirements.
-      </p>
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-        <div className="flex-1 space-y-1">
+    <Section className="space-y-3 p-4">
+      <div className="space-y-1">
+        <h2 className="text-[0.9375rem] font-semibold">
+          {compact ? 'Add another checklist' : 'Assign a document checklist'}
+        </h2>
+        <p className="max-w-prose text-sm text-muted-foreground">
+          Assigning copies the template's current items onto this vendor as a snapshot. Later edits
+          to the template never change this vendor's requirements.
+        </p>
+      </div>
+      <div className="flex flex-col gap-2 sm:max-w-md">
+        <div className="space-y-1.5">
           <Label htmlFor={`assign-template-${compact ? 'more' : 'first'}`}>Template</Label>
           <Select value={templateId} onValueChange={setTemplateId}>
-            <SelectTrigger id={`assign-template-${compact ? 'more' : 'first'}`}>
+            <SelectTrigger id={`assign-template-${compact ? 'more' : 'first'}`} className="h-9 w-full">
               <SelectValue placeholder="Choose a template" />
             </SelectTrigger>
             <SelectContent>
@@ -339,17 +405,35 @@ function AssignChecklistPanel({
       </div>
 
       {impact.data ? (
-        <div className="rounded-md border bg-muted/40 p-3 text-sm">
+        <div className="space-y-2 rounded-lg border bg-muted/40 p-3 text-sm">
           <p className="font-medium">Readiness impact preview</p>
-          <p className="text-muted-foreground">
-            Required items {impact.data.requiredBefore} → {impact.data.requiredAfter}. Status{' '}
-            {impact.data.currentStatus.replace('_', ' ')} → {impact.data.projectedStatus.replace('_', ' ')}.
-          </p>
-          <ul className="mt-1 list-inside list-disc text-muted-foreground">
-            {impact.data.addedTitles.map((title) => (
-              <li key={title}>{title}</li>
-            ))}
-          </ul>
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-muted-foreground">
+            <span>
+              Required items{' '}
+              <span className="font-medium text-foreground tabular-nums">
+                {impact.data.requiredBefore}
+              </span>
+              {' → '}
+              <span className="font-medium text-foreground tabular-nums">
+                {impact.data.requiredAfter}
+              </span>
+            </span>
+            <span className="flex items-center gap-1.5">
+              Status <ReadinessChip status={impact.data.currentStatus} size="sm" />
+              {' → '}
+              <ReadinessChip status={impact.data.projectedStatus} size="sm" />
+            </span>
+          </div>
+          {impact.data.addedTitles.length > 0 ? (
+            <ul className="space-y-0.5 text-muted-foreground">
+              {impact.data.addedTitles.map((title) => (
+                <li key={title} className="flex gap-1.5">
+                  <Plus aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
+                  {title}
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </div>
       ) : null}
 
@@ -372,7 +456,7 @@ function AssignChecklistPanel({
           }}
         />
       ) : null}
-    </section>
+    </Section>
   )
 }
 
@@ -401,36 +485,30 @@ function VendorDetailsForm({
 
   if (!canManage) {
     return (
-      <div className="space-y-3 rounded-lg border bg-background p-4">
-        <dl className="grid gap-2 text-sm sm:grid-cols-2">
-          <div>
-            <dt className="text-muted-foreground">Company</dt>
-            <dd>{initial.company_name}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Category</dt>
-            <dd>{initial.category}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Contact</dt>
-            <dd>
-              {initial.contact_name} ({initial.contact_email})
-            </dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Properties</dt>
-            <dd>{initial.property_tags.join(', ') || '—'}</dd>
-          </div>
-        </dl>
-        <AccessDeniedState message="Your role can view vendor details but not edit them." />
-      </div>
+      <Section className="space-y-4 p-4">
+        <KeyValueList
+          items={[
+            { label: 'Company', value: initial.company_name },
+            { label: 'Category', value: initial.category },
+            {
+              label: 'Contact',
+              value: `${initial.contact_name} (${initial.contact_email})`,
+            },
+            { label: 'Properties', value: initial.property_tags.join(', ') || '—' },
+          ]}
+        />
+        <InlineNotice tone="neutral" title="Read-only">
+          Your role can view vendor details but not edit them. Ask an admin or coordinator to make
+          changes.
+        </InlineNotice>
+      </Section>
     )
   }
 
   return (
     <form
       noValidate
-      className="space-y-4 rounded-lg border bg-background p-4"
+      className="surface space-y-4 p-4"
       onSubmit={(event) => {
         event.preventDefault()
         void action.run(
@@ -443,7 +521,7 @@ function VendorDetailsForm({
         )
       }}
     >
-      <h2 className="text-sm font-semibold">Vendor details</h2>
+      <h2 className="text-[0.9375rem] font-semibold">Vendor details</h2>
       <VendorFormFields
         values={values}
         onChange={setValues}
@@ -452,12 +530,13 @@ function VendorDetailsForm({
         idPrefix="edit-vendor"
       />
       {action.conflict ? (
-        <div className="space-y-2 rounded-md border border-amber-300 bg-amber-50 p-3">
-          <p className="text-sm text-amber-900">{action.conflict}</p>
+        <InlineNotice tone="warn" title="This looks like a duplicate">
+          <p>{action.conflict}</p>
           <Button
             type="button"
             variant="outline"
             size="sm"
+            className="mt-2"
             onClick={() => {
               setConfirmDuplicate(true)
               void action.run(
@@ -472,15 +551,15 @@ function VendorDetailsForm({
           >
             Save anyway
           </Button>
-        </div>
+        </InlineNotice>
       ) : null}
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2 border-t pt-4">
         <Button type="submit" disabled={action.pending}>
           <Save aria-hidden="true" />
           Save changes
         </Button>
         <Button type="button" variant="ghost" onClick={() => setValues(initial)}>
-          Reset form
+          Discard changes
         </Button>
       </div>
     </form>
