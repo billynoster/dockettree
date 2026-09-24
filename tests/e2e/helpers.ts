@@ -52,7 +52,7 @@ export async function signIn(page: Page, email: string, password: string) {
  * Staff sign out from the account menu in the header; the vendor portal keeps a direct button
  * because it has no other chrome. This resolves whichever of the two is on screen.
  */
-function signOutControl(page: Page) {
+export function signOutControl(page: Page) {
   return page
     .getByRole('button', { name: 'Account menu' })
     .or(page.getByRole('button', { name: 'Sign out' }))
@@ -61,11 +61,13 @@ function signOutControl(page: Page) {
 
 export async function signOut(page: Page) {
   const accountMenu = page.getByRole('button', { name: 'Account menu' })
-  if (await accountMenu.isVisible()) {
+  const direct = page.getByRole('button', { name: 'Sign out' })
+  await expect(signOutControl(page)).toBeVisible()
+  if ((await accountMenu.count()) > 0) {
     await accountMenu.click()
     await page.getByRole('menuitem', { name: 'Sign out' }).click()
   } else {
-    await page.getByRole('button', { name: 'Sign out' }).click()
+    await direct.click()
   }
   await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible()
 }
