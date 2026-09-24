@@ -253,7 +253,7 @@ export function AppShell() {
               <span className="block truncate text-sm leading-tight font-semibold">
                 Vendor Readiness
               </span>
-              <span className="hidden truncate text-xs leading-tight text-muted-foreground sm:block">
+              <span className="block truncate text-xs leading-tight text-muted-foreground">
                 {app.organization.name}
               </span>
             </span>
@@ -325,14 +325,18 @@ export function AppShell() {
           tabIndex={-1}
           className="min-w-0 flex-1 space-y-5 outline-none lg:space-y-6"
         >
+          {/*
+            * One line, because it sits above every screen: the detail lives on the notification
+            * log, and the header chip keeps the condition visible after this is dismissed.
+            */}
           {app.delivery.configured || noticeDismissed ? null : (
             <InlineNotice
               tone="warn"
-              title="Email delivery is not configured on this server"
+              className="py-2"
               action={
                 <Button
                   variant="ghost"
-                  size="icon-sm"
+                  size="icon-xs"
                   aria-label="Dismiss for this session"
                   onClick={dismissNotice}
                 >
@@ -340,8 +344,9 @@ export function AppShell() {
                 </Button>
               }
             >
-              Invitations and reminders are saved and shown as queued, and no message is sent.{' '}
-              <Link to="/notifications">Open the notification log</Link> to read the exact content.
+              <span className="font-medium">Email delivery is not configured.</span> Invitations and
+              reminders are saved as queued and nothing is sent.{' '}
+              <Link to="/notifications">Open the notification log</Link>.
             </InlineNotice>
           )}
           <Outlet />

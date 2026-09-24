@@ -249,7 +249,7 @@ export function InlineNotice({
     <div
       role={role}
       className={cn(
-        'flex flex-col gap-2 rounded-lg border px-3.5 py-3 text-sm sm:flex-row sm:items-start sm:gap-3',
+        'flex items-start gap-2.5 rounded-lg border px-3.5 py-3 text-sm',
         NOTICE_TONE[tone],
         className,
       )}
@@ -259,7 +259,7 @@ export function InlineNotice({
         {title ? <p className="font-medium">{title}</p> : null}
         {children ? <div className="[&_a]:underline [&_a]:underline-offset-2">{children}</div> : null}
       </div>
-      {action ? <div className="shrink-0">{action}</div> : null}
+      {action ? <div className="-mr-1.5 shrink-0">{action}</div> : null}
     </div>
   )
 }
