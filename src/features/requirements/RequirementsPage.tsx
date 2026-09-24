@@ -5,9 +5,10 @@ import { Archive, ArchiveRestore, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useApp } from '@/app/AppProvider'
 import { useAction } from '@/app/useAction'
 import { useServiceQuery } from '@/app/useServiceQuery'
+import { Page } from '@/components/Page'
 import { PageHeader } from '@/components/PageHeader'
 import { EmptyState, ErrorState, InlineNotice, LoadingState } from '@/components/States'
-import { Chip } from '@/components/StatusChips'
+import { Chip, RequiredChip } from '@/components/StatusChips'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -39,7 +40,7 @@ export function RequirementsPage() {
   const canManage = app.can('template.manage')
 
   return (
-    <div className="animate-rise space-y-4">
+    <Page>
       <PageHeader
         title="Requirement templates"
         description="A template is the checklist you assign to a vendor. Assignment takes a snapshot, so editing a template never changes the requirements a vendor already holds."
@@ -99,7 +100,7 @@ export function RequirementsPage() {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0 space-y-1.5">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-[0.9375rem] font-semibold">{entry.template.name}</h2>
+                  <h2 className="type-title">{entry.template.name}</h2>
                   <Chip tone="neutral" size="sm">
                     Version {entry.template.version}
                   </Chip>
@@ -181,9 +182,7 @@ export function RequirementsPage() {
                 <li key={item.id} className="px-3 py-2.5">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="text-sm font-medium">{item.title}</p>
-                    <Chip tone={item.required ? 'brand' : 'neutral'} size="sm">
-                      {item.required ? 'Required' : 'Optional'}
-                    </Chip>
+                    <RequiredChip required={item.required} />
                     <span className="text-xs text-muted-foreground">
                       {item.expiration_required ? 'Expiration required' : 'No expiration'}
                       {item.collect_issue_date ? ' · issue date collected' : ''}
@@ -221,7 +220,7 @@ export function RequirementsPage() {
           fieldErrors={action.fieldErrors}
         />
       ) : null}
-    </div>
+    </Page>
   )
 }
 

@@ -15,15 +15,24 @@ import {
 import { useApp } from '@/app/AppProvider'
 import { useAction } from '@/app/useAction'
 import { useServiceQuery } from '@/app/useServiceQuery'
+import { Page } from '@/components/Page'
 import { PageHeader } from '@/components/PageHeader'
 import { RequirementMeter } from '@/components/Metrics'
 import { Section } from '@/components/Section'
 import { EmptyState, ErrorState, FilteredEmptyState, TableSkeleton } from '@/components/States'
 import { ExpiringSoonChip, ReadinessChip } from '@/components/StatusChips'
 import { Timestamp } from '@/components/Timestamp'
+import {
+  ClearFiltersButton,
+  Toolbar,
+  ToolbarActions,
+  ToolbarGroup,
+  ToolbarRow,
+} from '@/components/Toolbar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { RemovableChip, ToggleChip } from '@/components/ui/toggle-chip'
 import {
   Select,
   SelectContent,
@@ -38,12 +47,12 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableSortHeader,
 } from '@/components/ui/table'
 import { formatDate } from '@/domain/dates'
 import { READINESS_LABEL } from '@/domain/readiness'
 import type { ReadinessStatus } from '@/domain/types'
 import { downloadText } from '@/lib/download'
-import { cn } from '@/lib/utils'
 import { ImportVendorsDialog } from './ImportVendorsDialog'
 import { hasActiveFilters, parseVendorQuery, vendorQueryToParams } from '@/domain/vendorQuery'
 
@@ -61,75 +70,6 @@ const SORT_LABEL = {
 } as const
 
 type SortKey = keyof typeof SORT_LABEL
-
-/** Toggle chip. `aria-pressed` carries the state, so it is not colour-only. */
-function FilterToggle({
-  pressed,
-  onToggle,
-  children,
-}: {
-  pressed: boolean
-  onToggle: () => void
-  children: React.ReactNode
-}) {
-  return (
-    <button
-      type="button"
-      aria-pressed={pressed}
-      onClick={onToggle}
-      className={cn(
-        'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[0.8125rem] font-medium transition-colors',
-        pressed
-          ? 'border-primary bg-primary text-primary-foreground'
-          : 'border-border bg-card text-muted-foreground hover:border-input hover:text-foreground',
-      )}
-    >
-      {children}
-    </button>
-  )
-}
-
-/** Column header that sorts. Clicking the active column flips direction. */
-function SortHeader({
-  column,
-  active,
-  direction,
-  onSort,
-  children,
-  className,
-}: {
-  column: SortKey
-  active: boolean
-  direction: 'asc' | 'desc'
-  onSort: (column: SortKey) => void
-  children: React.ReactNode
-  className?: string
-}) {
-  return (
-    <TableHead
-      aria-sort={active ? (direction === 'asc' ? 'ascending' : 'descending') : 'none'}
-      className={className}
-    >
-      <button
-        type="button"
-        onClick={() => onSort(column)}
-        className={cn(
-          'inline-flex items-center gap-1 rounded transition-colors',
-          active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
-        )}
-      >
-        {children}
-        {active ? (
-          direction === 'asc' ? (
-            <ArrowUp aria-hidden="true" className="size-3.5" />
-          ) : (
-            <ArrowDown aria-hidden="true" className="size-3.5" />
-          )
-        ) : null}
-      </button>
-    </TableHead>
-  )
-}
 
 export function VendorsPage() {
   const app = useApp()
@@ -240,7 +180,7 @@ export function VendorsPage() {
   ]
 
   return (
-    <div className="animate-rise space-y-4">
+    <Page>
       <PageHeader
         title="Vendors"
         description="Search, filter and open any vendor. Archived vendors stay out of the list until you include them."
@@ -286,9 +226,9 @@ export function VendorsPage() {
         }
       />
 
-      <Section aria-label="Search and filters" className="space-y-3 p-3 sm:p-4">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <div className="relative flex-1">
+      <Toolbar label="Search and filters">
+        <ToolbarRow className="sm:items-center">
+          <div className="relative min-w-0 flex-1">
             <Search
               aria-hidden="true"
               className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
@@ -301,7 +241,7 @@ export function VendorsPage() {
               ref={searchRef}
               type="search"
               value={searchDraft}
-              className="h-9 pr-8 pl-8.5"
+              className="pr-9 pl-9"
               placeholder="Search company, contact or email…"
               onChange={(event) => setSearchDraft(event.target.value)}
             />
@@ -310,7 +250,7 @@ export function VendorsPage() {
                 type="button"
                 variant="ghost"
                 size="icon-xs"
-                className="absolute top-1/2 right-1.5 -translate-y-1/2"
+                className="absolute top-1/2 right-1 -translate-y-1/2"
                 aria-label="Clear search"
                 onClick={() => {
                   setSearchDraft('')
@@ -321,12 +261,12 @@ export function VendorsPage() {
               </Button>
             ) : null}
           </div>
-          <div className="flex items-center gap-2">
+          <ToolbarActions>
             <Label htmlFor="filter-sort" className="sr-only">
               Sort by
             </Label>
             <Select value={query.sort ?? 'name'} onValueChange={(value) => sortBy(value as SortKey)}>
-              <SelectTrigger id="filter-sort" className="h-9 min-w-40 flex-1 sm:flex-none">
+              <SelectTrigger id="filter-sort" className="min-w-40 flex-1 sm:flex-none">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -341,7 +281,6 @@ export function VendorsPage() {
               type="button"
               variant="outline"
               size="icon"
-              className="size-9"
               aria-label={`Sort ${query.direction === 'asc' ? 'ascending' : 'descending'}. Switch to ${query.direction === 'asc' ? 'descending' : 'ascending'}.`}
               onClick={() => update({ direction: query.direction === 'asc' ? 'desc' : 'asc' })}
             >
@@ -354,36 +293,33 @@ export function VendorsPage() {
             <Button
               type="button"
               variant={moreOpen ? 'secondary' : 'outline'}
-              size="sm"
-              className="h-9"
               aria-expanded={moreOpen}
               onClick={() => setMoreOpen((open) => !open)}
             >
               <SlidersHorizontal aria-hidden="true" />
               More
             </Button>
-          </div>
-        </div>
+          </ToolbarActions>
+        </ToolbarRow>
 
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="pr-1 text-xs font-medium text-muted-foreground">Readiness</span>
+        <ToolbarGroup label="Readiness">
           {READINESS_FILTERS.map((status) => (
-            <FilterToggle
+            <ToggleChip
               key={status}
               pressed={(query.readiness ?? []).includes(status)}
               onToggle={() => toggleReadiness(status)}
             >
               {READINESS_LABEL[status]}
-            </FilterToggle>
+            </ToggleChip>
           ))}
           <span aria-hidden="true" className="mx-1 hidden h-4 w-px bg-border sm:block" />
-          <FilterToggle
+          <ToggleChip
             pressed={query.expiringSoonOnly ?? false}
             onToggle={() => update({ expiringSoonOnly: !query.expiringSoonOnly })}
           >
             Expiring soon
-          </FilterToggle>
-        </div>
+          </ToggleChip>
+        </ToolbarGroup>
 
         {moreOpen ? (
           <div className="grid gap-3 border-t pt-3 sm:grid-cols-3">
@@ -393,7 +329,7 @@ export function VendorsPage() {
                 value={query.category ?? 'all'}
                 onValueChange={(value) => update({ category: value === 'all' ? null : value })}
               >
-                <SelectTrigger id="filter-category" className="h-9 w-full">
+                <SelectTrigger id="filter-category" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -412,7 +348,7 @@ export function VendorsPage() {
                 value={query.property ?? 'all'}
                 onValueChange={(value) => update({ property: value === 'all' ? null : value })}
               >
-                <SelectTrigger id="filter-property" className="h-9 w-full">
+                <SelectTrigger id="filter-property" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -431,7 +367,7 @@ export function VendorsPage() {
                 value={query.lifecycle ?? 'active'}
                 onValueChange={(value) => update({ lifecycle: value as 'active' | 'archived' | 'all' })}
               >
-                <SelectTrigger id="filter-lifecycle" className="h-9 w-full">
+                <SelectTrigger id="filter-lifecycle" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -445,26 +381,16 @@ export function VendorsPage() {
         ) : null}
 
         {appliedPills.length > 0 ? (
-          <div className="flex flex-wrap items-center gap-1.5 border-t pt-3">
-            <span className="pr-1 text-xs font-medium text-muted-foreground">Applied</span>
+          <ToolbarGroup label="Applied" className="border-t pt-3">
             {appliedPills.map((pill) => (
-              <button
-                key={pill.key}
-                type="button"
-                onClick={pill.clear}
-                className="tone-brand inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium transition-opacity hover:opacity-80"
-              >
+              <RemovableChip key={pill.key} onRemove={pill.clear}>
                 {pill.label}
-                <X aria-hidden="true" className="size-3" />
-                <span className="sr-only">Remove filter</span>
-              </button>
+              </RemovableChip>
             ))}
-            <Button variant="ghost" size="xs" className="ml-1" onClick={clearAll}>
-              Clear all
-            </Button>
-          </div>
+            <ClearFiltersButton onClear={clearAll} />
+          </ToolbarGroup>
         ) : null}
-      </Section>
+      </Toolbar>
 
       {list.loading && !list.data ? <TableSkeleton label="Loading vendors" rows={6} columns={6} /> : null}
       {list.error ? <ErrorState message={list.error} onRetry={list.reload} /> : null}
@@ -515,34 +441,31 @@ export function VendorsPage() {
                 <Table>
                   <TableHeader>
                     <TableRow className="hover:bg-transparent">
-                      <SortHeader
-                        column="name"
+                      <TableSortHeader
                         active={(query.sort ?? 'name') === 'name'}
                         direction={query.direction ?? 'asc'}
-                        onSort={sortBy}
+                        onSort={() => sortBy('name')}
                         className="pl-4"
                       >
                         Vendor
-                      </SortHeader>
+                      </TableSortHeader>
                       <TableHead>Readiness</TableHead>
                       <TableHead>Required items</TableHead>
-                      <SortHeader
-                        column="next_expiration"
+                      <TableSortHeader
                         active={query.sort === 'next_expiration'}
                         direction={query.direction ?? 'asc'}
-                        onSort={sortBy}
+                        onSort={() => sortBy('next_expiration')}
                       >
                         Next expiration
-                      </SortHeader>
+                      </TableSortHeader>
                       <TableHead>Primary contact</TableHead>
-                      <SortHeader
-                        column="updated"
+                      <TableSortHeader
                         active={query.sort === 'updated'}
                         direction={query.direction ?? 'asc'}
-                        onSort={sortBy}
+                        onSort={() => sortBy('updated')}
                       >
                         Updated
-                      </SortHeader>
+                      </TableSortHeader>
                       <TableHead className="w-8 pr-4">
                         <span className="sr-only">Open</span>
                       </TableHead>
@@ -562,7 +485,7 @@ export function VendorsPage() {
                         <TableCell className="max-w-64 pl-4 font-medium whitespace-normal">
                           <Link
                             to={`/vendors/${row.vendor.id}`}
-                            className="underline-offset-4 group-hover:text-primary group-hover:underline"
+                            className="rounded-sm underline-offset-[3px] group-hover:text-clay-text group-hover:underline"
                             onClick={(event) => event.stopPropagation()}
                           >
                             {row.vendor.company_name}
@@ -692,6 +615,6 @@ export function VendorsPage() {
           )}
         </>
       ) : null}
-    </div>
+    </Page>
   )
 }

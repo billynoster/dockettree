@@ -4,6 +4,7 @@ import { api } from '@/api/client'
 import { useApp } from '@/app/AppProvider'
 import { useAction } from '@/app/useAction'
 import { useServiceQuery } from '@/app/useServiceQuery'
+import { Page } from '@/components/Page'
 import { PageHeader } from '@/components/PageHeader'
 import { PasswordField } from '@/components/PasswordField'
 import { Section, SectionBody, SectionHeader } from '@/components/Section'
@@ -63,7 +64,7 @@ export function SettingsPage() {
   const today = todayInTimeZone(new Date(), form.timezone)
 
   return (
-    <div className="animate-rise max-w-3xl space-y-5">
+    <Page width="reading">
       <PageHeader
         title="Settings"
         description="Organization details, the people who can sign in, and how this server delivers messages."
@@ -109,7 +110,7 @@ export function SettingsPage() {
                 <Label htmlFor="org-name">Organization name</Label>
                 <Input
                   id="org-name"
-                  className="h-9"
+                  
                   value={form.name}
                   disabled={!canManage}
                   aria-invalid={Boolean(action.fieldErrors.name)}
@@ -126,7 +127,7 @@ export function SettingsPage() {
                   disabled={!canManage}
                   onValueChange={(value) => setForm({ ...form, timezone: value })}
                 >
-                  <SelectTrigger id="org-timezone" className="h-9 w-full">
+                  <SelectTrigger id="org-timezone" className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -145,7 +146,7 @@ export function SettingsPage() {
                 <Label htmlFor="org-support-name">Support contact name</Label>
                 <Input
                   id="org-support-name"
-                  className="h-9"
+                  
                   value={form.support_contact_name}
                   disabled={!canManage}
                   onChange={(event) =>
@@ -158,7 +159,7 @@ export function SettingsPage() {
                 <Input
                   id="org-support-email"
                   type="email"
-                  className="h-9"
+                  
                   value={form.support_email}
                   disabled={!canManage}
                   aria-invalid={Boolean(action.fieldErrors.support_email)}
@@ -261,7 +262,7 @@ export function SettingsPage() {
                       >
                         <SelectTrigger
                           aria-label={`Role for ${member.user.display_name}`}
-                          className="h-8 w-36"
+                          className="w-36"
                         >
                           <SelectValue />
                         </SelectTrigger>
@@ -367,7 +368,7 @@ export function SettingsPage() {
           ) : null}
         </SectionBody>
       </Section>
-    </div>
+    </Page>
   )
 }
 
@@ -457,7 +458,7 @@ function AddMemberForm({ onAdded }: { onAdded: () => void }) {
           <Label htmlFor="member-name">Name</Label>
           <Input
             id="member-name"
-            className="h-9"
+            
             value={values.display_name}
             aria-invalid={Boolean(action.fieldErrors.display_name)}
             onChange={(event) => setValues({ ...values, display_name: event.target.value })}
@@ -471,7 +472,7 @@ function AddMemberForm({ onAdded }: { onAdded: () => void }) {
           <Input
             id="member-email"
             type="email"
-            className="h-9"
+            
             value={values.email}
             aria-invalid={Boolean(action.fieldErrors.email)}
             onChange={(event) => setValues({ ...values, email: event.target.value })}
@@ -486,7 +487,7 @@ function AddMemberForm({ onAdded }: { onAdded: () => void }) {
             value={values.role}
             onValueChange={(value) => setValues({ ...values, role: value as InternalRole })}
           >
-            <SelectTrigger id="member-role" className="h-9 w-full">
+            <SelectTrigger id="member-role" className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

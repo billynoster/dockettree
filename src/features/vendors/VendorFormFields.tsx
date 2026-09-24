@@ -41,7 +41,6 @@ export function VendorFormFields({
         <Label htmlFor={field('company_name')}>Company name</Label>
         <Input
           id={field('company_name')}
-          className="h-9"
           value={values.company_name}
           required
           aria-invalid={Boolean(fieldErrors.company_name)}
@@ -63,7 +62,7 @@ export function VendorFormFields({
         >
           <SelectTrigger
             id={field('category')}
-            className="h-9 w-full"
+            className="w-full"
             aria-invalid={Boolean(fieldErrors.category)}
             aria-describedby={fieldErrors.category ? errorId('category') : undefined}
           >
@@ -88,7 +87,6 @@ export function VendorFormFields({
         <Label htmlFor={field('contact_name')}>Primary contact name</Label>
         <Input
           id={field('contact_name')}
-          className="h-9"
           value={values.contact_name}
           required
           aria-invalid={Boolean(fieldErrors.contact_name)}
@@ -107,7 +105,6 @@ export function VendorFormFields({
         <Input
           id={field('contact_email')}
           type="email"
-          className="h-9"
           value={values.contact_email}
           required
           aria-invalid={Boolean(fieldErrors.contact_email)}

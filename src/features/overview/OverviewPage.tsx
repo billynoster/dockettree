@@ -4,6 +4,7 @@ import { api } from '@/api/client'
 import { useApp } from '@/app/AppProvider'
 import { useServiceQuery } from '@/app/useServiceQuery'
 import { ErrorState, StatsSkeleton } from '@/components/States'
+import { Page } from '@/components/Page'
 import { PageHeader } from '@/components/PageHeader'
 import { ReadinessMixBar, READINESS_TONE, StatTile, ToneDot, type Tone } from '@/components/Metrics'
 import { Section, SectionHeader } from '@/components/Section'
@@ -39,17 +40,17 @@ function SecondaryMetric({
     <Section className="flex flex-col gap-3 p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-1">
-          <h2 className="flex items-center gap-2 text-[0.8125rem] font-medium">
+          <h2 className="type-subtitle flex items-center gap-2">
             <ToneDot tone={tone} />
             {label}
           </h2>
-          <p className="text-[1.75rem] leading-none font-semibold">{value}</p>
+          <p className="type-metric-sm">{value}</p>
         </div>
         <span className="flex size-9 items-center justify-center rounded-lg bg-muted text-muted-foreground">
           <Icon aria-hidden="true" className="size-4.5" />
         </span>
       </div>
-      <p className="text-xs leading-relaxed text-muted-foreground">{description}</p>
+      <p className="type-meta">{description}</p>
       <Button asChild variant="outline" size="sm" className="mt-auto w-fit">
         <Link to={to}>
           {cta}
@@ -72,7 +73,7 @@ export function OverviewPage() {
   const organizationIsEmpty = counts.active === 0 && counts.archived === 0
 
   return (
-    <div className="animate-rise space-y-5 lg:space-y-6">
+    <Page>
       <PageHeader
         title="Overview"
         description={
@@ -87,12 +88,12 @@ export function OverviewPage() {
         <div className="flex flex-col gap-4 p-4">
           <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
             <div className="space-y-1">
-              <h2 id="active-count" className="text-[0.8125rem] font-medium text-muted-foreground">
+              <h2 id="active-count" className="type-subtitle text-muted-foreground">
                 Active vendors
               </h2>
-              <p className="text-4xl leading-none font-semibold">{counts.active}</p>
+              <p className="type-metric">{counts.active}</p>
             </div>
-            <p className="max-w-md text-xs leading-relaxed text-muted-foreground">
+            <p className="type-meta max-w-md">
               Ready, Awaiting review, Not ready and Unconfigured add up to the active total. The{' '}
               {counts.archived} archived vendor{counts.archived === 1 ? '' : 's'}{' '}
               {counts.archived === 1 ? 'is' : 'are'} excluded from every count on this page.
@@ -198,7 +199,7 @@ export function OverviewPage() {
                     <span className="flex min-w-0 flex-1 items-start gap-2.5">
                       <ToneDot tone={tone} className="mt-1.5" />
                       <span className="min-w-0">
-                        <span className="block truncate text-sm font-medium group-hover:text-primary">
+                        <span className="block truncate text-sm font-medium group-hover:text-clay-text">
                           {item.company_name}
                         </span>
                         <span className="block text-sm text-muted-foreground">
@@ -264,6 +265,6 @@ export function OverviewPage() {
           </ul>
         )}
       </Section>
-    </div>
+    </Page>
   )
 }

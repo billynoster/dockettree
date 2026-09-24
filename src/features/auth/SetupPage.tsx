@@ -46,7 +46,6 @@ export function SetupPage() {
         type={options.type ?? 'text'}
         autoComplete={options.autoComplete}
         placeholder={options.placeholder}
-        className="h-9"
         value={values[key]}
         aria-invalid={Boolean(fieldErrors[key])}
         aria-describedby={fieldErrors[key] ? `setup-${key}-error` : undefined}
@@ -73,10 +72,10 @@ export function SetupPage() {
     >
       <div className="space-y-6">
         <div className="space-y-1.5">
-          <p className="text-xs font-semibold tracking-[0.08em] text-primary uppercase">
+          <p className="type-eyebrow text-clay-text">
             First-run setup
           </p>
-          <h1 className="text-xl font-semibold tracking-tight">Create your organization</h1>
+          <h1 className="type-display">Create your organization</h1>
           <p className="text-sm text-muted-foreground">
             This server has no organization yet. Create it together with the first admin account.
           </p>
@@ -101,7 +100,7 @@ export function SetupPage() {
           }}
         >
           <fieldset className="space-y-4">
-            <legend className="mb-1 text-[0.8125rem] font-semibold tracking-wide text-muted-foreground uppercase">
+            <legend className="mb-1 type-eyebrow">
               Organization
             </legend>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -116,7 +115,7 @@ export function SetupPage() {
                   value={values.timezone}
                   onValueChange={(value) => setValues({ ...values, timezone: value })}
                 >
-                  <SelectTrigger id="setup-timezone" className="h-9 w-full">
+                  <SelectTrigger id="setup-timezone" className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -145,7 +144,7 @@ export function SetupPage() {
           </fieldset>
 
           <fieldset className="space-y-4">
-            <legend className="mb-1 text-[0.8125rem] font-semibold tracking-wide text-muted-foreground uppercase">
+            <legend className="mb-1 type-eyebrow">
               First admin
             </legend>
             <div className="grid gap-4 sm:grid-cols-2">

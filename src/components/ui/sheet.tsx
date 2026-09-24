@@ -38,12 +38,12 @@ function SheetContent({
     <DialogPrimitive.Portal>
       <DialogPrimitive.Overlay
         data-slot="sheet-overlay"
-        className="fixed inset-0 z-50 bg-foreground/25 duration-150 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0"
+        className="fixed inset-0 z-50 bg-foreground/20 duration-150 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0"
       />
       <DialogPrimitive.Content
         data-slot="sheet-content"
         className={cn(
-          'fixed z-50 flex flex-col gap-4 bg-popover p-4 text-sm text-popover-foreground shadow-overlay duration-200 outline-none data-open:animate-in data-closed:animate-out',
+          'fixed z-50 flex flex-col gap-5 bg-popover p-5 text-sm text-popover-foreground shadow-overlay duration-(--duration-settle) ease-(--ease-soft) outline-none data-open:animate-in data-closed:animate-out',
           SIDE_CLASS[side],
           className,
         )}
@@ -67,7 +67,7 @@ function SheetTitle({ className, ...props }: React.ComponentProps<typeof DialogP
   return (
     <DialogPrimitive.Title
       data-slot="sheet-title"
-      className={cn('text-base font-semibold', className)}
+      className={cn('type-display-sm', className)}
       {...props}
     />
   )

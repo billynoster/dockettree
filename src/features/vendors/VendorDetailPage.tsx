@@ -14,6 +14,7 @@ import {
 import { useApp } from '@/app/AppProvider'
 import { useAction } from '@/app/useAction'
 import { useServiceQuery } from '@/app/useServiceQuery'
+import { Page } from '@/components/Page'
 import { PageHeader } from '@/components/PageHeader'
 import { ReasonDialog } from '@/components/ReasonDialog'
 import { RequirementCard } from '@/components/RequirementCard'
@@ -82,7 +83,7 @@ export function VendorDetailPage() {
   )
 
   return (
-    <div className="animate-rise space-y-5">
+    <Page>
       <PageHeader
         back={{ label: 'All vendors', to: '/vendors' }}
         title={vendor.company_name}
@@ -194,7 +195,7 @@ export function VendorDetailPage() {
 
           {readiness.blockers.length > 0 ? (
             <div className="space-y-1.5">
-              <h2 className="text-[0.8125rem] font-semibold">
+              <h2 className="type-subtitle font-semibold">
                 What is blocking readiness ({readiness.blockers.length})
               </h2>
               <ul className="space-y-1 text-sm">
@@ -346,7 +347,7 @@ export function VendorDetailPage() {
           )}
         </TabsContent>
       </Tabs>
-    </div>
+    </Page>
   )
 }
 
@@ -376,7 +377,7 @@ function AssignChecklistPanel({
   return (
     <Section className="space-y-3 p-4">
       <div className="space-y-1">
-        <h2 className="text-[0.9375rem] font-semibold">
+        <h2 className="type-title">
           {compact ? 'Add another checklist' : 'Assign a document checklist'}
         </h2>
         <p className="max-w-prose text-sm text-muted-foreground">
@@ -388,7 +389,7 @@ function AssignChecklistPanel({
         <div className="space-y-1.5">
           <Label htmlFor={`assign-template-${compact ? 'more' : 'first'}`}>Template</Label>
           <Select value={templateId} onValueChange={setTemplateId}>
-            <SelectTrigger id={`assign-template-${compact ? 'more' : 'first'}`} className="h-9 w-full">
+            <SelectTrigger id={`assign-template-${compact ? 'more' : 'first'}`} className="w-full">
               <SelectValue placeholder="Choose a template" />
             </SelectTrigger>
             <SelectContent>
@@ -521,7 +522,7 @@ function VendorDetailsForm({
         )
       }}
     >
-      <h2 className="text-[0.9375rem] font-semibold">Vendor details</h2>
+      <h2 className="type-title">Vendor details</h2>
       <VendorFormFields
         values={values}
         onChange={setValues}

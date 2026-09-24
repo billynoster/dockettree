@@ -41,7 +41,7 @@ export function PasswordField({
           autoComplete={autoComplete}
           autoFocus={autoFocus}
           value={value}
-          className="h-9 pr-9"
+          className="pr-9"
           aria-invalid={Boolean(error)}
           aria-describedby={error ? `${fieldId}-error` : hint ? `${fieldId}-hint` : undefined}
           onChange={(event) => onChange(event.target.value)}

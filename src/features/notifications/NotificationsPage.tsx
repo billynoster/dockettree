@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useSearchParams } from 'react-router'
+import { useSearchParams } from 'react-router'
 import {
   Bell,
   CalendarClock,
@@ -12,13 +12,19 @@ import { api } from '@/api/client'
 import { useApp } from '@/app/AppProvider'
 import { useAction } from '@/app/useAction'
 import { useServiceQuery } from '@/app/useServiceQuery'
+import { Page } from '@/components/Page'
 import { PageHeader } from '@/components/PageHeader'
-import { Section } from '@/components/Section'
 import { EmptyState, ErrorState, InlineNotice, LoadingState } from '@/components/States'
 import { Chip, type ChipTone } from '@/components/StatusChips'
 import { Timestamp } from '@/components/Timestamp'
+import {
+  ClearFiltersButton,
+  Toolbar,
+  ToolbarField,
+  ToolbarRow,
+} from '@/components/Toolbar'
 import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
+import { TextLink } from '@/components/ui/text-link'
 import {
   Select,
   SelectContent,
@@ -82,7 +88,7 @@ export function NotificationsPage() {
   }
 
   return (
-    <div className="animate-rise space-y-4">
+    <Page>
       <PageHeader
         title="Notifications"
         description="Every invitation, reminder and correction notice this organization has produced, with its real delivery state. Nothing here is simulated."
@@ -102,58 +108,55 @@ export function NotificationsPage() {
 
       {outbox.data ? (
         <>
-          <Section aria-label="Message filters" className="p-3 sm:p-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-              <div className="flex-1 space-y-1.5">
-                <Label htmlFor="outbox-vendor">Vendor</Label>
-                <Select
-                  value={vendorId ?? 'all'}
-                  onValueChange={(value) => setFilter('vendor', value === 'all' ? null : value)}
-                >
-                  <SelectTrigger id="outbox-vendor" className="h-9 w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All vendors</SelectItem>
-                    {outbox.data.vendors.map((vendor) => (
-                      <SelectItem key={vendor.id} value={vendor.id}>
-                        {vendor.company_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex-1 space-y-1.5">
-                <Label htmlFor="outbox-type">Message type</Label>
-                <Select
-                  value={type ?? 'all'}
-                  onValueChange={(value) => setFilter('type', value === 'all' ? null : value)}
-                >
-                  <SelectTrigger id="outbox-type" className="h-9 w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All types</SelectItem>
-                    {Object.entries(TYPE_LABEL).map(([value, label]) => (
-                      <SelectItem key={value} value={value}>
-                        {label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+          <Toolbar label="Message filters">
+            <ToolbarRow>
+              <ToolbarField label="Vendor">
+                {(id) => (
+                  <Select
+                    value={vendorId ?? 'all'}
+                    onValueChange={(value) => setFilter('vendor', value === 'all' ? null : value)}
+                  >
+                    <SelectTrigger id={id} className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All vendors</SelectItem>
+                      {outbox.data!.vendors.map((vendor) => (
+                        <SelectItem key={vendor.id} value={vendor.id}>
+                          {vendor.company_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </ToolbarField>
+              <ToolbarField label="Message type">
+                {(id) => (
+                  <Select
+                    value={type ?? 'all'}
+                    onValueChange={(value) => setFilter('type', value === 'all' ? null : value)}
+                  >
+                    <SelectTrigger id={id} className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All types</SelectItem>
+                      {Object.entries(TYPE_LABEL).map(([value, label]) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </ToolbarField>
               {vendorId || type ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-9 shrink-0"
-                  onClick={() => setSearchParams(new URLSearchParams(), { replace: true })}
-                >
-                  Clear filters
-                </Button>
+                <ClearFiltersButton
+                  onClear={() => setSearchParams(new URLSearchParams(), { replace: true })}
+                />
               ) : null}
-            </div>
-          </Section>
+            </ToolbarRow>
+          </Toolbar>
 
           <p className="text-sm text-muted-foreground" role="status">
             {outbox.data.entries.length === outbox.data.total
@@ -209,12 +212,9 @@ export function NotificationsPage() {
                           {entry.vendorName ? (
                             <>
                               {' · '}
-                              <Link
-                                to={`/vendors/${notification.vendor_id}`}
-                                className="text-primary underline-offset-4 hover:underline"
-                              >
+                              <TextLink to={`/vendors/${notification.vendor_id}`}>
                                 {entry.vendorName}
-                              </Link>
+                              </TextLink>
                             </>
                           ) : null}
                         </p>
@@ -294,6 +294,6 @@ export function NotificationsPage() {
           )}
         </>
       ) : null}
-    </div>
+    </Page>
   )
 }

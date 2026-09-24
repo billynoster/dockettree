@@ -29,7 +29,7 @@ export function AuthLayout({
             <ShieldCheck aria-hidden="true" className="size-6" />
           </span>
           <div className="space-y-2">
-            <p className="text-2xl leading-snug font-semibold tracking-tight">Vendor Readiness</p>
+            <p className="type-display">Vendor Readiness</p>
             <p className="text-sm leading-relaxed text-primary-foreground/80">
               {organizationName
                 ? `Document compliance for ${organizationName}.`

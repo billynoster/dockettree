@@ -37,12 +37,10 @@ export function SectionHeader({
       )}
     >
       <div className="min-w-0 space-y-0.5">
-        <Heading id={id} className="text-[0.9375rem] leading-tight font-semibold">
+        <Heading id={id} className="type-title">
           {title}
         </Heading>
-        {description ? (
-          <p className="text-[0.8125rem] leading-snug text-muted-foreground">{description}</p>
-        ) : null}
+        {description ? <p className="type-meta max-w-prose">{description}</p> : null}
       </div>
       {action ? <div className="flex shrink-0 flex-wrap items-center gap-2">{action}</div> : null}
     </div>
@@ -83,9 +81,7 @@ export function KeyValueList({
     >
       {items.map((item, index) => (
         <div key={item.key ?? index} className="min-w-0">
-          <dt className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-            {item.label}
-          </dt>
+          <dt className="type-eyebrow">{item.label}</dt>
           <dd className="mt-0.5 break-words">{item.value}</dd>
         </div>
       ))}

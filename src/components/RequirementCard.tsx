@@ -10,9 +10,10 @@ import { InlineNotice } from '@/components/States'
 import {
   Chip,
   CurrentDocumentChip,
+  RequiredChip,
   SubmissionStateChip,
-  type ChipTone,
 } from '@/components/StatusChips'
+import { TONE_SOLID, type ChipTone } from '@/components/ui/chip'
 import { Timestamp } from '@/components/Timestamp'
 import { Button } from '@/components/ui/button'
 import {
@@ -26,15 +27,6 @@ import { describeRelativeDays, formatDate } from '@/domain/dates'
 import type { RequirementStatus } from '@/domain/readiness'
 import type { Vendor } from '@/domain/types'
 import { cn } from '@/lib/utils'
-
-const ACCENT_CLASS: Record<ChipTone, string> = {
-  ok: 'bg-tone-ok',
-  info: 'bg-tone-info',
-  warn: 'bg-tone-warn',
-  danger: 'bg-tone-danger',
-  neutral: 'bg-tone-neutral',
-  brand: 'bg-primary',
-}
 
 /**
  * One assigned requirement. Current document and latest submission are always shown as two
@@ -100,23 +92,21 @@ export function RequirementCard({
     <li className="surface relative overflow-hidden pl-1">
       <span
         aria-hidden="true"
-        className={cn('absolute inset-y-0 left-0 w-1', ACCENT_CLASS[accent])}
+        className={cn('absolute inset-y-0 left-0 w-1', TONE_SOLID[accent])}
       />
       <div className="space-y-4 p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
           <div className="min-w-0 space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
-              <h3 className="text-[0.9375rem] font-semibold">{requirement.title}</h3>
-              <Chip tone={requirement.required ? 'brand' : 'neutral'} size="sm">
-                {requirement.required ? 'Required' : 'Optional'}
-              </Chip>
+              <h3 className="type-title">{requirement.title}</h3>
+              <RequiredChip required={requirement.required} />
               {retired ? (
                 <Chip tone="neutral" size="sm">
                   Retired — excluded from readiness
                 </Chip>
               ) : null}
             </div>
-            <p className="max-w-prose text-sm leading-relaxed text-muted-foreground">
+            <p className="type-body max-w-prose text-muted-foreground">
               {requirement.instructions}
             </p>
             {requirement.due_date ? (
@@ -159,7 +149,7 @@ export function RequirementCard({
 
         <dl className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-2 rounded-lg border bg-muted/40 p-3">
-            <dt className="text-[0.6875rem] font-semibold tracking-[0.06em] text-muted-foreground uppercase">
+            <dt className="type-eyebrow">
               Current document
             </dt>
             <dd className="space-y-2">
@@ -244,7 +234,7 @@ export function RequirementCard({
           </div>
 
           <div className="space-y-2 rounded-lg border bg-muted/40 p-3">
-            <dt className="text-[0.6875rem] font-semibold tracking-[0.06em] text-muted-foreground uppercase">
+            <dt className="type-eyebrow">
               Latest submission
             </dt>
             <dd className="space-y-2">

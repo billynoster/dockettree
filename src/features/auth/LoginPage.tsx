@@ -45,7 +45,7 @@ export function LoginPage() {
     >
       <div className="space-y-6">
         <div className="space-y-1.5">
-          <h1 className="text-xl font-semibold tracking-tight">Sign in</h1>
+          <h1 className="type-display">Sign in</h1>
           <p className="text-sm text-muted-foreground">
             {state.info?.organizationName
               ? `Continue to ${state.info.organizationName}.`
@@ -69,7 +69,6 @@ export function LoginPage() {
               inputMode="email"
               autoComplete="username"
               autoFocus
-              className="h-9"
               value={email}
               aria-invalid={Boolean(fieldErrors.email)}
               aria-describedby={fieldErrors.email ? 'login-email-error' : undefined}

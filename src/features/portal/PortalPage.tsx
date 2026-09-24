@@ -11,6 +11,7 @@ import { ErrorState, InlineNotice, LoadingState } from '@/components/States'
 import { ReadinessChip } from '@/components/StatusChips'
 import { Timestamp } from '@/components/Timestamp'
 import { Button } from '@/components/ui/button'
+import { TextLinkExternal } from '@/components/ui/text-link'
 import {
   Select,
   SelectContent,
@@ -65,7 +66,7 @@ export function PortalPage() {
                       .finally(() => setSwitching(false))
                   }}
                 >
-                  <SelectTrigger id="portal-vendor-context" className="h-9 w-48 sm:w-56">
+                  <SelectTrigger id="portal-vendor-context" className="w-48 sm:w-56">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -78,7 +79,7 @@ export function PortalPage() {
                 </Select>
               </div>
             ) : null}
-            <Button variant="outline" size="sm" className="h-9" onClick={() => void app.signOut()}>
+            <Button variant="outline" onClick={() => void app.signOut()}>
               <LogOut aria-hidden="true" />
               Sign out
             </Button>
@@ -103,7 +104,7 @@ export function PortalPage() {
             <Section className="space-y-4 p-4 sm:p-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="space-y-0.5">
-                  <h1 className="text-xl font-semibold tracking-tight">
+                  <h1 className="type-display">
                     {portal.data.vendor.company_name}
                   </h1>
                   <p className="text-sm text-muted-foreground">
@@ -118,11 +119,13 @@ export function PortalPage() {
                   value={portal.data.requiredSatisfied}
                   max={portal.data.requiredTotal}
                   label="Required documents accepted"
+                  /* Ink while there is work left, green once everything is accepted. A clay bar
+                   * reads as a warning to someone who has never seen this screen before. */
                   tone={
                     portal.data.requiredTotal > 0 &&
                     portal.data.requiredSatisfied >= portal.data.requiredTotal
                       ? 'ok'
-                      : 'brand'
+                      : 'neutral'
                   }
                 />
                 <p className="text-sm">
@@ -175,7 +178,7 @@ export function PortalPage() {
 
             <section className="space-y-3" aria-labelledby="portal-required">
               <div className="flex items-baseline justify-between gap-3">
-                <h2 id="portal-required" className="text-[0.9375rem] font-semibold">
+                <h2 id="portal-required" className="type-title">
                   Required documents
                   <span className="ml-2 font-normal text-muted-foreground tabular-nums">
                     {portal.data.requirements.length}
@@ -204,7 +207,7 @@ export function PortalPage() {
 
             {portal.data.optionalRequirements.length > 0 ? (
               <section className="space-y-3" aria-labelledby="portal-optional">
-                <h2 id="portal-optional" className="text-[0.9375rem] font-semibold">
+                <h2 id="portal-optional" className="type-title">
                   Optional documents
                   <span className="ml-2 text-sm font-normal text-muted-foreground">
                     these never block readiness
@@ -263,12 +266,9 @@ export function PortalPage() {
                 <span>
                   Questions about a document? Contact{' '}
                   {portal.data.organization?.support_contact_name} at{' '}
-                  <a
-                    href={`mailto:${portal.data.organization?.support_email}`}
-                    className="font-medium text-primary underline-offset-4 hover:underline"
-                  >
+                  <TextLinkExternal href={`mailto:${portal.data.organization?.support_email}`}>
                     {portal.data.organization?.support_email}
-                  </a>
+                  </TextLinkExternal>
                   .
                 </span>
               </p>

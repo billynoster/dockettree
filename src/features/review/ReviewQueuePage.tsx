@@ -3,6 +3,7 @@ import { ChevronRight, Paperclip } from 'lucide-react'
 import { api } from '@/api/client'
 import { useApp } from '@/app/AppProvider'
 import { useServiceQuery } from '@/app/useServiceQuery'
+import { Page } from '@/components/Page'
 import { PageHeader } from '@/components/PageHeader'
 import { Section } from '@/components/Section'
 import {
@@ -13,8 +14,12 @@ import {
   LoadingState,
 } from '@/components/States'
 import { Timestamp } from '@/components/Timestamp'
-import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
+import {
+  ClearFiltersButton,
+  Toolbar,
+  ToolbarField,
+  ToolbarRow,
+} from '@/components/Toolbar'
 import {
   Select,
   SelectContent,
@@ -46,7 +51,7 @@ export function ReviewQueuePage() {
   const canDecide = app.can('submission.review')
 
   return (
-    <div className="animate-rise space-y-4">
+    <Page>
       <PageHeader
         title="Review queue"
         description="Oldest pending submission first, so nothing waits indefinitely. Archived vendors are excluded, and the count is submissions rather than vendors."
@@ -59,58 +64,55 @@ export function ReviewQueuePage() {
 
       {queue.data ? (
         <>
-          <Section aria-label="Queue filters" className="p-3 sm:p-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-              <div className="flex-1 space-y-1.5">
-                <Label htmlFor="review-vendor">Vendor</Label>
-                <Select
-                  value={vendorId ?? 'all'}
-                  onValueChange={(value) => setFilter('vendor', value === 'all' ? null : value)}
-                >
-                  <SelectTrigger id="review-vendor" className="h-9 w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All vendors</SelectItem>
-                    {queue.data.vendors.map((vendor) => (
-                      <SelectItem key={vendor.id} value={vendor.id}>
-                        {vendor.company_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex-1 space-y-1.5">
-                <Label htmlFor="review-requirement">Requirement</Label>
-                <Select
-                  value={requirementTitle ?? 'all'}
-                  onValueChange={(value) => setFilter('requirement', value === 'all' ? null : value)}
-                >
-                  <SelectTrigger id="review-requirement" className="h-9 w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All requirements</SelectItem>
-                    {queue.data.requirementTitles.map((title) => (
-                      <SelectItem key={title} value={title}>
-                        {title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+          <Toolbar label="Queue filters">
+            <ToolbarRow>
+              <ToolbarField label="Vendor">
+                {(id) => (
+                  <Select
+                    value={vendorId ?? 'all'}
+                    onValueChange={(value) => setFilter('vendor', value === 'all' ? null : value)}
+                  >
+                    <SelectTrigger id={id} className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All vendors</SelectItem>
+                      {queue.data!.vendors.map((vendor) => (
+                        <SelectItem key={vendor.id} value={vendor.id}>
+                          {vendor.company_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </ToolbarField>
+              <ToolbarField label="Requirement">
+                {(id) => (
+                  <Select
+                    value={requirementTitle ?? 'all'}
+                    onValueChange={(value) => setFilter('requirement', value === 'all' ? null : value)}
+                  >
+                    <SelectTrigger id={id} className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All requirements</SelectItem>
+                      {queue.data!.requirementTitles.map((title) => (
+                        <SelectItem key={title} value={title}>
+                          {title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </ToolbarField>
               {filtered ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-9 shrink-0"
-                  onClick={() => setSearchParams(new URLSearchParams(), { replace: true })}
-                >
-                  Clear filters
-                </Button>
+                <ClearFiltersButton
+                  onClear={() => setSearchParams(new URLSearchParams(), { replace: true })}
+                />
               ) : null}
-            </div>
-          </Section>
+            </ToolbarRow>
+          </Toolbar>
 
           {!canDecide ? (
             <InlineNotice tone="info" title="You can read this queue but not decide">
@@ -149,12 +151,12 @@ export function ReviewQueuePage() {
                     >
                       <span
                         aria-hidden="true"
-                        className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-[0.6875rem] font-semibold text-muted-foreground tabular-nums sm:mt-0"
+                        className="type-meta mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-accent font-semibold tabular-nums sm:mt-0"
                       >
                         {item.position}
                       </span>
                       <span className="min-w-0 flex-1 space-y-0.5">
-                        <span className="block text-sm font-medium group-hover:text-primary">
+                        <span className="block text-sm font-medium group-hover:text-clay-text">
                           {item.requirement.title}
                           <span className="font-normal text-muted-foreground">
                             {' · '}v{item.submission.version_number}
@@ -180,7 +182,7 @@ export function ReviewQueuePage() {
                           </span>
                         ) : null}
                       </span>
-                      <span className="flex shrink-0 items-center gap-1 text-sm font-medium text-muted-foreground group-hover:text-primary">
+                      <span className="flex shrink-0 items-center gap-1 text-sm font-medium text-muted-foreground group-hover:text-clay-text">
                         <span className="hidden sm:inline">
                           {canDecide ? 'Review' : 'Open'}
                         </span>
@@ -197,6 +199,6 @@ export function ReviewQueuePage() {
           )}
         </>
       ) : null}
-    </div>
+    </Page>
   )
 }

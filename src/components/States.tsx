@@ -12,7 +12,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
-import type { ChipTone } from '@/components/StatusChips'
+import { TONE_CLASS, type ChipTone } from '@/components/ui/chip'
 
 /**
  * Generic placeholder. Skeletons mirror the shape of the content that replaces them so the layout
@@ -109,22 +109,22 @@ function Panel({
   return (
     <div
       className={cn(
-        'flex flex-col items-center gap-3 rounded-xl border px-6 py-10 text-center',
-        tone === 'danger' ? 'tone-danger' : 'border-dashed bg-card',
+        'flex flex-col items-center gap-3 rounded-2xl border px-6 py-12 text-center',
+        tone === 'danger' ? 'tone-danger' : 'border-dashed bg-card/60',
       )}
     >
       <span
         className={cn(
-          'flex size-10 items-center justify-center rounded-full',
-          tone === 'danger' ? 'bg-card/70 text-tone-danger' : 'bg-muted text-muted-foreground',
+          'flex size-11 items-center justify-center rounded-full',
+          tone === 'danger' ? 'bg-card/70' : 'bg-muted text-muted-foreground',
         )}
       >
         {icon}
       </span>
-      <div className="max-w-prose space-y-1">
-        <h3 className="text-[0.9375rem] font-semibold">{title}</h3>
+      <div className="max-w-prose space-y-1.5">
+        <h3 className="type-display-sm">{title}</h3>
         {description ? (
-          <p className={cn('text-sm', tone === 'danger' ? undefined : 'text-muted-foreground')}>
+          <p className={cn('type-body', tone === 'danger' ? undefined : 'text-muted-foreground')}>
             {description}
           </p>
         ) : null}
@@ -215,15 +215,6 @@ const NOTICE_ICON = {
   brand: Info,
 } as const
 
-const NOTICE_TONE: Record<ChipTone, string> = {
-  ok: 'tone-ok',
-  info: 'tone-info',
-  warn: 'tone-warn',
-  danger: 'tone-danger',
-  neutral: 'tone-neutral',
-  brand: 'tone-brand',
-}
-
 /**
  * Inline explanation attached to the thing it describes: a read-only reason, a delivery caveat, a
  * blocked action. One shape for all of them, so the meaning is carried by tone and icon, and a
@@ -249,8 +240,8 @@ export function InlineNotice({
     <div
       role={role}
       className={cn(
-        'flex items-start gap-2.5 rounded-lg border px-3.5 py-3 text-sm',
-        NOTICE_TONE[tone],
+        'flex items-start gap-2.5 rounded-xl border px-3.5 py-3 text-sm',
+        TONE_CLASS[tone],
         className,
       )}
     >

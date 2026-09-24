@@ -116,7 +116,7 @@ function NavItems({
     <div className="space-y-5">
       {NAV_GROUPS.map((group) => (
         <div key={group.label}>
-          <p className="px-3 pb-1.5 text-[0.6875rem] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
+          <p className="px-3 pb-1.5 type-eyebrow">
             {group.label}
           </p>
           <ul className="space-y-0.5">

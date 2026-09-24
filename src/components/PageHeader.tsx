@@ -33,7 +33,7 @@ export function PageHeader({
       {back ? (
         <Link
           to={back.to}
-          className="-ml-1 inline-flex items-center gap-1 rounded px-1 py-0.5 text-[0.8125rem] font-medium text-muted-foreground transition-colors hover:text-foreground"
+          className="-ml-1 inline-flex items-center gap-1 rounded px-1 py-0.5 text-[0.8125rem] font-medium text-muted-foreground transition-colors duration-(--duration-quick) hover:text-clay-text"
         >
           <ChevronLeft aria-hidden="true" className="size-3.5" />
           {back.label}
@@ -41,11 +41,9 @@ export function PageHeader({
       ) : null}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
         <div className="min-w-0 space-y-1.5">
-          <h1 className="text-[1.375rem] leading-tight font-semibold text-balance sm:text-2xl">
-            {title}
-          </h1>
+          <h1 className="type-display">{title}</h1>
           {description ? (
-            <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">{description}</p>
+            <p className="type-body max-w-3xl text-muted-foreground">{description}</p>
           ) : null}
           {meta ? <div className="flex flex-wrap items-center gap-2 pt-0.5">{meta}</div> : null}
         </div>

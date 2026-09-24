@@ -1,4 +1,4 @@
-import { Link, useSearchParams } from 'react-router'
+import { useSearchParams } from 'react-router'
 import {
   Archive,
   ArchiveRestore,
@@ -18,12 +18,18 @@ import { api } from '@/api/client'
 import { ACTIVITY_TYPE_LABEL } from '@/domain/activity'
 import { useApp } from '@/app/AppProvider'
 import { useServiceQuery } from '@/app/useServiceQuery'
+import { Page } from '@/components/Page'
 import { PageHeader } from '@/components/PageHeader'
 import { Section } from '@/components/Section'
 import { EmptyState, ErrorState, FilteredEmptyState, LoadingState } from '@/components/States'
 import { Timestamp } from '@/components/Timestamp'
-import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
+import {
+  ClearFiltersButton,
+  Toolbar,
+  ToolbarField,
+  ToolbarRow,
+} from '@/components/Toolbar'
+import { TextLink } from '@/components/ui/text-link'
 import {
   Select,
   SelectContent,
@@ -101,64 +107,61 @@ export function ActivityPage() {
   }
 
   return (
-    <div className="animate-rise space-y-4">
+    <Page>
       <PageHeader
         title="Activity"
         description="Append-only history of vendor changes, invitations, submissions, decisions and reminders. Events cannot be edited or deleted, by anyone."
       />
 
-      <Section aria-label="Activity filters" className="p-3 sm:p-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-          <div className="flex-1 space-y-1.5">
-            <Label htmlFor="activity-vendor">Vendor</Label>
-            <Select
-              value={vendorId ?? 'all'}
-              onValueChange={(value) => setFilter('vendor', value === 'all' ? null : value)}
-            >
-              <SelectTrigger id="activity-vendor" className="h-9 w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All vendors</SelectItem>
-                {(vendors.data?.rows ?? []).map((row) => (
-                  <SelectItem key={row.vendor.id} value={row.vendor.id}>
-                    {row.vendor.company_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex-1 space-y-1.5">
-            <Label htmlFor="activity-type">Event type</Label>
-            <Select
-              value={eventType ?? 'all'}
-              onValueChange={(value) => setFilter('type', value === 'all' ? null : value)}
-            >
-              <SelectTrigger id="activity-type" className="h-9 w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All event types</SelectItem>
-                {Object.entries(ACTIVITY_TYPE_LABEL).map(([value, label]) => (
-                  <SelectItem key={value} value={value}>
-                    {label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+      <Toolbar label="Activity filters">
+        <ToolbarRow>
+          <ToolbarField label="Vendor">
+            {(id) => (
+              <Select
+                value={vendorId ?? 'all'}
+                onValueChange={(value) => setFilter('vendor', value === 'all' ? null : value)}
+              >
+                <SelectTrigger id={id} className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All vendors</SelectItem>
+                  {(vendors.data?.rows ?? []).map((row) => (
+                    <SelectItem key={row.vendor.id} value={row.vendor.id}>
+                      {row.vendor.company_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </ToolbarField>
+          <ToolbarField label="Event type">
+            {(id) => (
+              <Select
+                value={eventType ?? 'all'}
+                onValueChange={(value) => setFilter('type', value === 'all' ? null : value)}
+              >
+                <SelectTrigger id={id} className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All event types</SelectItem>
+                  {Object.entries(ACTIVITY_TYPE_LABEL).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </ToolbarField>
           {filtered ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-9 shrink-0"
-              onClick={() => setSearchParams(new URLSearchParams(), { replace: true })}
-            >
-              Clear filters
-            </Button>
+            <ClearFiltersButton
+              onClear={() => setSearchParams(new URLSearchParams(), { replace: true })}
+            />
           ) : null}
-        </div>
-      </Section>
+        </ToolbarRow>
+      </Toolbar>
 
       {activity.loading && !activity.data ? (
         <LoadingState label="Loading activity" rows={6} />
@@ -221,12 +224,7 @@ export function ActivityPage() {
                           {event.vendor_id ? (
                             <>
                               {' · '}
-                              <Link
-                                to={`/vendors/${event.vendor_id}`}
-                                className="text-primary underline-offset-4 hover:underline"
-                              >
-                                Open vendor
-                              </Link>
+                              <TextLink to={`/vendors/${event.vendor_id}`}>Open vendor</TextLink>
                             </>
                           ) : null}
                         </p>
@@ -239,6 +237,6 @@ export function ActivityPage() {
           </>
         )
       ) : null}
-    </div>
+    </Page>
   )
 }

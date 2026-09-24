@@ -173,7 +173,6 @@ export function SubmitDocumentDialog({
               <Input
                 id="submit-issue"
                 type="date"
-                className="h-9"
                 value={issueDate}
                 aria-invalid={Boolean(fieldErrors.issue_date)}
                 aria-describedby={fieldErrors.issue_date ? 'submit-issue-error' : undefined}
@@ -193,7 +192,6 @@ export function SubmitDocumentDialog({
               <Input
                 id="submit-expiration"
                 type="date"
-                className="h-9"
                 value={expirationDate}
                 required
                 aria-invalid={Boolean(fieldErrors.expiration_date)}

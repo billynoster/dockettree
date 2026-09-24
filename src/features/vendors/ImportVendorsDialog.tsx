@@ -123,7 +123,7 @@ export function ImportVendorsDialog({ trigger }: { trigger: React.ReactNode }) {
           <div className="space-y-1.5">
             <Label htmlFor="import-template">Checklist for every imported vendor</Label>
             <Select value={templateId} onValueChange={setTemplateId}>
-              <SelectTrigger id="import-template" className="h-9 w-full">
+              <SelectTrigger id="import-template" className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

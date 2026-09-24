@@ -6,12 +6,14 @@ import { useApp } from '@/app/AppProvider'
 import { useAction } from '@/app/useAction'
 import { useServiceQuery } from '@/app/useServiceQuery'
 import { DocumentPreview } from '@/components/DocumentPreview'
+import { Page } from '@/components/Page'
 import { PageHeader } from '@/components/PageHeader'
 import { KeyValueList, Section, SectionHeader } from '@/components/Section'
 import { AccessDeniedState, ErrorState, InlineNotice, LoadingState } from '@/components/States'
-import { Chip, SubmissionStateChip } from '@/components/StatusChips'
+import { RequiredChip, SubmissionStateChip } from '@/components/StatusChips'
 import { Timestamp } from '@/components/Timestamp'
 import { Button } from '@/components/ui/button'
+import { TextLink } from '@/components/ui/text-link'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { formatDate } from '@/domain/dates'
@@ -67,18 +69,13 @@ export function ReviewDetailPage() {
   }
 
   return (
-    <div className="animate-rise space-y-4">
+    <Page>
       <PageHeader
         back={{ label: 'Review queue', to: '/review' }}
         title={requirement.title}
         description={
           <>
-            <Link
-              to={`/vendors/${vendor.id}`}
-              className="font-medium text-primary underline-offset-4 hover:underline"
-            >
-              {vendor.company_name}
-            </Link>{' '}
+            <TextLink to={`/vendors/${vendor.id}`}>{vendor.company_name}</TextLink>{' '}
             · version {submission.version_number} · submitted{' '}
             <Timestamp value={submission.submitted_at} timezone={app.organization.timezone} /> by{' '}
             {submission.submitted_by_label}
@@ -88,9 +85,7 @@ export function ReviewDetailPage() {
         meta={
           <>
             <SubmissionStateChip state={submission.state} />
-            <Chip tone={requirement.required ? 'brand' : 'neutral'}>
-              {requirement.required ? 'Required' : 'Optional'}
-            </Chip>
+            <RequiredChip required={requirement.required} size="default" />
           </>
         }
       />
@@ -102,7 +97,7 @@ export function ReviewDetailPage() {
          * the main way a wrong decision happens.
          */}
         <Section className="p-4 lg:sticky lg:top-[calc(var(--header-height)+1.5rem)]">
-          <h2 className="mb-3 text-[0.9375rem] font-semibold">Submitted document</h2>
+          <h2 className="type-title mb-3">Submitted document</h2>
           <DocumentPreview submissionId={submission.id} height="h-[32rem]" />
         </Section>
 
@@ -200,7 +195,7 @@ export function ReviewDetailPage() {
 
           <Section className="space-y-3 p-4">
             <div className="space-y-1">
-              <h2 className="text-[0.9375rem] font-semibold">Checklist instructions</h2>
+              <h2 className="type-title">Checklist instructions</h2>
               <p className="text-sm leading-relaxed text-muted-foreground">
                 {requirement.instructions}
               </p>
@@ -228,7 +223,7 @@ export function ReviewDetailPage() {
 
           {effective && effective.id !== submission.id ? (
             <Section className="space-y-2 p-4">
-              <h2 className="text-[0.9375rem] font-semibold">Currently effective version</h2>
+              <h2 className="type-title">Currently effective version</h2>
               <p className="text-sm">
                 Version {effective.version_number}
                 {effective.expiration_date
@@ -292,6 +287,6 @@ export function ReviewDetailPage() {
           ) : null}
         </div>
       </div>
-    </div>
+    </Page>
   )
 }

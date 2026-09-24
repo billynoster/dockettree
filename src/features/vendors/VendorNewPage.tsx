@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router'
 import { useApp } from '@/app/AppProvider'
 import { useAction } from '@/app/useAction'
 import { useServiceQuery } from '@/app/useServiceQuery'
+import { Page } from '@/components/Page'
 import { PageHeader } from '@/components/PageHeader'
 import { Section, SectionBody, SectionHeader } from '@/components/Section'
 import { AccessDeniedState, InlineNotice } from '@/components/States'
@@ -111,7 +112,7 @@ export function VendorNewPage() {
   }
 
   return (
-    <div className="animate-rise max-w-3xl space-y-5">
+    <Page width="reading">
       <PageHeader
         back={{ label: 'All vendors', to: '/vendors' }}
         title="Add vendor"
@@ -148,7 +149,7 @@ export function VendorNewPage() {
           <div className="space-y-1.5">
             <Label htmlFor="new-vendor-template">Checklist template</Label>
             <Select value={templateId} onValueChange={setTemplateId}>
-              <SelectTrigger id="new-vendor-template" className="h-9 w-full">
+              <SelectTrigger id="new-vendor-template" className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -280,6 +281,6 @@ export function VendorNewPage() {
           </Button>
         </div>
       </form>
-    </div>
+    </Page>
   )
 }

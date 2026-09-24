@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { Link, useSearchParams } from 'react-router'
+import { useSearchParams } from 'react-router'
 import { LoaderCircle, UserCheck } from 'lucide-react'
 import { api } from '@/api/client'
 import { useSession } from '@/app/AppProvider'
 import { PasswordField } from '@/components/PasswordField'
+import { TextLink } from '@/components/ui/text-link'
 import { ErrorState, InlineNotice, LoadingState } from '@/components/States'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -57,10 +58,10 @@ export function AcceptInvitationPage() {
         {check.data ? (
           <>
             <div className="space-y-1.5">
-              <p className="text-xs font-semibold tracking-[0.08em] text-primary uppercase">
+              <p className="type-eyebrow text-clay-text">
                 Vendor invitation
               </p>
-              <h1 className="text-xl leading-snug font-semibold tracking-tight">
+              <h1 className="type-display">
                 {check.data.organization_name} needs documents from {check.data.company_name}
               </h1>
               <p className="text-sm text-muted-foreground">
@@ -93,7 +94,6 @@ export function AcceptInvitationPage() {
                   id="accept-name"
                   autoFocus
                   autoComplete="name"
-                  className="h-9"
                   value={values.display_name}
                   aria-invalid={Boolean(fieldErrors.display_name)}
                   aria-describedby={fieldErrors.display_name ? 'accept-name-error' : undefined}
@@ -136,9 +136,7 @@ export function AcceptInvitationPage() {
 
         <p className="border-t pt-4 text-xs text-muted-foreground">
           Already set a password?{' '}
-          <Link to="/login" className="font-medium text-primary underline-offset-2 hover:underline">
-            Sign in instead
-          </Link>
+          <TextLink to="/login">Sign in instead</TextLink>
           .
         </p>
       </div>
