@@ -112,6 +112,8 @@
     --shadow-surface:
         0 1px 1px oklch(0.32 0.03 55 / 0.035),
         0 2px 4px -1px oklch(0.32 0.03 55 / 0.035);
+    /* A warm inset hairline for fields. It is a boundary cue, not an elevation step. */
+    --shadow-control: inset 0 1px 1px oklch(0.32 0.03 55 / 0.03);
     --shadow-raised:
         0 1px 1px oklch(0.32 0.03 55 / 0.04),
         0 3px 6px -2px oklch(0.32 0.03 55 / 0.05),
@@ -174,6 +176,7 @@
     --radius-3xl: calc(var(--radius) * 1.7);
 
     --shadow-surface: var(--shadow-surface);
+    --shadow-control: var(--shadow-control);
     --shadow-raised: var(--shadow-raised);
     --shadow-overlay: var(--shadow-overlay);
 

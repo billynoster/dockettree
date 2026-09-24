@@ -22,7 +22,7 @@ export function ToggleChip({
       aria-pressed={pressed}
       onClick={onToggle}
       className={cn(
-        'inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-[0.8125rem] font-medium transition-[background-color,border-color,color] duration-(--duration-quick) ease-(--ease-soft)',
+        'type-subtitle inline-flex h-8 items-center gap-1.5 rounded-full border px-3 transition-[background-color,border-color,color] duration-(--duration-quick) ease-(--ease-soft)',
         pressed
           ? 'border-primary bg-primary text-primary-foreground'
           : 'border-border-strong bg-card text-foreground-soft hover:border-input hover:bg-muted hover:text-foreground',
