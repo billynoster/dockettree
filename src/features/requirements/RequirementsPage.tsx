@@ -6,7 +6,8 @@ import { useApp } from '@/app/AppProvider'
 import { useAction } from '@/app/useAction'
 import { useServiceQuery } from '@/app/useServiceQuery'
 import { PageHeader } from '@/components/PageHeader'
-import { AccessDeniedState, EmptyState, ErrorState, LoadingState } from '@/components/States'
+import { EmptyState, ErrorState, InlineNotice, LoadingState } from '@/components/States'
+import { Chip } from '@/components/StatusChips'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -38,10 +39,10 @@ export function RequirementsPage() {
   const canManage = app.can('template.manage')
 
   return (
-    <div className="space-y-4">
+    <div className="animate-rise space-y-4">
       <PageHeader
         title="Requirement templates"
-        description="Templates define the checklist you assign to vendors. Assignments are snapshots, so editing a template never changes a vendor's existing requirements."
+        description="A template is the checklist you assign to a vendor. Assignment takes a snapshot, so editing a template never changes the requirements a vendor already holds."
         actions={
           canManage ? (
             <Button
@@ -61,7 +62,9 @@ export function RequirementsPage() {
       />
 
       {!canManage ? (
-        <AccessDeniedState message="Only an admin can create or edit templates. You can still read them below." />
+        <InlineNotice tone="neutral">
+          Only an admin can create or edit templates. You can read every template below.
+        </InlineNotice>
       ) : null}
 
       {templates.loading && !templates.data ? <LoadingState label="Loading templates" /> : null}
@@ -70,27 +73,45 @@ export function RequirementsPage() {
       {templates.data?.length === 0 ? (
         <EmptyState
           title="No templates yet"
-          description="Create a template so coordinators can assign a consistent checklist."
+          description="Create a template so coordinators assign the same checklist every time instead of assembling it by hand."
+          action={
+            canManage ? (
+              <Button
+                size="sm"
+                onClick={() =>
+                  setEditing({
+                    id: null,
+                    input: { name: '', description: '', items: [{ ...BLANK_ITEM }] },
+                  })
+                }
+              >
+                <Plus aria-hidden="true" />
+                New template
+              </Button>
+            ) : undefined
+          }
         />
       ) : null}
 
       <ul className="space-y-3">
         {(templates.data ?? []).map((entry) => (
-          <li key={entry.template.id} className="rounded-lg border bg-background p-4">
+          <li key={entry.template.id} className="surface p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div className="min-w-0 space-y-1">
+              <div className="min-w-0 space-y-1.5">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-sm font-semibold">{entry.template.name}</h2>
-                  <span className="rounded border px-1.5 py-0.5 text-xs text-muted-foreground">
+                  <h2 className="text-[0.9375rem] font-semibold">{entry.template.name}</h2>
+                  <Chip tone="neutral" size="sm">
                     Version {entry.template.version}
-                  </span>
+                  </Chip>
                   {entry.template.archived_at ? (
-                    <span className="rounded border border-slate-300 bg-slate-100 px-1.5 py-0.5 text-xs text-slate-700">
+                    <Chip tone="warn" size="sm">
                       Archived
-                    </span>
+                    </Chip>
                   ) : null}
                 </div>
-                <p className="text-sm text-muted-foreground">{entry.template.description}</p>
+                <p className="max-w-prose text-sm text-muted-foreground">
+                  {entry.template.description}
+                </p>
                 <p className="text-xs text-muted-foreground">
                   {entry.items.length} item{entry.items.length === 1 ? '' : 's'} ·{' '}
                   {entry.requiredCount} required · {entry.optionalCount} optional ·{' '}
@@ -155,18 +176,22 @@ export function RequirementsPage() {
               ) : null}
             </div>
 
-            <ul className="mt-3 divide-y rounded-md border">
+            <ul className="mt-3 divide-y rounded-lg border">
               {entry.items.map((item) => (
-                <li key={item.id} className="px-3 py-2">
-                  <p className="text-sm font-medium">
-                    {item.title}{' '}
-                    <span className="font-normal text-muted-foreground">
-                      · {item.required ? 'Required' : 'Optional'}
-                      {item.expiration_required ? ' · expiration required' : ' · no expiration'}
+                <li key={item.id} className="px-3 py-2.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-sm font-medium">{item.title}</p>
+                    <Chip tone={item.required ? 'brand' : 'neutral'} size="sm">
+                      {item.required ? 'Required' : 'Optional'}
+                    </Chip>
+                    <span className="text-xs text-muted-foreground">
+                      {item.expiration_required ? 'Expiration required' : 'No expiration'}
                       {item.collect_issue_date ? ' · issue date collected' : ''}
                     </span>
+                  </div>
+                  <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                    {item.instructions}
                   </p>
-                  <p className="text-xs text-muted-foreground">{item.instructions}</p>
                 </li>
               ))}
             </ul>
