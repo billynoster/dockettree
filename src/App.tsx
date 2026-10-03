@@ -17,6 +17,7 @@ import { RequestsPage } from '@/features/requests/RequestsPage'
 import { RequirementsPage } from '@/features/requirements/RequirementsPage'
 import { ReviewDetailPage } from '@/features/review/ReviewDetailPage'
 import { ReviewQueuePage } from '@/features/review/ReviewQueuePage'
+import { PricingPage } from '@/features/pricing/PricingPage'
 import { SettingsPage } from '@/features/settings/SettingsPage'
 import { VendorDetailPage } from '@/features/vendors/VendorDetailPage'
 import { VendorNewPage } from '@/features/vendors/VendorNewPage'
@@ -115,6 +116,15 @@ function AppRoutes() {
 
   const info = state.info
 
+  // Public marketing surface — available before and after auth so pricing is never gated.
+  if (location.pathname === '/pricing') {
+    return (
+      <Routes>
+        <Route path="/pricing" element={<PricingPage />} />
+      </Routes>
+    )
+  }
+
   // Invitation acceptance is reachable without a session; once it succeeds the normal routes
   // take over and send the new contact to their portal.
   if (location.pathname === '/invitations/accept' && !info.authenticated) {
@@ -129,6 +139,7 @@ function AppRoutes() {
     return (
       <Routes>
         <Route path="/setup" element={<SetupPage />} />
+        <Route path="/pricing" element={<PricingPage />} />
         <Route path="*" element={<Navigate to="/setup" replace />} />
       </Routes>
     )
@@ -138,6 +149,7 @@ function AppRoutes() {
     return (
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/pricing" element={<PricingPage />} />
         <Route path="*" element={<Navigate to="/login" replace state={{ from: location.pathname }} />} />
       </Routes>
     )
@@ -176,6 +188,7 @@ function InternalRoutes() {
         <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/activity" element={<ActivityPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/pricing" element={<PricingPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>

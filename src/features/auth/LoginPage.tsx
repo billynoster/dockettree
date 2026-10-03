@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router'
 import { LoaderCircle, LogIn } from 'lucide-react'
 import { api } from '@/api/client'
 import { useSession } from '@/app/AppProvider'
@@ -110,6 +111,13 @@ export function LoginPage() {
           <p>
             Invited as a vendor contact? Open the link in your invitation email to choose a password
             first.
+          </p>
+          <p>
+            Evaluating Docket Tree?{' '}
+            <Link to="/pricing" className="text-clay-text underline-offset-4 hover:underline">
+              View pricing
+            </Link>
+            .
           </p>
         </div>
       </div>
