@@ -45,6 +45,20 @@ export type NotificationType =
   | 'internal_expiration_notice'
 
 /**
+ * Lifecycle of one document/info ask in the Requests inbox.
+ * Mapped onto outbox sends, portal opens, submissions, and review decisions.
+ */
+export type DocumentRequestState =
+  | 'sent'
+  | 'viewed'
+  | 'uploaded'
+  | 'in_review'
+  | 'completed'
+
+/** How the ask was originated. Does not change readiness math. */
+export type DocumentRequestSource = 'reminder' | 'correction' | 'manual'
+
+/**
  * Delivery state of an outbox row. `queued` means the message is persisted and waiting:
  * either for the next delivery attempt or, when SMTP is not configured, indefinitely.
  */
@@ -319,4 +333,30 @@ export interface RequestRecord {
   key: string
   result_json: string
   created_at: IsoDateTime
+}
+
+/**
+ * One document/info ask tracked in the Requests inbox.
+ * Distinct from `RequestRecord` (HTTP idempotency ledger → SQLite `request_records`).
+ */
+export interface DocumentRequest {
+  id: UUID
+  organization_id: UUID
+  vendor_id: UUID
+  requirement_id: UUID | null
+  item_title: string
+  detail: string | null
+  source: DocumentRequestSource
+  state: DocumentRequestState
+  notification_id: UUID | null
+  submission_id: UUID | null
+  created_by: UUID | 'system'
+  sent_at: IsoDateTime
+  viewed_at: IsoDateTime | null
+  uploaded_at: IsoDateTime | null
+  in_review_at: IsoDateTime | null
+  completed_at: IsoDateTime | null
+  closed_reason: string | null
+  created_at: IsoDateTime
+  updated_at: IsoDateTime
 }

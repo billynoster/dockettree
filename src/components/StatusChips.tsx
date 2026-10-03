@@ -12,6 +12,8 @@ import {
   CircleDashed,
   CircleHelp,
   Clock3,
+  Eye,
+  FileUp,
   FileX2,
   Hourglass,
   MailCheck,
@@ -22,8 +24,14 @@ import {
 } from 'lucide-react'
 import { Chip, ToneDot, type ChipTone } from '@/components/ui/chip'
 import { formatDate } from '@/domain/dates'
+import { DOCUMENT_REQUEST_STATE_LABEL } from '@/domain/documentRequests'
 import { CURRENT_DOCUMENT_LABEL, READINESS_LABEL, SUBMISSION_STATE_LABEL } from '@/domain/readiness'
-import type { CurrentDocumentStatus, ReadinessStatus, SubmissionState } from '@/domain/types'
+import type {
+  CurrentDocumentStatus,
+  DocumentRequestState,
+  ReadinessStatus,
+  SubmissionState,
+} from '@/domain/types'
 import { INVITATION_LABEL, type InvitationStatus } from '@/domain/invitations'
 
 export { Chip, ToneDot, type ChipTone }
@@ -247,6 +255,42 @@ export function RequiredChip({ required, size = 'sm' }: { required: boolean; siz
   return (
     <Chip tone={required ? 'brand' : 'neutral'} size={size}>
       {required ? 'Required' : 'Optional'}
+    </Chip>
+  )
+}
+
+const REQUEST_STATE_CHIP: Record<
+  DocumentRequestState,
+  { status?: StatusChipStatus; tone: ChipTone; icon: LucideIcon }
+> = {
+  sent: { status: 'waiting', tone: 'waiting', icon: Send },
+  viewed: { status: 'waiting', tone: 'waiting', icon: Eye },
+  uploaded: { status: 'in-review', tone: 'info', icon: FileUp },
+  in_review: { status: 'in-review', tone: 'info', icon: Clock3 },
+  completed: { status: 'ready', tone: 'ok', icon: CheckCircle2 },
+}
+
+/** Requests inbox lifecycle chips — Sent → Completed. */
+export function RequestStateChip({
+  state,
+  size,
+}: {
+  state: DocumentRequestState
+  size?: 'sm' | 'default'
+}) {
+  const meta = REQUEST_STATE_CHIP[state]
+  if (meta.status) {
+    return (
+      <StatusChip
+        status={meta.status}
+        size={size}
+        label={DOCUMENT_REQUEST_STATE_LABEL[state]}
+      />
+    )
+  }
+  return (
+    <Chip tone={meta.tone} icon={meta.icon} size={size}>
+      {DOCUMENT_REQUEST_STATE_LABEL[state]}
     </Chip>
   )
 }

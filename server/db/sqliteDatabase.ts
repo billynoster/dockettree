@@ -210,6 +210,7 @@ export class SqliteDatabase implements Database {
       activity: this.collection('activity'),
       importBatches: this.collection('importBatches'),
       requests: this.collection('requests'),
+      documentRequests: this.collection('documentRequests'),
       blobs,
     } as UnitOfWork
   }

@@ -8,6 +8,12 @@ import { forbidden } from '@/domain/errors'
 import { CURRENT_DOCUMENT_LABEL, type RequirementStatus } from '@/domain/readiness'
 import type { ActivityEvent, Organization, ReviewEvent, UUID, Vendor } from '@/domain/types'
 import { today, type ServiceContext } from './context'
+import {
+  ensureDocumentRequestsFromOutbox,
+  listVendorDocumentRequests,
+  markVendorRequestsViewed,
+  type DocumentRequestListItem,
+} from './documentRequestService'
 import { loadVendorSnapshot, sortByCreatedAtDesc, type VendorSnapshot } from './queries'
 
 export interface PortalRequirement {
@@ -28,6 +34,7 @@ export interface PortalData {
   requiredTotal: number
   requiredSatisfied: number
   events: ActivityEvent[]
+  requests: DocumentRequestListItem[]
   readOnlyReason: string | null
 }
 
@@ -37,6 +44,13 @@ export async function getVendorPortal(ctx: ServiceContext, vendorId: UUID): Prom
       'This portal belongs to a different vendor. A vendor contact can only open their own portal.',
     )
   }
+
+  // Opening the portal advances Sent → Viewed for this vendor's open asks.
+  await ctx.db.write(async (uow) => {
+    await ensureDocumentRequestsFromOutbox(uow, ctx)
+    await markVendorRequestsViewed(uow, ctx, vendorId)
+  })
+
   return await ctx.db.read(async (uow) => {
     const todayValue = today(ctx)
     const snapshot = await loadVendorSnapshot(uow, vendorId, todayValue, ctx.organizationId)
@@ -90,9 +104,16 @@ export async function getVendorPortal(ctx: ServiceContext, vendorId: UUID): Prom
       requiredTotal: snapshot.readiness.requiredTotal,
       requiredSatisfied: snapshot.readiness.requiredSatisfied,
       events,
+      requests: [],
       readOnlyReason: archived
         ? 'This vendor record is archived. Contact the operations team if you need to submit documents.'
         : null,
+    }
+  }).then(async (data) => {
+    const listed = await listVendorDocumentRequests(ctx, vendorId)
+    return {
+      ...data,
+      requests: listed.items.filter((item) => item.request.state !== 'completed').slice(0, 12),
     }
   })
 }

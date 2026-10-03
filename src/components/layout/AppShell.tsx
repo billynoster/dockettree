@@ -51,12 +51,13 @@ interface SoonItem {
 }
 
 /**
- * Spec IA mapped onto existing routes. Properties / Requests / Reports stay “Soon”
- * until those backends exist — do not invent models in a visual pass.
+ * Spec IA mapped onto existing routes. Properties / Reports stay “Soon”
+ * until those backends exist. Requests is a real inbox backed by document_requests.
  */
 const PRIMARY_NAV: NavItem[] = [
   { to: '/overview', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/vendors', label: 'Vendors', icon: Users },
+  { to: '/requests', label: 'Requests', icon: Inbox },
   { to: '/review', label: 'Reviews', icon: FileCheck2, badge: 'review' },
   { to: '/requirements', label: 'Documents', icon: ClipboardList },
 ]
@@ -68,7 +69,6 @@ const RECORDS_NAV: NavItem[] = [
 
 const SOON_NAV: SoonItem[] = [
   { label: 'Properties', icon: Building2 },
-  { label: 'Requests', icon: Inbox },
   { label: 'Reports', icon: FileBarChart },
 ]
 
@@ -78,6 +78,7 @@ const PAGE_TITLES: { prefix: string; title: string }[] = [
   { prefix: '/overview', title: 'Dashboard' },
   { prefix: '/vendors/new', title: 'Add vendor' },
   { prefix: '/vendors', title: 'Vendors' },
+  { prefix: '/requests', title: 'Requests' },
   { prefix: '/review', title: 'Reviews' },
   { prefix: '/requirements', title: 'Documents' },
   { prefix: '/notifications', title: 'Notifications' },

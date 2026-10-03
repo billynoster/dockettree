@@ -19,6 +19,7 @@ import type { IsoDate, Notification, Organization, UUID } from '@/domain/types'
 import type { UnitOfWork } from '@/repositories/types'
 import { recordActivity } from './activityService'
 import { nowIso, requireCapability, today, type ServiceContext } from './context'
+import { createRequestsFromNotification } from './documentRequestService'
 import { loadVendorSnapshot, loadVendorSnapshots, sortByCreatedAtDesc, type VendorSnapshot } from './queries'
 
 export interface ReminderPreview {
@@ -229,6 +230,9 @@ async function writeDigest(
     created_at: timestamp,
   }
   await uow.notifications.put(notification)
+  await createRequestsFromNotification(uow, ctx, notification, {
+    actorId: input.manual ? ctx.session.userId : 'system',
+  })
   await recordActivity(uow, ctx, {
     vendor_id: input.snapshot.vendor.id,
     event_type: 'reminder_sent',

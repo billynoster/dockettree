@@ -9,12 +9,17 @@
 import { AppError, type AppErrorCode, type FieldErrors } from '@/domain/errors'
 import type {
   ActivityEventType,
+  DocumentRequestState,
   InternalRole,
   Notification,
   Organization,
   Role,
   UUID,
 } from '@/domain/types'
+import type {
+  DocumentRequestDetail,
+  DocumentRequestListResult,
+} from '@/services/documentRequestService'
 import type { Capability } from '@/domain/permissions'
 import { vendorQueryToParams, type VendorListQuery } from '@/domain/vendorQuery'
 import type { ActivityQuery } from '@/services/activityService'
@@ -263,6 +268,19 @@ export const api = {
     post<{ updated: boolean }>(`/members/${userId}/status`, { status }),
   resetMemberPassword: (userId: UUID, password: string) =>
     post<{ updated: boolean }>(`/members/${userId}/password`, { password }),
+
+  listRequests: (filters: {
+    vendorId?: string | null
+    state?: DocumentRequestState | 'open' | 'all' | null
+  } = {}) => {
+    const params = new URLSearchParams()
+    if (filters.vendorId) params.set('vendor', filters.vendorId)
+    if (filters.state && filters.state !== 'all') params.set('state', filters.state)
+    const search = params.toString()
+    return get<DocumentRequestListResult>(`/requests${search ? `?${search}` : ''}`)
+  },
+  requestDetail: (requestId: UUID) => get<DocumentRequestDetail>(`/requests/${requestId}`),
+  vendorRequests: (vendorId: UUID) => get<DocumentRequestListResult>(`/vendors/${vendorId}/requests`),
 
   notifications: (filters: { vendorId?: string | null; type?: Notification['type'] | null } = {}) => {
     const params = new URLSearchParams()

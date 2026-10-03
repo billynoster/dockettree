@@ -38,6 +38,7 @@ import {
   ExpiringSoonChip,
   InvitationChip,
   ReadinessChip,
+  RequestStateChip,
   SubmissionStateChip,
 } from '@/components/StatusChips'
 import { Button } from '@/components/ui/button'
@@ -60,7 +61,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { describeRelativeDays, formatDate, formatDateTime } from '@/domain/dates'
 import { INVITATION_LABEL } from '@/domain/invitations'
 import type { RequirementStatus } from '@/domain/readiness'
-import type { ActivityEvent, Invitation, Submission, Vendor } from '@/domain/types'
+import type { Invitation, Submission, Vendor } from '@/domain/types'
 import { InviteVendorDialog } from './InviteVendorDialog'
 import { RemindVendorDialog } from './RemindVendorDialog'
 import { VendorFormFields, type VendorFormValues } from './VendorFormFields'
@@ -124,13 +125,6 @@ export function VendorDetailPage() {
         (status.currentDocument === 'expiring_soon' || status.currentDocument === 'expired'),
     )
     .sort((a, b) => (a.currentExpiration ?? '').localeCompare(b.currentExpiration ?? ''))
-  const requestEvents = activity.filter(
-    (event) =>
-      event.event_type === 'invitation_sent' ||
-      event.event_type === 'invitation_revoked' ||
-      event.event_type === 'invitation_accepted' ||
-      event.event_type === 'reminder_sent',
-  )
   const recentActivity = activity.slice(0, 6)
   const missingRequirements = activeRequirements.filter(
     (status) => status.requirement.required && !status.satisfied,
@@ -272,9 +266,6 @@ export function VendorDetailPage() {
             </TabsTrigger>
             <TabsTrigger value="requests">
               Requests
-              <span className="text-muted-foreground tabular-nums">
-                {invitations.length + requestEvents.filter((e) => e.event_type === 'reminder_sent').length}
-              </span>
             </TabsTrigger>
             <TabsTrigger value="activity">
               Activity
@@ -634,12 +625,11 @@ export function VendorDetailPage() {
           <RequestsPanel
             invitations={invitations}
             invitationStatus={invitation.status}
-            requestEvents={requestEvents}
-            lastReminderAt={lastReminderAt}
             timezone={app.organization.timezone}
             canInvite={canInvite}
             canRemind={canRemind}
             vendor={vendor}
+            onChanged={detail.reload}
           />
         </TabsContent>
 
@@ -791,34 +781,40 @@ function collectDocumentRows(statuses: RequirementStatus[]): {
 function RequestsPanel({
   invitations,
   invitationStatus,
-  requestEvents,
-  lastReminderAt,
   timezone,
   canInvite,
   canRemind,
   vendor,
+  onChanged,
 }: {
   invitations: Invitation[]
   invitationStatus: ReturnType<typeof import('@/domain/invitations').invitationStatus>['status']
-  requestEvents: ActivityEvent[]
-  lastReminderAt: string | null
   timezone: string
   canInvite: boolean
   canRemind: boolean
   vendor: Vendor
+  onChanged: () => void
 }) {
   const sortedInvites = useMemo(
     () => [...invitations].sort((a, b) => b.created_at.localeCompare(a.created_at)),
     [invitations],
   )
-  const reminders = requestEvents.filter((event) => event.event_type === 'reminder_sent')
-  const empty = sortedInvites.length === 0 && reminders.length === 0
+  const requests = useServiceQuery(() => api.vendorRequests(vendor.id), [vendor.id])
+  const items = requests.data?.items ?? []
+  const empty = sortedInvites.length === 0 && items.length === 0 && !requests.loading
+
+  if (requests.loading && !requests.data) {
+    return <LoadingState label="Loading requests" rows={3} />
+  }
+  if (requests.error) {
+    return <ErrorState message={requests.error} onRetry={requests.reload} />
+  }
 
   if (empty) {
     return (
       <EmptyState
-        title="No invitations or reminders yet"
-        description="When you invite this vendor or request documents, those sends show up here. There’s no separate messaging inbox on this screen."
+        title="No invitations or document requests yet"
+        description="Invite this vendor to the portal or request documents. Open asks also appear in the workspace Requests inbox."
         action={
           vendor.lifecycle === 'active' && (canInvite || canRemind) ? (
             <div className="flex flex-wrap justify-center gap-2">
@@ -853,6 +849,64 @@ function RequestsPanel({
 
   return (
     <div className="space-y-4">
+      <Section aria-labelledby="document-requests-heading">
+        <SectionHeader
+          id="document-requests-heading"
+          title="Document requests"
+          description="Sent → Viewed → Uploaded → In Review → Completed"
+          action={
+            <div className="flex flex-wrap gap-2">
+              <Button asChild size="sm" variant="ghost">
+                <Link to={`/requests?vendor=${vendor.id}&state=all`}>Open inbox</Link>
+              </Button>
+              {canRemind && vendor.lifecycle === 'active' ? (
+                <RemindVendorDialog
+                  vendorId={vendor.id}
+                  onSent={() => {
+                    void requests.reload()
+                    onChanged()
+                  }}
+                  trigger={
+                    <Button size="sm" variant="outline">
+                      <BellRing aria-hidden="true" />
+                      Request documents
+                    </Button>
+                  }
+                />
+              ) : null}
+            </div>
+          }
+          border={items.length > 0}
+        />
+        {items.length === 0 ? (
+          <p className="px-4 py-6 text-center text-sm text-muted-foreground">
+            No document requests have been sent yet.
+          </p>
+        ) : (
+          <ul className="divide-y">
+            {items.map((item) => (
+              <li key={item.request.id}>
+                <Link
+                  to={`/requests?vendor=${vendor.id}&id=${item.request.id}&state=all`}
+                  className="flex flex-col gap-2 px-4 py-3 transition-colors hover:bg-muted/50 sm:flex-row sm:items-center sm:justify-between"
+                  onClick={() => onChanged()}
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">{item.request.item_title}</p>
+                    <p className="text-sm text-muted-foreground">
+                      Sent <Timestamp value={item.request.sent_at} timezone={timezone} />
+                      {' · '}
+                      {item.next_action}
+                    </p>
+                  </div>
+                  <RequestStateChip state={item.request.state} size="sm" />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Section>
+
       <Section aria-labelledby="invitations-heading">
         <SectionHeader
           id="invitations-heading"
@@ -900,42 +954,6 @@ function RequestsPanel({
                 </li>
               )
             })}
-          </ul>
-        )}
-      </Section>
-
-      <Section aria-labelledby="reminders-heading">
-        <SectionHeader
-          id="reminders-heading"
-          title="Document requests"
-          description={
-            lastReminderAt
-              ? undefined
-              : 'Reminders ask the vendor for missing or expiring documents'
-          }
-          border={reminders.length > 0}
-        />
-        {reminders.length === 0 ? (
-          <p className="px-4 py-6 text-center text-sm text-muted-foreground">
-            No document requests have been sent yet.
-          </p>
-        ) : (
-          <ul className="divide-y">
-            {reminders.map((event) => (
-              <li key={event.id} className="px-4 py-3">
-                <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
-                  <p className="min-w-0 text-sm">{event.summary}</p>
-                  <Timestamp
-                    value={event.created_at}
-                    timezone={timezone}
-                    className="shrink-0 text-xs text-muted-foreground"
-                  />
-                </div>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {event.actor_label} · {event.actor_role}
-                </p>
-              </li>
-            ))}
           </ul>
         )}
       </Section>

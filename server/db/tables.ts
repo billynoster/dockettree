@@ -302,6 +302,38 @@ export const TABLES = {
     columns: { key: 'text', result_json: 'text', created_at: 'text' },
     indexes: {},
   },
+  /** Inbox rows for document/info asks — not the idempotency ledger above. */
+  documentRequests: {
+    table: 'document_requests',
+    key: 'id',
+    columns: {
+      id: 'text',
+      organization_id: 'text',
+      vendor_id: 'text',
+      requirement_id: 'text',
+      item_title: 'text',
+      detail: 'text',
+      source: 'text',
+      state: 'text',
+      notification_id: 'text',
+      submission_id: 'text',
+      created_by: 'text',
+      sent_at: 'text',
+      viewed_at: 'text',
+      uploaded_at: 'text',
+      in_review_at: 'text',
+      completed_at: 'text',
+      closed_reason: 'text',
+      ...timestamps,
+    },
+    indexes: {
+      by_organization: 'organization_id',
+      by_vendor: 'vendor_id',
+      by_requirement: 'requirement_id',
+      by_notification: 'notification_id',
+      by_state: 'state',
+    },
+  },
 } as const satisfies Record<string, TableSpec>
 
 export type TableName = keyof typeof TABLES

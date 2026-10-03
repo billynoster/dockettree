@@ -6,6 +6,7 @@ import type {
   ActivityEvent,
   AssignedRequirement,
   AuthSession,
+  DocumentRequest,
   FileObject,
   ImportBatch,
   Invitation,
@@ -64,6 +65,7 @@ export interface UnitOfWork {
   activity: Collection<ActivityEvent>
   importBatches: Collection<ImportBatch>
   requests: Collection<RequestRecord>
+  documentRequests: Collection<DocumentRequest>
   blobs: BlobStore
 }
 

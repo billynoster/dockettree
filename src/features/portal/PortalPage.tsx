@@ -9,7 +9,7 @@ import { RequirementCard } from '@/components/RequirementCard'
 import { ScrollRegion } from '@/components/ScrollRegion'
 import { Section, SectionHeader } from '@/components/Section'
 import { ErrorState, InlineNotice, LoadingState } from '@/components/States'
-import { ReadinessChip } from '@/components/StatusChips'
+import { ReadinessChip, RequestStateChip } from '@/components/StatusChips'
 import { Timestamp } from '@/components/Timestamp'
 import { Button } from '@/components/ui/button'
 import { TextLinkExternal } from '@/components/ui/text-link'
@@ -256,6 +256,31 @@ export function PortalPage() {
                       ))}
                     </ul>
                   </section>
+                ) : null}
+
+                {portal.data.requests.length > 0 ? (
+                  <Section>
+                    <SectionHeader
+                      title="Open requests"
+                      description="What we still need from you"
+                      border
+                      className="px-3 py-2.5"
+                    />
+                    <ul className="divide-y">
+                      {portal.data.requests.map((item) => (
+                        <li
+                          key={item.request.id}
+                          className="flex flex-col gap-2 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between"
+                        >
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium">{item.request.item_title}</p>
+                            <p className="text-sm text-muted-foreground">{item.next_action}</p>
+                          </div>
+                          <RequestStateChip state={item.request.state} size="sm" />
+                        </li>
+                      ))}
+                    </ul>
+                  </Section>
                 ) : null}
 
                 <Section>

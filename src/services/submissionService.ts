@@ -12,6 +12,7 @@ import {
 import { withIdempotency } from '@/repositories/types'
 import { recordActivity } from './activityService'
 import { nowIso, today, type ServiceContext } from './context'
+import { advanceRequestsForSubmission } from './documentRequestService'
 import { requireOwned } from './queries'
 
 export interface SubmitDocumentInput {
@@ -134,6 +135,12 @@ export async function submitDocument(
       }
       await uow.submissions.put(submission)
       await uow.vendors.put({ ...vendor, updated_at: timestamp })
+      await advanceRequestsForSubmission(uow, ctx, {
+        vendorId: vendor.id,
+        requirementId: requirement.id,
+        submissionId: submission.id,
+        at: timestamp,
+      })
 
       await recordActivity(uow, ctx, {
         vendor_id: vendor.id,

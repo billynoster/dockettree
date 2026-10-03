@@ -16,7 +16,13 @@ import {
   resetMemberPassword,
   setMemberStatus,
 } from '@/services/memberService'
+import {
+  getDocumentRequest,
+  listDocumentRequests,
+  listVendorDocumentRequests,
+} from '@/services/documentRequestService'
 import { listOutbox, retryNotification, runDailyReminderJob } from '@/services/reminderService'
+import type { DocumentRequestState } from '@/domain/types'
 import { updateOrganizationSettings } from '@/services/settingsService'
 import {
   createTemplate,
@@ -170,6 +176,28 @@ adminRoutes.post(
     )
     return { updated: true }
   }),
+)
+
+adminRoutes.get(
+  '/requests',
+  handle(async (c) => {
+    const params = new URL(c.req.url).searchParams
+    const state = params.get('state') as DocumentRequestState | 'open' | 'all' | null
+    return await listDocumentRequests(await ctxOf(c), {
+      vendorId: params.get('vendor'),
+      state,
+    })
+  }),
+)
+
+adminRoutes.get(
+  '/requests/:requestId',
+  handle(async (c) => await getDocumentRequest(await ctxOf(c), param(c, 'requestId'))),
+)
+
+adminRoutes.get(
+  '/vendors/:vendorId/requests',
+  handle(async (c) => await listVendorDocumentRequests(await ctxOf(c), param(c, 'vendorId'))),
 )
 
 adminRoutes.get(

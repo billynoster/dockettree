@@ -261,3 +261,31 @@ CREATE TABLE IF NOT EXISTS request_records (
   result_json TEXT NOT NULL,
   created_at  TEXT NOT NULL
 );
+
+-- Document/info asks for the Requests inbox (distinct from request_records above).
+CREATE TABLE IF NOT EXISTS document_requests (
+  id               TEXT PRIMARY KEY,
+  organization_id  TEXT NOT NULL REFERENCES organizations (id),
+  vendor_id        TEXT NOT NULL REFERENCES vendors (id),
+  requirement_id   TEXT,
+  item_title       TEXT NOT NULL,
+  detail           TEXT,
+  source           TEXT NOT NULL,
+  state            TEXT NOT NULL,
+  notification_id  TEXT,
+  submission_id    TEXT,
+  created_by       TEXT NOT NULL,
+  sent_at          TEXT NOT NULL,
+  viewed_at        TEXT,
+  uploaded_at      TEXT,
+  in_review_at     TEXT,
+  completed_at     TEXT,
+  closed_reason    TEXT,
+  created_at       TEXT NOT NULL,
+  updated_at       TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS document_requests_by_organization ON document_requests (organization_id, sent_at);
+CREATE INDEX IF NOT EXISTS document_requests_by_vendor ON document_requests (vendor_id);
+CREATE INDEX IF NOT EXISTS document_requests_by_requirement ON document_requests (requirement_id);
+CREATE INDEX IF NOT EXISTS document_requests_by_notification ON document_requests (notification_id);
+CREATE INDEX IF NOT EXISTS document_requests_by_state ON document_requests (state);

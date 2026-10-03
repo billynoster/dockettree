@@ -15,6 +15,10 @@ import type {
 import { recordActivity } from './activityService'
 import { nowIso, requireCapability, today, type ServiceContext } from './context'
 import {
+  completeRequestsForAcceptance,
+  createRequestsFromNotification,
+} from './documentRequestService'
+import {
   loadReviewEvents,
   loadVendorSnapshot,
   requireOwned,
@@ -292,6 +296,15 @@ export async function reviewSubmission(
       vendor_visible: true,
     })
 
+    if (input.decision === 'accepted') {
+      await completeRequestsForAcceptance(uow, ctx, {
+        vendorId: vendor.id,
+        requirementId: requirement.id,
+        submissionId: submission.id,
+        at: timestamp,
+      })
+    }
+
     if (input.decision === 'changes_requested') {
       // Correction notices are transactional and separate from the daily digest.
       const notification: Notification = {
@@ -334,6 +347,7 @@ export async function reviewSubmission(
         created_at: timestamp,
       }
       await uow.notifications.put(notification)
+      await createRequestsFromNotification(uow, ctx, notification)
     }
 
     return { vendorId: vendor.id, supersededSubmissionId }

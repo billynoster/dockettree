@@ -13,6 +13,7 @@ import { SetupPage } from '@/features/auth/SetupPage'
 import { NotificationsPage } from '@/features/notifications/NotificationsPage'
 import { OverviewPage } from '@/features/overview/OverviewPage'
 import { PortalPage } from '@/features/portal/PortalPage'
+import { RequestsPage } from '@/features/requests/RequestsPage'
 import { RequirementsPage } from '@/features/requirements/RequirementsPage'
 import { ReviewDetailPage } from '@/features/review/ReviewDetailPage'
 import { ReviewQueuePage } from '@/features/review/ReviewQueuePage'
@@ -168,6 +169,7 @@ function InternalRoutes() {
         <Route path="/vendors" element={<VendorsPage />} />
         {app.can('vendor.manage') ? <Route path="/vendors/new" element={<VendorNewPage />} /> : null}
         <Route path="/vendors/:vendorId" element={<VendorDetailPage />} />
+        <Route path="/requests" element={<RequestsPage />} />
         <Route path="/review" element={<ReviewQueuePage />} />
         <Route path="/review/:submissionId" element={<ReviewDetailPage />} />
         <Route path="/requirements" element={<RequirementsPage />} />

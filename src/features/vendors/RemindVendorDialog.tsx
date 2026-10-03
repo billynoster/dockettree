@@ -21,9 +21,12 @@ import type { UUID } from '@/domain/types'
 export function RemindVendorDialog({
   vendorId,
   trigger,
+  onSent,
 }: {
   vendorId: UUID
   trigger: React.ReactNode
+  /** Called after a reminder is successfully queued (including deduplicated). */
+  onSent?: () => void
 }) {
   const [open, setOpen] = useState(false)
   const [requestKey, setRequestKey] = useState(() => newId())
@@ -119,7 +122,10 @@ export function RemindVendorDialog({
               const result = await action.run(() => api.sendReminder(vendorId, requestKey), {
                 success: (value) => value.message,
               })
-              if (result) setOpen(false)
+              if (result) {
+                setOpen(false)
+                onSent?.()
+              }
             }}
           >
             <BellRing aria-hidden="true" />
