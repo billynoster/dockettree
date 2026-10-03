@@ -17,6 +17,7 @@ export function DocumentPreview({
   height = 'h-[420px]',
 }: {
   submissionId: UUID
+  /** Tailwind height utilities for the preview frame. */
   height?: string
 }) {
   const [state, setState] = useState<{

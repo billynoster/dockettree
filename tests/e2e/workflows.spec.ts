@@ -91,7 +91,7 @@ test.describe('W2/W3 submit, correct, accept', () => {
     await page
       .locator('#review-reason')
       .fill('Page 2 is missing the signature date. Please sign and date it.')
-    await page.getByRole('button', { name: 'Request changes' }).click()
+    await page.getByRole('button', { name: 'Request Update' }).click()
     await expect(page.getByText(/correction notice for Ironwood/i)).toBeVisible()
 
     await openVendor(page, IRONWOOD)
@@ -325,7 +325,7 @@ test.describe('accessibility and responsiveness', () => {
     await page.keyboard.press('Tab')
     await expect(page.locator('button:focus')).toHaveText(/Accept/)
     await page.keyboard.press('Tab')
-    await expect(page.locator('button:focus')).toHaveText(/Request changes/)
+    await expect(page.locator('button:focus')).toHaveText(/Request Update/)
     await page.keyboard.press('Enter')
     await expect(page.getByText(/Changes requested/).first()).toBeVisible()
   })

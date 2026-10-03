@@ -77,15 +77,19 @@ export function ReadinessSummary({
   action,
   className,
   compact = false,
+  reviewHref,
 }: {
   readiness: VendorReadiness
   /** Optional primary control (invite, request documents, assign checklist). */
   action?: React.ReactNode
   className?: string
   compact?: boolean
+  /** Deep-link into review (vendor-filtered queue or a specific submission). */
+  reviewHref?: string
 }) {
   const title = readinessSummaryTitle(readiness)
   const next = readinessNextAction(readiness)
+  const nextHref = reviewHref ?? next.href
   const ready = readiness.status === 'ready' && !readiness.expiringSoon
   const accentTone =
     readiness.status === 'ready' && readiness.expiringSoon
@@ -179,10 +183,10 @@ export function ReadinessSummary({
             <p className="type-eyebrow">Next</p>
             <p className="mt-0.5 text-sm font-medium">{next.label}</p>
             <p className="mt-0.5 text-sm text-muted-foreground">{next.hint}</p>
-            {next.href ? (
+            {nextHref ? (
               <Button asChild variant="ghost" size="sm" className="-ml-2.5 mt-1.5">
-                <Link to={next.href}>
-                  Open review queue
+                <Link to={nextHref}>
+                  {reviewHref ? 'Open review' : 'Open review queue'}
                   <ArrowRight aria-hidden="true" />
                 </Link>
               </Button>

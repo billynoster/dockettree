@@ -1,6 +1,6 @@
 import { api } from '@/api/client'
 import { useEffect, useMemo, useState } from 'react'
-import { useParams, useSearchParams } from 'react-router'
+import { Link, useParams, useSearchParams } from 'react-router'
 import {
   Archive,
   ArchiveRestore,
@@ -8,6 +8,7 @@ import {
   Building2,
   CalendarClock,
   Eye,
+  FileCheck2,
   FileText,
   Plus,
   Save,
@@ -289,6 +290,9 @@ export function VendorDetailPage() {
         <TabsContent value="overview" className="space-y-4">
           <ReadinessSummary
             readiness={readiness}
+            reviewHref={
+              readiness.status === 'awaiting_review' ? `/review?vendor=${vendor.id}` : undefined
+            }
             action={
               readiness.status === 'unconfigured' && canManage ? (
                 <Button size="sm" variant="outline" onClick={() => setTab('requirements')}>
@@ -353,7 +357,15 @@ export function VendorDetailPage() {
                         </p>
                       </div>
                       {status.pending ? (
-                        <SubmissionStateChip state={status.pending.state} size="sm" />
+                        <div className="flex shrink-0 flex-wrap items-center gap-2">
+                          <SubmissionStateChip state={status.pending.state} size="sm" />
+                          <Button asChild size="sm" variant="outline">
+                            <Link to={`/review/${status.pending.id}`}>
+                              <FileCheck2 aria-hidden="true" />
+                              {app.can('submission.review') ? 'Review' : 'Open review'}
+                            </Link>
+                          </Button>
+                        </div>
                       ) : (
                         <CurrentDocumentChip status={status.currentDocument} />
                       )}
@@ -555,7 +567,7 @@ export function VendorDetailPage() {
             <Section>
               <SectionHeader
                 title="Documents on file"
-                description="Current and latest submissions — preview only; review decisions stay in the review queue."
+                description="Current and latest submissions. Pending files open in the review split-screen."
                 border
               />
               <ul className="divide-y">
@@ -585,22 +597,32 @@ export function VendorDetailPage() {
                         {row.submission.submitted_by_label}
                       </p>
                     </div>
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button size="sm" variant="outline">
-                          <Eye aria-hidden="true" />
-                          Preview
+                    <div className="flex shrink-0 flex-wrap items-center gap-2">
+                      {row.role === 'pending' ? (
+                        <Button asChild size="sm">
+                          <Link to={`/review/${row.submission.id}`}>
+                            <FileCheck2 aria-hidden="true" />
+                            {app.can('submission.review') ? 'Review' : 'Open review'}
+                          </Link>
                         </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-3xl">
-                        <DialogHeader>
-                          <DialogTitle>
-                            {row.requirementTitle} · version {row.submission.version_number}
-                          </DialogTitle>
-                        </DialogHeader>
-                        <DocumentPreview submissionId={row.submission.id} />
-                      </DialogContent>
-                    </Dialog>
+                      ) : null}
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button size="sm" variant="outline">
+                            <Eye aria-hidden="true" />
+                            Preview
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-3xl">
+                          <DialogHeader>
+                            <DialogTitle>
+                              {row.requirementTitle} · version {row.submission.version_number}
+                            </DialogTitle>
+                          </DialogHeader>
+                          <DocumentPreview submissionId={row.submission.id} />
+                        </DialogContent>
+                      </Dialog>
+                    </div>
                   </li>
                 ))}
               </ul>

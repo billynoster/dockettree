@@ -1,6 +1,7 @@
 import { api } from '@/api/client'
 import { useState } from 'react'
-import { ChevronDown, Eye, RotateCcw, ShieldOff, Upload } from 'lucide-react'
+import { Link } from 'react-router'
+import { ChevronDown, Eye, FileCheck2, RotateCcw, ShieldOff, Upload } from 'lucide-react'
 import { useApp } from '@/app/AppProvider'
 import { useAction } from '@/app/useAction'
 import { DocumentPreview } from '@/components/DocumentPreview'
@@ -117,6 +118,14 @@ export function RequirementCard({
           </div>
 
           <div className="flex shrink-0 flex-wrap items-center gap-2">
+            {context === 'internal' && status.pending ? (
+              <Button asChild size="sm">
+                <Link to={`/review/${status.pending.id}`}>
+                  <FileCheck2 aria-hidden="true" />
+                  {app.can('submission.review') ? 'Review' : 'Open review'}
+                </Link>
+              </Button>
+            ) : null}
             {canUpload ? (
               <SubmitDocumentDialog
                 requirement={requirement}
