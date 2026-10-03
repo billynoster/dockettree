@@ -13,8 +13,8 @@ import {
   Mail,
   MailWarning,
   Menu,
-  PanelLeft,
   PanelLeftClose,
+  PanelLeftOpen,
   Search,
   Settings,
   Users,
@@ -375,27 +375,30 @@ function SidebarCollapseToggle({
   collapsed: boolean
   onToggle: () => void
 }) {
-  const label = collapsed ? 'Expand sidebar' : 'Collapse sidebar'
-  const Icon = collapsed ? PanelLeft : PanelLeftClose
+  const shortLabel = collapsed ? 'Expand' : 'Collapse'
+  const accessibleName = collapsed ? 'Expand sidebar' : 'Collapse sidebar'
+  // Open icon when rail is closed (action = expand); close icon when expanded.
+  const Icon = collapsed ? PanelLeftOpen : PanelLeftClose
 
   return (
-    <NavTooltip label={label} enabled={collapsed}>
-      <Button
+    <NavTooltip label={shortLabel} enabled>
+      <button
         type="button"
-        variant="ghost"
-        size={collapsed ? 'icon-sm' : 'sm'}
         className={cn(
-          'text-muted-foreground',
-          collapsed ? 'mx-auto' : 'w-full justify-start gap-3 px-3',
+          'flex h-11 items-center rounded-xl text-sm font-medium text-muted-foreground transition-colors duration-(--duration-quick) ease-(--ease-soft)',
+          'hover:bg-[var(--tone-brand-surface)] hover:text-[var(--tone-brand-foreground)]',
+          'focus-visible:bg-[var(--tone-brand-surface)] focus-visible:text-[var(--tone-brand-foreground)] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/30',
+          'active:bg-[var(--tone-brand-surface)] active:text-[var(--tone-brand-foreground)]',
+          collapsed ? 'w-full justify-center px-0' : 'w-full gap-3 px-4',
         )}
-        aria-label={label}
+        aria-label={accessibleName}
         aria-expanded={!collapsed}
         aria-controls="desktop-sidebar"
         onClick={onToggle}
       >
         <Icon aria-hidden="true" strokeWidth={1.75} className="size-[18px] shrink-0" />
-        {collapsed ? null : <span>Collapse</span>}
-      </Button>
+        {collapsed ? null : <span>{shortLabel}</span>}
+      </button>
     </NavTooltip>
   )
 }
@@ -492,8 +495,10 @@ export function AppShell() {
           </nav>
           <div
             className={cn(
-              'space-y-2 border-t py-3',
-              sidebarCollapsed ? 'px-2' : 'px-3',
+              'border-t',
+              sidebarCollapsed
+                ? 'flex flex-col items-stretch gap-1 px-2 py-2.5'
+                : 'flex flex-col gap-1.5 px-3 py-3',
             )}
           >
             <SidebarCollapseToggle collapsed={sidebarCollapsed} onToggle={toggleSidebarCollapsed} />
