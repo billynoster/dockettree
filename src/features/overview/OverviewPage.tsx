@@ -98,7 +98,7 @@ export function OverviewPage() {
 
               <ReadinessMixBar counts={counts} total={counts.active} />
 
-              <ul className="grid gap-2 sm:grid-cols-2">
+              <ul className="grid grid-cols-2 gap-2">
                 {BUCKETS.map((status) => (
                   <li key={status}>
                     <StatTile

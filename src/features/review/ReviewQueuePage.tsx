@@ -117,9 +117,9 @@ export function ReviewQueuePage() {
           </Toolbar>
 
           {!canDecide ? (
-            <InlineNotice tone="info" title="You can read this queue but not decide">
-              Only an admin or reviewer can accept a submission or request changes. Open a submission
-              to read it and its history.
+            <InlineNotice tone="info" className="py-2">
+              <span className="font-medium">Read-only for your role.</span> Only an admin or reviewer
+              can accept or request changes.
             </InlineNotice>
           ) : null}
 

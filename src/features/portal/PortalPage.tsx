@@ -36,6 +36,19 @@ export function PortalPage() {
   const portal = useServiceQuery(() => api.portal(), [app.activeVendorId])
   const today = todayInTimeZone(new Date(), app.organization.timezone)
   const blockers = portal.data?.snapshot.readiness.blockers ?? []
+  // Surface items that still need action first so the checklist answer is above the fold.
+  const requiredDocuments = [...(portal.data?.requirements ?? [])].sort((left, right) => {
+    const rank = (entry: (typeof left)) => {
+      if (entry.correctionReason) return 0
+      if (entry.status.pending) return 1
+      if (entry.status.currentDocument !== 'accepted') return 2
+      if (entry.status.currentDocument === 'accepted' && entry.status.effective?.expiration_date) {
+        return 3
+      }
+      return 4
+    }
+    return rank(left) - rank(right)
+  })
 
   return (
     <div className="min-h-dvh">
@@ -201,7 +214,7 @@ export function PortalPage() {
                       </span>
                     </h2>
                   </div>
-                  {portal.data.requirements.length === 0 ? (
+                  {requiredDocuments.length === 0 ? (
                     <Section className="p-5 text-center text-sm text-muted-foreground">
                       No documents have been requested yet. {app.organization.name} will add them
                       and send you a message.
@@ -209,7 +222,7 @@ export function PortalPage() {
                   ) : (
                     <ScrollRegion label="Required documents">
                       <ul className="space-y-2.5 pr-0.5">
-                        {portal.data.requirements.map((entry) => (
+                        {requiredDocuments.map((entry) => (
                           <li key={entry.status.requirement.id}>
                             <RequirementCard
                               status={entry.status}

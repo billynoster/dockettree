@@ -61,7 +61,7 @@ export function StatTile({
           />
         </span>
       )}
-      <span className={cn('type-meta', compact && 'line-clamp-2')}>{description}</span>
+      <span className={cn('type-meta', compact && 'line-clamp-2 max-sm:sr-only')}>{description}</span>
     </Link>
   )
 }

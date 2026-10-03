@@ -81,12 +81,6 @@ export function RequirementsPage() {
         }
       />
 
-      {!canManage ? (
-        <InlineNotice tone="neutral">
-          Only an admin can create or edit templates. You can read every template below.
-        </InlineNotice>
-      ) : null}
-
       {templates.loading && !templates.data ? <LoadingState label="Loading templates" /> : null}
       {templates.error ? <ErrorState message={templates.error} onRetry={templates.reload} /> : null}
 
@@ -153,6 +147,11 @@ export function RequirementsPage() {
           {selected ? (
             <Section className="min-w-0">
               <div className="flex flex-col gap-3 p-3 sm:p-3.5">
+                {!canManage ? (
+                  <InlineNotice tone="neutral" className="py-2">
+                    Only an admin can create or edit templates.
+                  </InlineNotice>
+                ) : null}
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0 space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
