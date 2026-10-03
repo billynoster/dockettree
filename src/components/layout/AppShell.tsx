@@ -497,8 +497,8 @@ export function AppShell() {
             className={cn(
               'border-t',
               sidebarCollapsed
-                ? 'flex flex-col items-stretch gap-1 px-2 py-2.5'
-                : 'flex flex-col gap-1.5 px-3 py-3',
+                ? 'flex flex-col items-stretch gap-0.5 px-2 py-2'
+                : 'flex flex-col gap-1 px-3 py-3',
             )}
           >
             <SidebarCollapseToggle collapsed={sidebarCollapsed} onToggle={toggleSidebarCollapsed} />
