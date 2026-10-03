@@ -469,7 +469,7 @@ export function AppShell() {
           id="desktop-sidebar"
           data-collapsed={sidebarCollapsed ? 'true' : 'false'}
           className={cn(
-            'sticky top-0 hidden h-dvh shrink-0 flex-col overflow-x-hidden border-r bg-card transition-[width] duration-(--duration-settle) ease-(--ease-soft) lg:flex',
+            'sticky top-0 hidden h-dvh shrink-0 flex-col overflow-x-hidden border-r border-border bg-background transition-[width] duration-(--duration-settle) ease-(--ease-soft) lg:flex',
             sidebarCollapsed
               ? 'w-(--sidebar-width-collapsed) min-w-(--sidebar-width-collapsed)'
               : 'w-(--sidebar-width) min-w-(--sidebar-width)',
@@ -478,7 +478,7 @@ export function AppShell() {
         >
           <div
             className={cn(
-              'flex h-(--header-height) items-center border-b',
+              'flex h-(--header-height) items-center',
               sidebarCollapsed ? 'justify-center px-2' : 'px-5',
             )}
           >
@@ -523,9 +523,9 @@ export function AppShell() {
         </aside>
       </TooltipProvider>
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        {/* Top bar — 68px, page title + search + actions */}
-        <header className="sticky top-0 z-40 border-b bg-card">
+      <div className="flex min-w-0 flex-1 flex-col bg-background">
+        {/* Top bar — 68px, page title + search + actions (shell chrome; main panel nests below) */}
+        <header className="sticky top-0 z-40 bg-background">
           <div className="flex h-(--header-height) items-center gap-3 px-4 sm:gap-4 sm:px-6 xl:px-8">
             <Sheet open={navOpen} onOpenChange={setNavOpen}>
               <SheetTrigger asChild>
@@ -580,7 +580,7 @@ export function AppShell() {
                 onChange={(event) => setSearchDraft(event.target.value)}
                 placeholder="Search vendors…"
                 aria-label="Search vendors"
-                className="h-10 rounded-[10px] border-border bg-background pl-9 pr-3 shadow-none"
+                className="h-10 rounded-[10px] border-border bg-card pl-9 pr-3 shadow-none"
               />
             </form>
 
@@ -663,7 +663,7 @@ export function AppShell() {
           id="main"
           ref={mainRef}
           tabIndex={-1}
-          className="min-w-0 flex-1 outline-none"
+          className="min-w-0 flex-1 rounded-t-2xl bg-card outline-none"
         >
           <div className="mx-auto w-full max-w-[1600px] space-y-6 px-4 py-6 sm:px-6 sm:py-8 xl:px-8 xl:py-10">
             {app.delivery.configured || noticeDismissed ? null : (
