@@ -14,6 +14,8 @@ import { useAction } from '@/app/useAction'
 import { useServiceQuery } from '@/app/useServiceQuery'
 import { Page } from '@/components/Page'
 import { PageHeader } from '@/components/PageHeader'
+import { ScrollRegion } from '@/components/ScrollRegion'
+import { Section } from '@/components/Section'
 import { EmptyState, ErrorState, InlineNotice, LoadingState } from '@/components/States'
 import { Chip, type ChipTone } from '@/components/StatusChips'
 import { Timestamp } from '@/components/Timestamp'
@@ -88,10 +90,11 @@ export function NotificationsPage() {
   }
 
   return (
-    <Page>
+    <Page density="workspace">
       <PageHeader
+        compact
         title="Notifications"
-        description="Every invitation, reminder and correction notice this organization has produced, with its real delivery state. Nothing here is simulated."
+        description="Real delivery state for every invitation, reminder and correction notice"
       />
 
       {outbox.data && !outbox.data.delivery.configured ? (
@@ -108,7 +111,7 @@ export function NotificationsPage() {
 
       {outbox.data ? (
         <>
-          <Toolbar label="Message filters">
+          <Toolbar label="Message filters" sticky>
             <ToolbarRow>
               <ToolbarField label="Vendor">
                 {(id) => (
@@ -158,7 +161,7 @@ export function NotificationsPage() {
             </ToolbarRow>
           </Toolbar>
 
-          <p className="text-sm text-muted-foreground" role="status">
+          <p className="type-meta" role="status">
             {outbox.data.entries.length === outbox.data.total
               ? `${outbox.data.total} message${outbox.data.total === 1 ? '' : 's'}.`
               : `Showing ${outbox.data.entries.length} of ${outbox.data.total} messages.`}
@@ -170,127 +173,124 @@ export function NotificationsPage() {
               description="Send an invitation or a reminder from a vendor, or run the reminder job from Settings, and the exact message appears here."
             />
           ) : (
-            <ul className="space-y-2.5">
-              {outbox.data.entries.map((entry) => {
-                const notification = entry.notification
-                const Icon = TYPE_ICON[notification.type]
-                const open = expanded.has(notification.id)
-                return (
-                  <li key={notification.id} className="surface p-4">
-                    <div className="flex items-start gap-3">
-                      <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-                        <Icon aria-hidden="true" className="size-4" />
-                      </span>
-                      <div className="min-w-0 flex-1 space-y-1">
-                        <div className="flex flex-wrap items-start justify-between gap-2">
-                          <p className="text-sm font-medium">{notification.subject}</p>
-                          <div className="flex shrink-0 items-center gap-2">
-                            <Chip tone={STATUS_TONE[notification.status]} size="sm">
-                              {STATUS_LABEL[notification.status]}
-                            </Chip>
-                          </div>
-                        </div>
-                        <p className="text-sm break-all text-muted-foreground">
-                          To {notification.recipient_label} &lt;{notification.recipient}&gt;
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {TYPE_LABEL[notification.type]} ·{' '}
-                          {notification.manual ? 'Sent by a person' : 'Scheduled job'} ·{' '}
-                          <Timestamp
-                            value={notification.created_at}
-                            timezone={app.organization.timezone}
-                          />
-                          {notification.sent_at ? (
-                            <>
-                              {' · delivered '}
+            <Section>
+              <ScrollRegion label="Notification log">
+                <ul className="divide-y">
+                  {outbox.data.entries.map((entry) => {
+                    const notification = entry.notification
+                    const Icon = TYPE_ICON[notification.type]
+                    const open = expanded.has(notification.id)
+                    return (
+                      <li key={notification.id} className="px-3 py-2.5">
+                        <div className="flex items-start gap-2.5">
+                          <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                            <Icon aria-hidden="true" className="size-3.5" />
+                          </span>
+                          <div className="min-w-0 flex-1 space-y-0.5">
+                            <div className="flex flex-wrap items-start justify-between gap-2">
+                              <p className="text-sm font-medium">{notification.subject}</p>
+                              <Chip tone={STATUS_TONE[notification.status]} size="sm">
+                                {STATUS_LABEL[notification.status]}
+                              </Chip>
+                            </div>
+                            <p className="truncate text-sm text-muted-foreground">
+                              To {notification.recipient_label} &lt;{notification.recipient}&gt;
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {TYPE_LABEL[notification.type]} ·{' '}
+                              {notification.manual ? 'Sent by a person' : 'Scheduled job'} ·{' '}
                               <Timestamp
-                                value={notification.sent_at}
+                                value={notification.created_at}
                                 timezone={app.organization.timezone}
                               />
-                            </>
-                          ) : null}
-                          {entry.vendorName ? (
-                            <>
-                              {' · '}
-                              <TextLink to={`/vendors/${notification.vendor_id}`}>
-                                {entry.vendorName}
-                              </TextLink>
-                            </>
-                          ) : null}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        aria-expanded={open}
-                        className="-ml-2.5 text-muted-foreground"
-                        onClick={() => toggle(notification.id)}
-                      >
-                        <ChevronDown
-                          aria-hidden="true"
-                          className={cn('transition-transform', open && 'rotate-180')}
-                        />
-                        {open ? 'Hide message' : 'Read message'}
-                      </Button>
-                      {notification.status !== 'sent' && app.can('reminder.send') ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={action.pending}
-                          onClick={() =>
-                            void action.run(() => api.retryNotification(notification.id), {
-                              success: outbox.data?.delivery.configured
-                                ? 'Delivery attempted again. The status reflects the result.'
-                                : 'Message re-queued. It stays queued until SMTP is configured.',
-                            })
-                          }
-                        >
-                          <RefreshCw aria-hidden="true" />
-                          Try delivery again
-                        </Button>
-                      ) : null}
-                    </div>
-
-                    {open ? (
-                      <div className="mt-2 space-y-3">
-                        <pre className="overflow-x-auto rounded-lg border bg-muted/40 p-3 font-sans text-xs leading-relaxed whitespace-pre-wrap">
-                          {notification.body}
-                        </pre>
-                        <dl className="space-y-1 text-xs text-muted-foreground">
-                          <div className="flex flex-wrap gap-2">
-                            <dt className="font-medium">Deduplication key</dt>
-                            <dd className="font-mono break-all">{notification.idempotency_key}</dd>
-                          </div>
-                          <div className="flex gap-2">
-                            <dt className="font-medium">Attempts</dt>
-                            <dd className="tabular-nums">{notification.attempt_count}</dd>
-                          </div>
-                          {notification.items.length > 0 ? (
-                            <div className="flex flex-wrap gap-2">
-                              <dt className="font-medium">Items</dt>
-                              <dd>
-                                {notification.items
-                                  .map((item) => `${item.requirement_title} (${item.milestone_key})`)
-                                  .join('; ')}
-                              </dd>
+                              {entry.vendorName ? (
+                                <>
+                                  {' · '}
+                                  <TextLink to={`/vendors/${notification.vendor_id}`}>
+                                    {entry.vendorName}
+                                  </TextLink>
+                                </>
+                              ) : null}
+                            </p>
+                            <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                aria-expanded={open}
+                                className="-ml-2.5 h-7 text-muted-foreground"
+                                onClick={() => toggle(notification.id)}
+                              >
+                                <ChevronDown
+                                  aria-hidden="true"
+                                  className={cn('transition-transform', open && 'rotate-180')}
+                                />
+                                {open ? 'Hide message' : 'Read message'}
+                              </Button>
+                              {notification.status !== 'sent' && app.can('reminder.send') ? (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7"
+                                  disabled={action.pending}
+                                  onClick={() =>
+                                    void action.run(() => api.retryNotification(notification.id), {
+                                      success: outbox.data?.delivery.configured
+                                        ? 'Delivery attempted again. The status reflects the result.'
+                                        : 'Message re-queued. It stays queued until SMTP is configured.',
+                                    })
+                                  }
+                                >
+                                  <RefreshCw aria-hidden="true" />
+                                  Try delivery again
+                                </Button>
+                              ) : null}
                             </div>
-                          ) : null}
-                          {notification.last_error ? (
-                            <div className="flex flex-wrap gap-2">
-                              <dt className="font-medium">Last error</dt>
-                              <dd className="text-destructive">{notification.last_error}</dd>
-                            </div>
-                          ) : null}
-                        </dl>
-                      </div>
-                    ) : null}
-                  </li>
-                )
-              })}
-            </ul>
+                            {open ? (
+                              <div className="mt-1.5 space-y-2">
+                                <pre className="overflow-x-auto rounded-lg border bg-muted/40 p-2.5 font-sans text-xs leading-relaxed whitespace-pre-wrap">
+                                  {notification.body}
+                                </pre>
+                                <dl className="space-y-1 text-xs text-muted-foreground">
+                                  <div className="flex flex-wrap gap-2">
+                                    <dt className="font-medium">Deduplication key</dt>
+                                    <dd className="font-mono break-all">
+                                      {notification.idempotency_key}
+                                    </dd>
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <dt className="font-medium">Attempts</dt>
+                                    <dd className="tabular-nums">{notification.attempt_count}</dd>
+                                  </div>
+                                  {notification.items.length > 0 ? (
+                                    <div className="flex flex-wrap gap-2">
+                                      <dt className="font-medium">Items</dt>
+                                      <dd>
+                                        {notification.items
+                                          .map(
+                                            (item) =>
+                                              `${item.requirement_title} (${item.milestone_key})`,
+                                          )
+                                          .join('; ')}
+                                      </dd>
+                                    </div>
+                                  ) : null}
+                                  {notification.last_error ? (
+                                    <div className="flex flex-wrap gap-2">
+                                      <dt className="font-medium">Last error</dt>
+                                      <dd className="text-destructive">{notification.last_error}</dd>
+                                    </div>
+                                  ) : null}
+                                </dl>
+                              </div>
+                            ) : null}
+                          </div>
+                        </div>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </ScrollRegion>
+            </Section>
           )}
         </>
       ) : null}

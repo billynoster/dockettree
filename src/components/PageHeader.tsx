@@ -19,6 +19,7 @@ export function PageHeader({
   meta,
   back,
   className,
+  compact = false,
 }: {
   title: React.ReactNode
   description?: React.ReactNode
@@ -27,9 +28,14 @@ export function PageHeader({
   meta?: React.ReactNode
   back?: Crumb
   className?: string
+  /**
+   * Workspace screens: one-line meta description and tighter title/actions row so the primary
+   * list or split pane starts higher on a laptop viewport.
+   */
+  compact?: boolean
 }) {
   return (
-    <div className={cn('space-y-3', className)}>
+    <div className={cn(compact ? 'space-y-1.5' : 'space-y-2', className)}>
       {back ? (
         <Link
           to={back.to}
@@ -39,11 +45,23 @@ export function PageHeader({
           {back.label}
         </Link>
       ) : null}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
-        <div className="min-w-0 space-y-1.5">
+      <div
+        className={cn(
+          'flex flex-col sm:flex-row sm:items-start sm:justify-between',
+          compact ? 'gap-2 sm:gap-4' : 'gap-2.5 sm:gap-5',
+        )}
+      >
+        <div className={cn('min-w-0', compact ? 'space-y-0.5' : 'space-y-1')}>
           <h1 className="type-display">{title}</h1>
           {description ? (
-            <p className="type-body max-w-3xl text-muted-foreground">{description}</p>
+            <p
+              className={cn(
+                'max-w-3xl text-muted-foreground',
+                compact ? 'type-meta line-clamp-2 sm:line-clamp-1' : 'type-body',
+              )}
+            >
+              {description}
+            </p>
           ) : null}
           {meta ? <div className="flex flex-wrap items-center gap-2 pt-0.5">{meta}</div> : null}
         </div>

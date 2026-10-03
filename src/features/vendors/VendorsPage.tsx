@@ -53,6 +53,7 @@ import { formatDate } from '@/domain/dates'
 import { READINESS_LABEL } from '@/domain/readiness'
 import type { ReadinessStatus } from '@/domain/types'
 import { downloadText } from '@/lib/download'
+import { ScrollRegion } from '@/components/ScrollRegion'
 import { ImportVendorsDialog } from './ImportVendorsDialog'
 import { hasActiveFilters, parseVendorQuery, vendorQueryToParams } from '@/domain/vendorQuery'
 
@@ -180,10 +181,11 @@ export function VendorsPage() {
   ]
 
   return (
-    <Page>
+    <Page density="workspace">
       <PageHeader
+        compact
         title="Vendors"
-        description="Search, filter and open any vendor. Archived vendors stay out of the list until you include them."
+        description="Search and filter active vendors. Include archived from More when needed."
         actions={
           <>
             {canManage ? (
@@ -226,7 +228,7 @@ export function VendorsPage() {
         }
       />
 
-      <Toolbar label="Search and filters">
+      <Toolbar label="Search and filters" sticky>
         <ToolbarRow className="sm:items-center">
           <div className="relative min-w-0 flex-1">
             <Search
@@ -431,159 +433,168 @@ export function VendorsPage() {
             )
           ) : (
             <>
-              <p className="text-sm text-muted-foreground" role="status">
-                Showing {firstRow}–{lastRow} of {list.data.total} vendor
-                {list.data.total === 1 ? '' : 's'}
-                {filtersApplied ? ' matching these filters' : ''}.
-              </p>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="type-meta" role="status">
+                  Showing {firstRow}–{lastRow} of {list.data.total} vendor
+                  {list.data.total === 1 ? '' : 's'}
+                  {filtersApplied ? ' matching these filters' : ''}.
+                </p>
+              </div>
 
               <Section className="hidden md:block">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="hover:bg-transparent">
-                      <TableSortHeader
-                        active={(query.sort ?? 'name') === 'name'}
-                        direction={query.direction ?? 'asc'}
-                        onSort={() => sortBy('name')}
-                        className="pl-4"
-                      >
-                        Vendor
-                      </TableSortHeader>
-                      <TableHead>Readiness</TableHead>
-                      <TableHead>Required items</TableHead>
-                      <TableSortHeader
-                        active={query.sort === 'next_expiration'}
-                        direction={query.direction ?? 'asc'}
-                        onSort={() => sortBy('next_expiration')}
-                      >
-                        Next expiration
-                      </TableSortHeader>
-                      <TableHead>Primary contact</TableHead>
-                      <TableSortHeader
-                        active={query.sort === 'updated'}
-                        direction={query.direction ?? 'asc'}
-                        onSort={() => sortBy('updated')}
-                      >
-                        Updated
-                      </TableSortHeader>
-                      <TableHead className="w-8 pr-4">
-                        <span className="sr-only">Open</span>
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody className="[&_td]:py-3">
-                    {rows.map((row) => (
-                      /*
-                       * The row responds to a click for pointer convenience; the vendor name is a
-                       * real link, which is what the keyboard and assistive technology follow.
-                       */
-                      <TableRow
-                        key={row.vendor.id}
-                        className="group cursor-pointer"
-                        onClick={() => navigate(`/vendors/${row.vendor.id}`)}
-                      >
-                        <TableCell className="max-w-64 pl-4 font-medium whitespace-normal">
-                          <Link
-                            to={`/vendors/${row.vendor.id}`}
-                            className="rounded-sm underline-offset-[3px] group-hover:text-clay-text group-hover:underline"
-                            onClick={(event) => event.stopPropagation()}
-                          >
-                            {row.vendor.company_name}
-                          </Link>
-                          <p className="text-xs text-muted-foreground">
-                            {row.vendor.category}
-                            {row.vendor.property_tags.length > 0
-                              ? ` · ${row.vendor.property_tags.join(', ')}`
-                              : ''}
-                          </p>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col items-start gap-1">
-                            <ReadinessChip status={row.readiness.status} size="sm" />
-                            {row.readiness.expiringSoon ? <ExpiringSoonChip size="sm" /> : null}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <RequirementMeter
-                            satisfied={row.readiness.requiredSatisfied}
-                            total={row.readiness.requiredTotal}
-                          />
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {formatDate(row.readiness.nextExpiration)}
-                        </TableCell>
-                        <TableCell className="max-w-56 whitespace-normal">
-                          <p className="text-sm">{row.vendor.contact_name}</p>
-                          <p className="truncate text-xs text-muted-foreground">
-                            {row.vendor.contact_email}
-                          </p>
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          <Timestamp
-                            value={row.vendor.updated_at}
-                            timezone={app.organization.timezone}
-                          />
-                        </TableCell>
-                        <TableCell className="pr-4">
-                          <ChevronRight
-                            aria-hidden="true"
-                            className="size-4 text-muted-foreground/60 transition-transform group-hover:translate-x-0.5 group-hover:text-foreground"
-                          />
-                        </TableCell>
+                <ScrollRegion label="Vendor results">
+                  <Table>
+                    <TableHeader className="sticky top-0 z-10 bg-card/95 backdrop-blur supports-backdrop-filter:bg-card/90">
+                      <TableRow className="hover:bg-transparent">
+                        <TableSortHeader
+                          active={(query.sort ?? 'name') === 'name'}
+                          direction={query.direction ?? 'asc'}
+                          onSort={() => sortBy('name')}
+                          className="pl-4"
+                        >
+                          Vendor
+                        </TableSortHeader>
+                        <TableHead>Readiness</TableHead>
+                        <TableHead>Required items</TableHead>
+                        <TableSortHeader
+                          active={query.sort === 'next_expiration'}
+                          direction={query.direction ?? 'asc'}
+                          onSort={() => sortBy('next_expiration')}
+                        >
+                          Next expiration
+                        </TableSortHeader>
+                        <TableHead>Primary contact</TableHead>
+                        <TableSortHeader
+                          active={query.sort === 'updated'}
+                          direction={query.direction ?? 'asc'}
+                          onSort={() => sortBy('updated')}
+                        >
+                          Updated
+                        </TableSortHeader>
+                        <TableHead className="w-8 pr-4">
+                          <span className="sr-only">Open</span>
+                        </TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </Section>
-
-              <ul className="space-y-2.5 md:hidden">
-                {rows.map((row) => (
-                  <li key={row.vendor.id}>
-                    <Link
-                      to={`/vendors/${row.vendor.id}`}
-                      className="surface block space-y-3 p-4 transition-colors active:bg-muted/60"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="font-medium">{row.vendor.company_name}</p>
-                          <p className="text-xs text-muted-foreground">{row.vendor.category}</p>
-                        </div>
-                        <ChevronRight
-                          aria-hidden="true"
-                          className="mt-0.5 size-4 shrink-0 text-muted-foreground"
-                        />
-                      </div>
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <ReadinessChip status={row.readiness.status} size="sm" />
-                        {row.readiness.expiringSoon ? (
-                          <ExpiringSoonChip nextExpiration={row.readiness.nextExpiration} size="sm" />
-                        ) : null}
-                      </div>
-                      <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
-                        <div>
-                          <dt className="text-xs text-muted-foreground">Required items</dt>
-                          <dd>
+                    </TableHeader>
+                    <TableBody className="[&_td]:py-2">
+                      {rows.map((row) => (
+                        /*
+                         * The row responds to a click for pointer convenience; the vendor name is a
+                         * real link, which is what the keyboard and assistive technology follow.
+                         */
+                        <TableRow
+                          key={row.vendor.id}
+                          className="group cursor-pointer"
+                          onClick={() => navigate(`/vendors/${row.vendor.id}`)}
+                        >
+                          <TableCell className="max-w-64 pl-4 font-medium whitespace-normal">
+                            <Link
+                              to={`/vendors/${row.vendor.id}`}
+                              className="rounded-sm underline-offset-[3px] group-hover:text-clay-text group-hover:underline"
+                              onClick={(event) => event.stopPropagation()}
+                            >
+                              {row.vendor.company_name}
+                            </Link>
+                            <p className="text-xs text-muted-foreground">
+                              {row.vendor.category}
+                              {row.vendor.property_tags.length > 0
+                                ? ` · ${row.vendor.property_tags.join(', ')}`
+                                : ''}
+                            </p>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col items-start gap-0.5">
+                              <ReadinessChip status={row.readiness.status} size="sm" />
+                              {row.readiness.expiringSoon ? <ExpiringSoonChip size="sm" /> : null}
+                            </div>
+                          </TableCell>
+                          <TableCell>
                             <RequirementMeter
                               satisfied={row.readiness.requiredSatisfied}
                               total={row.readiness.requiredTotal}
                             />
-                          </dd>
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {formatDate(row.readiness.nextExpiration)}
+                          </TableCell>
+                          <TableCell className="max-w-56 whitespace-normal">
+                            <p className="text-sm">{row.vendor.contact_name}</p>
+                            <p className="truncate text-xs text-muted-foreground">
+                              {row.vendor.contact_email}
+                            </p>
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            <Timestamp
+                              value={row.vendor.updated_at}
+                              timezone={app.organization.timezone}
+                            />
+                          </TableCell>
+                          <TableCell className="pr-4">
+                            <ChevronRight
+                              aria-hidden="true"
+                              className="size-4 text-muted-foreground/60 transition-transform group-hover:translate-x-0.5 group-hover:text-foreground"
+                            />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </ScrollRegion>
+              </Section>
+
+              <ScrollRegion label="Vendor results" className="md:hidden">
+                <ul className="space-y-2">
+                  {rows.map((row) => (
+                    <li key={row.vendor.id}>
+                      <Link
+                        to={`/vendors/${row.vendor.id}`}
+                        className="surface block space-y-2 p-3 transition-colors active:bg-muted/60"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="font-medium">{row.vendor.company_name}</p>
+                            <p className="text-xs text-muted-foreground">{row.vendor.category}</p>
+                          </div>
+                          <ChevronRight
+                            aria-hidden="true"
+                            className="mt-0.5 size-4 shrink-0 text-muted-foreground"
+                          />
                         </div>
-                        <div>
-                          <dt className="text-xs text-muted-foreground">Next expiration</dt>
-                          <dd>{formatDate(row.readiness.nextExpiration)}</dd>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <ReadinessChip status={row.readiness.status} size="sm" />
+                          {row.readiness.expiringSoon ? (
+                            <ExpiringSoonChip
+                              nextExpiration={row.readiness.nextExpiration}
+                              size="sm"
+                            />
+                          ) : null}
                         </div>
-                        <div className="col-span-2 min-w-0">
-                          <dt className="text-xs text-muted-foreground">Primary contact</dt>
-                          <dd className="truncate">
-                            {row.vendor.contact_name} · {row.vendor.contact_email}
-                          </dd>
-                        </div>
-                      </dl>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+                        <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm">
+                          <div>
+                            <dt className="text-xs text-muted-foreground">Required items</dt>
+                            <dd>
+                              <RequirementMeter
+                                satisfied={row.readiness.requiredSatisfied}
+                                total={row.readiness.requiredTotal}
+                              />
+                            </dd>
+                          </div>
+                          <div>
+                            <dt className="text-xs text-muted-foreground">Next expiration</dt>
+                            <dd>{formatDate(row.readiness.nextExpiration)}</dd>
+                          </div>
+                          <div className="col-span-2 min-w-0">
+                            <dt className="text-xs text-muted-foreground">Primary contact</dt>
+                            <dd className="truncate">
+                              {row.vendor.contact_name} · {row.vendor.contact_email}
+                            </dd>
+                          </div>
+                        </dl>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </ScrollRegion>
 
               {list.data.totalPages > 1 ? (
                 <nav

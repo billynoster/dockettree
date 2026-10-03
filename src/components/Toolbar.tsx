@@ -14,15 +14,26 @@ export function Toolbar({
   children,
   label,
   className,
+  sticky = false,
 }: {
   children: React.ReactNode
   /** Names the region for assistive technology, e.g. "Queue filters". */
   label: string
   className?: string
+  /** Pin filters under the app header while the list scrolls. */
+  sticky?: boolean
 }) {
   return (
-    <Section aria-label={label} className={cn('p-3 sm:p-4', className)}>
-      <div className="flex flex-col gap-3">{children}</div>
+    <Section
+      aria-label={label}
+      className={cn(
+        'p-2.5 sm:p-3',
+        sticky &&
+          'sticky top-[calc(var(--header-height)+0.5rem)] z-20 bg-card/95 shadow-surface backdrop-blur supports-backdrop-filter:bg-card/90',
+        className,
+      )}
+    >
+      <div className="flex flex-col gap-2.5">{children}</div>
     </Section>
   )
 }

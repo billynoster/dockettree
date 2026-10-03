@@ -7,6 +7,7 @@ import { useServiceQuery } from '@/app/useServiceQuery'
 import { Page } from '@/components/Page'
 import { PageHeader } from '@/components/PageHeader'
 import { PasswordField } from '@/components/PasswordField'
+import { ScrollRegion } from '@/components/ScrollRegion'
 import { Section, SectionBody, SectionHeader } from '@/components/Section'
 import { ErrorState, InlineNotice, LoadingState } from '@/components/States'
 import { Chip } from '@/components/StatusChips'
@@ -32,6 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { todayInTimeZone } from '@/domain/dates'
 import { ROLE_LABEL, ROLE_SUMMARY } from '@/domain/permissions'
 import type { InternalRole } from '@/domain/types'
@@ -64,19 +66,33 @@ export function SettingsPage() {
   const today = todayInTimeZone(new Date(), form.timezone)
 
   return (
-    <Page width="reading">
+    <Page width="reading" density="workspace">
       <PageHeader
+        compact
         title="Settings"
-        description="Organization details, the people who can sign in, and how this server delivers messages."
+        description="Organization, members, your password, and message delivery"
       />
 
+      <Tabs defaultValue="organization" className="gap-3">
+        <TabsList
+          variant="line"
+          className="sticky top-[calc(var(--header-height)+0.5rem)] z-20 w-full max-w-full justify-start overflow-x-auto bg-background/90 px-0 backdrop-blur supports-backdrop-filter:bg-background/80"
+        >
+          <TabsTrigger value="organization">Organization</TabsTrigger>
+          <TabsTrigger value="members">Members</TabsTrigger>
+          <TabsTrigger value="account">Your password</TabsTrigger>
+          <TabsTrigger value="delivery">Delivery</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="organization" className="mt-0">
       <Section>
         <SectionHeader
           title="Organization"
           description="Shown to vendors on their portal and in every message this server sends."
           border
+          className="px-3 py-2.5"
         />
-        <SectionBody className="space-y-4 pt-4">
+        <SectionBody className="space-y-3 pt-3">
           {/*
            * A read-only role sees the same fields, disabled, with one line explaining why. The
            * earlier full-width lock panel above the form said the same thing far more loudly.
@@ -186,17 +202,18 @@ export function SettingsPage() {
           </form>
         </SectionBody>
       </Section>
+        </TabsContent>
 
-      <ChangePasswordSection />
-
+        <TabsContent value="members" className="mt-0">
       <Section>
         <SectionHeader
           title="Internal members"
           description="Each member holds exactly one role, and the role decides what they can do."
           border
+          className="px-3 py-2.5"
         />
-        <SectionBody className="space-y-4 pt-4">
-          <dl className="grid gap-x-6 gap-y-1.5 text-xs sm:grid-cols-3">
+        <SectionBody className="space-y-3 pt-3">
+          <dl className="grid gap-x-6 gap-y-1 text-xs sm:grid-cols-3">
             {INTERNAL_ROLE_OPTIONS.map((role) => (
               <div key={role}>
                 <dt className="font-medium">{ROLE_LABEL[role]}</dt>
@@ -211,113 +228,137 @@ export function SettingsPage() {
             <ErrorState message={settings.error} onRetry={settings.reload} />
           ) : null}
           {settings.data ? (
-            <ul className="divide-y rounded-lg border">
-              {settings.data.members.map((member) => (
-                <li
-                  key={member.membership.id}
-                  className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div className="min-w-0">
-                    <p className="flex flex-wrap items-center gap-2 text-sm font-medium">
-                      {member.user.display_name}
-                      {member.user.id === app.user.id ? (
-                        <Chip tone="brand" size="sm">
-                          You
-                        </Chip>
-                      ) : null}
-                      {member.user.status === 'disabled' ? (
-                        <Chip tone="neutral" size="sm">
-                          Disabled
-                        </Chip>
-                      ) : null}
-                    </p>
-                    <p className="truncate text-xs text-muted-foreground">{member.user.email}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {member.user.last_login_at ? (
-                        <>
-                          Last signed in{' '}
-                          <Timestamp
-                            value={member.user.last_login_at}
-                            timezone={app.organization.timezone}
-                          />
-                        </>
-                      ) : (
-                        'Has not signed in yet'
-                      )}
-                    </p>
-                  </div>
-                  {canManage ? (
-                    <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
-                      <Select
-                        value={member.membership.role}
-                        onValueChange={(value) =>
-                          void action.run(
-                            () => api.changeMemberRole(member.user.id, value as InternalRole),
-                            {
-                              success: `${member.user.display_name} is now ${ROLE_LABEL[value as InternalRole].toLowerCase()}.`,
-                              onSuccess: () => settings.reload(),
-                            },
-                          )
-                        }
-                      >
-                        <SelectTrigger
-                          aria-label={`Role for ${member.user.display_name}`}
-                          className="w-36"
-                        >
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {INTERNAL_ROLE_OPTIONS.map((role) => (
-                            <SelectItem key={role} value={role}>
-                              {ROLE_LABEL[role]}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <ResetPasswordDialog
-                        userId={member.user.id}
-                        name={member.user.display_name}
-                        onDone={() => settings.reload()}
-                      />
-                      {member.user.id === app.user.id ? null : (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
+            <ScrollRegion size="panel" label="Organization members">
+              <ul className="divide-y rounded-lg border">
+                {settings.data.members.map((member) => (
+                  <li
+                    key={member.membership.id}
+                    className="flex flex-col gap-2 p-2.5 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="min-w-0">
+                      <p className="flex flex-wrap items-center gap-2 text-sm font-medium">
+                        {member.user.display_name}
+                        {member.user.id === app.user.id ? (
+                          <Chip tone="brand" size="sm">
+                            You
+                          </Chip>
+                        ) : null}
+                        {member.user.status === 'disabled' ? (
+                          <Chip tone="neutral" size="sm">
+                            Disabled
+                          </Chip>
+                        ) : null}
+                      </p>
+                      <p className="truncate text-xs text-muted-foreground">{member.user.email}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {member.user.last_login_at ? (
+                          <>
+                            Last signed in{' '}
+                            <Timestamp
+                              value={member.user.last_login_at}
+                              timezone={app.organization.timezone}
+                            />
+                          </>
+                        ) : (
+                          'Has not signed in yet'
+                        )}
+                      </p>
+                    </div>
+                    {canManage ? (
+                      <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
+                        <Select
+                          value={member.membership.role}
+                          onValueChange={(value) =>
                             void action.run(
-                              () =>
-                                api.setMemberStatus(
-                                  member.user.id,
-                                  member.user.status === 'active' ? 'disabled' : 'active',
-                                ),
+                              () => api.changeMemberRole(member.user.id, value as InternalRole),
                               {
-                                success:
-                                  member.user.status === 'active'
-                                    ? `${member.user.display_name} can no longer sign in.`
-                                    : `${member.user.display_name} can sign in again.`,
+                                success: `${member.user.display_name} is now ${ROLE_LABEL[value as InternalRole].toLowerCase()}.`,
                                 onSuccess: () => settings.reload(),
                               },
                             )
                           }
                         >
-                          {member.user.status === 'active' ? 'Disable' : 'Enable'}
-                        </Button>
-                      )}
-                    </div>
-                  ) : (
-                    <Chip tone="neutral">{ROLE_LABEL[member.membership.role]}</Chip>
-                  )}
-                </li>
-              ))}
-            </ul>
+                          <SelectTrigger
+                            aria-label={`Role for ${member.user.display_name}`}
+                            className="w-36"
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {INTERNAL_ROLE_OPTIONS.map((role) => (
+                              <SelectItem key={role} value={role}>
+                                {ROLE_LABEL[role]}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <ResetPasswordDialog
+                          userId={member.user.id}
+                          name={member.user.display_name}
+                          onDone={() => settings.reload()}
+                        />
+                        {member.user.id === app.user.id ? null : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              void action.run(
+                                () =>
+                                  api.setMemberStatus(
+                                    member.user.id,
+                                    member.user.status === 'active' ? 'disabled' : 'active',
+                                  ),
+                                {
+                                  success:
+                                    member.user.status === 'active'
+                                      ? `${member.user.display_name} can no longer sign in.`
+                                      : `${member.user.display_name} can sign in again.`,
+                                  onSuccess: () => settings.reload(),
+                                },
+                              )
+                            }
+                          >
+                            {member.user.status === 'active' ? 'Disable' : 'Enable'}
+                          </Button>
+                        )}
+                      </div>
+                    ) : (
+                      <Chip tone="neutral">{ROLE_LABEL[member.membership.role]}</Chip>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </ScrollRegion>
           ) : null}
           {canManage ? <AddMemberForm onAdded={() => settings.reload()} /> : null}
         </SectionBody>
       </Section>
+        </TabsContent>
 
+        <TabsContent value="account" className="mt-0 space-y-3">
+      <ChangePasswordSection />
       <Section>
-        <SectionHeader title="Email delivery and reminders" border />
-        <SectionBody className="space-y-3 pt-4">
+        <SectionHeader title="Sign-in" border className="px-3 py-2.5" />
+        <SectionBody className="space-y-2 pt-3">
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            This server verifies email and password itself and stores a session for each sign-in.
+            Firebase Authentication is the planned provider; it will replace the local adapter
+            without changing any of the workflows above.
+          </p>
+          {settings.data ? (
+            <p className="text-xs text-muted-foreground">
+              Active identity provider:{' '}
+              <code className="rounded bg-muted px-1 py-0.5">{settings.data.identity.provider}</code>
+            </p>
+          ) : null}
+        </SectionBody>
+      </Section>
+        </TabsContent>
+
+        <TabsContent value="delivery" className="mt-0">
+      <Section>
+        <SectionHeader title="Email delivery and reminders" border className="px-3 py-2.5" />
+        <SectionBody className="space-y-3 pt-3">
           {app.delivery.configured ? (
             <InlineNotice tone="ok" title="SMTP is configured">
               Messages are queued in the notification log and delivered over SMTP with bounded
@@ -351,23 +392,8 @@ export function SettingsPage() {
           ) : null}
         </SectionBody>
       </Section>
-
-      <Section>
-        <SectionHeader title="Sign-in" border />
-        <SectionBody className="space-y-2 pt-4">
-          <p className="text-sm leading-relaxed text-muted-foreground">
-            This server verifies email and password itself and stores a session for each sign-in.
-            Firebase Authentication is the planned provider; it will replace the local adapter
-            without changing any of the workflows above.
-          </p>
-          {settings.data ? (
-            <p className="text-xs text-muted-foreground">
-              Active identity provider:{' '}
-              <code className="rounded bg-muted px-1 py-0.5">{settings.data.identity.provider}</code>
-            </p>
-          ) : null}
-        </SectionBody>
-      </Section>
+        </TabsContent>
+      </Tabs>
     </Page>
   )
 }

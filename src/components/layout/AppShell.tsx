@@ -113,10 +113,10 @@ function NavItems({
   onNavigate?: () => void
 }) {
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {NAV_GROUPS.map((group) => (
         <div key={group.label}>
-          <p className="px-3 pb-1.5 type-eyebrow">
+          <p className="px-3 pb-1 type-eyebrow">
             {group.label}
           </p>
           <ul className="space-y-0.5">
@@ -127,7 +127,7 @@ function NavItems({
                   onClick={onNavigate}
                   className={({ isActive }) =>
                     cn(
-                      'relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                      'relative flex items-center gap-2.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
                       isActive
                         ? 'tone-brand before:absolute before:top-1.5 before:bottom-1.5 before:-left-px before:w-0.5 before:rounded-full before:bg-primary'
                         : 'text-muted-foreground hover:bg-muted hover:text-foreground',
@@ -311,10 +311,10 @@ export function AppShell() {
         </div>
       </header>
 
-      <div className="mx-auto flex w-full max-w-[1600px] gap-8 px-4 py-6 lg:py-8">
+      <div className="mx-auto flex w-full max-w-[1600px] gap-6 px-4 py-3 lg:gap-7 lg:py-4">
         <nav
           aria-label="Main"
-          className="sticky top-[calc(var(--header-height)+1.5rem)] hidden h-fit w-52 shrink-0 lg:block"
+          className="sticky top-[calc(var(--header-height)+0.75rem)] hidden h-fit w-48 shrink-0 lg:block xl:w-52"
         >
           <NavItems pendingCount={pendingCount} />
         </nav>
@@ -323,7 +323,7 @@ export function AppShell() {
           id="main"
           ref={mainRef}
           tabIndex={-1}
-          className="min-w-0 flex-1 space-y-5 outline-none lg:space-y-6"
+          className="min-w-0 flex-1 space-y-3 outline-none lg:space-y-3.5"
         >
           {/*
             * One line, because it sits above every screen: the detail lives on the notification

@@ -20,6 +20,7 @@ import { useApp } from '@/app/AppProvider'
 import { useServiceQuery } from '@/app/useServiceQuery'
 import { Page } from '@/components/Page'
 import { PageHeader } from '@/components/PageHeader'
+import { ScrollRegion } from '@/components/ScrollRegion'
 import { Section } from '@/components/Section'
 import { EmptyState, ErrorState, FilteredEmptyState, LoadingState } from '@/components/States'
 import { Timestamp } from '@/components/Timestamp'
@@ -107,13 +108,14 @@ export function ActivityPage() {
   }
 
   return (
-    <Page>
+    <Page density="workspace">
       <PageHeader
+        compact
         title="Activity"
-        description="Append-only history of vendor changes, invitations, submissions, decisions and reminders. Events cannot be edited or deleted, by anyone."
+        description="Append-only history · events cannot be edited or deleted"
       />
 
-      <Toolbar label="Activity filters">
+      <Toolbar label="Activity filters" sticky>
         <ToolbarRow>
           <ToolbarField label="Vendor">
             {(id) => (
@@ -183,56 +185,58 @@ export function ActivityPage() {
           )
         ) : (
           <>
-            <p className="text-sm text-muted-foreground" role="status">
+            <p className="type-meta" role="status">
               {activity.data.events.length} event
               {activity.data.events.length === 1 ? '' : 's'}, newest first.
             </p>
             <Section>
-              <ol className="divide-y">
-                {activity.data.events.map((event) => {
-                  const Icon = EVENT_ICON[event.event_type]
-                  return (
-                    <li key={event.id} className="flex gap-3 px-4 py-3.5">
-                      <span
-                        className={cn(
-                          'mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full border',
-                          ACCENT[event.event_type] ?? 'tone-neutral',
-                        )}
-                      >
-                        <Icon aria-hidden="true" className="size-3.5" />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                          <p className="text-sm font-medium">
-                            {ACTIVITY_TYPE_LABEL[event.event_type]}
-                          </p>
-                          <Timestamp
-                            value={event.created_at}
-                            timezone={app.organization.timezone}
-                            mode="absolute"
-                            className="text-xs text-muted-foreground"
-                          />
-                        </div>
-                        <p className="mt-0.5 text-sm">{event.summary}</p>
-                        {event.reason ? (
-                          <p className="mt-1 border-l-2 pl-2.5 text-sm text-muted-foreground">
-                            {event.reason}
-                          </p>
-                        ) : null}
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {event.actor_label} · {event.actor_role}
-                          {event.vendor_id ? (
-                            <>
-                              {' · '}
-                              <TextLink to={`/vendors/${event.vendor_id}`}>Open vendor</TextLink>
-                            </>
+              <ScrollRegion label="Activity events">
+                <ol className="divide-y">
+                  {activity.data.events.map((event) => {
+                    const Icon = EVENT_ICON[event.event_type]
+                    return (
+                      <li key={event.id} className="flex gap-2.5 px-3 py-2.5">
+                        <span
+                          className={cn(
+                            'mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full border',
+                            ACCENT[event.event_type] ?? 'tone-neutral',
+                          )}
+                        >
+                          <Icon aria-hidden="true" className="size-3.5" />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5">
+                            <p className="text-sm font-medium">
+                              {ACTIVITY_TYPE_LABEL[event.event_type]}
+                            </p>
+                            <Timestamp
+                              value={event.created_at}
+                              timezone={app.organization.timezone}
+                              mode="absolute"
+                              className="text-xs text-muted-foreground"
+                            />
+                          </div>
+                          <p className="mt-0.5 text-sm">{event.summary}</p>
+                          {event.reason ? (
+                            <p className="mt-1 border-l-2 pl-2.5 text-sm text-muted-foreground">
+                              {event.reason}
+                            </p>
                           ) : null}
-                        </p>
-                      </div>
-                    </li>
-                  )
-                })}
-              </ol>
+                          <p className="mt-0.5 text-xs text-muted-foreground">
+                            {event.actor_label} · {event.actor_role}
+                            {event.vendor_id ? (
+                              <>
+                                {' · '}
+                                <TextLink to={`/vendors/${event.vendor_id}`}>Open vendor</TextLink>
+                              </>
+                            ) : null}
+                          </p>
+                        </div>
+                      </li>
+                    )
+                  })}
+                </ol>
+              </ScrollRegion>
             </Section>
           </>
         )

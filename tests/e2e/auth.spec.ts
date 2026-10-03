@@ -96,6 +96,7 @@ test.describe('invitation to portal', () => {
 test.describe('member administration', () => {
   test('an admin adds a member who can then sign in', async ({ page }) => {
     await signInAsStaff(page, ADMIN, '/settings')
+    await page.getByRole('tab', { name: 'Members' }).click()
     await page.locator('#member-name').fill('Ravi Okonkwo')
     await page.locator('#member-email').fill('ravi.okonkwo@example.com')
     await page.locator('#member-password').fill('a-long-enough-password')

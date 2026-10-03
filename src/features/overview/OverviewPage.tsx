@@ -7,6 +7,7 @@ import { ErrorState, StatsSkeleton } from '@/components/States'
 import { Page } from '@/components/Page'
 import { PageHeader } from '@/components/PageHeader'
 import { ReadinessMixBar, READINESS_TONE, StatTile, ToneDot, type Tone } from '@/components/Metrics'
+import { ScrollRegion } from '@/components/ScrollRegion'
 import { Section, SectionHeader } from '@/components/Section'
 import { ExpiringSoonChip, ReadinessChip } from '@/components/StatusChips'
 import { Timestamp } from '@/components/Timestamp'
@@ -18,46 +19,40 @@ import type { ReadinessStatus } from '@/domain/types'
 
 const BUCKETS: ReadinessStatus[] = ['ready', 'awaiting_review', 'not_ready', 'unconfigured']
 
-/** A secondary number that overlaps the four buckets and therefore gets its own card. */
-function SecondaryMetric({
+/** Compact overlapping metric that sits in the primary readiness band. */
+function SecondaryMetricLink({
   label,
   value,
   tone,
   icon: Icon,
-  description,
   to,
-  cta,
 }: {
   label: string
   value: number
   tone: Tone
   icon: typeof CalendarClock
-  description: string
   to: string
-  cta: string
 }) {
   return (
-    <Section className="flex flex-col gap-3 p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="space-y-1">
-          <h2 className="type-subtitle flex items-center gap-2">
-            <ToneDot tone={tone} />
-            {label}
-          </h2>
-          <p className="type-metric-sm">{value}</p>
-        </div>
-        <span className="flex size-9 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-          <Icon aria-hidden="true" className="size-4.5" />
+    <Link
+      to={to}
+      className="group flex min-w-0 flex-1 items-center gap-3 rounded-xl border bg-card px-3 py-2.5 transition-colors hover:border-border-strong hover:bg-muted/50"
+    >
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+        <Icon aria-hidden="true" className="size-4" />
+      </span>
+      <span className="min-w-0">
+        <span className="type-subtitle flex items-center gap-1.5">
+          <ToneDot tone={tone} />
+          {label}
         </span>
-      </div>
-      <p className="type-meta">{description}</p>
-      <Button asChild variant="outline" size="sm" className="mt-auto w-fit">
-        <Link to={to}>
-          {cta}
-          <ArrowRight aria-hidden="true" />
-        </Link>
-      </Button>
-    </Section>
+        <span className="type-metric-sm block leading-none">{value}</span>
+      </span>
+      <ArrowRight
+        aria-hidden="true"
+        className="ml-auto size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-clay-text"
+      />
+    </Link>
   )
 }
 
@@ -73,184 +68,233 @@ export function OverviewPage() {
   const organizationIsEmpty = counts.active === 0 && counts.archived === 0
 
   return (
-    <Page>
+    <Page density="workspace">
       <PageHeader
+        compact
         title="Overview"
         description={
           <>
-            Readiness across every active vendor at {app.organization.name}. Expirations are judged
-            against today, {formatDate(query.data.today)} in {app.organization.timezone}.
+            Readiness across active vendors · today {formatDate(query.data.today)} (
+            {app.organization.timezone})
           </>
         }
       />
 
-      <Section aria-labelledby="active-count">
-        <div className="flex flex-col gap-4 p-4">
-          <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
-            <div className="space-y-1">
-              <h2 id="active-count" className="type-subtitle text-muted-foreground">
-                Active vendors
-              </h2>
-              <p className="type-metric">{counts.active}</p>
+      <div className="grid gap-3 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] xl:items-start">
+        <div className="space-y-3">
+          <Section aria-labelledby="active-count">
+            <div className="flex flex-col gap-3 p-3 sm:p-3.5">
+              <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
+                <div className="space-y-0.5">
+                  <h2 id="active-count" className="type-subtitle text-muted-foreground">
+                    Active vendors
+                  </h2>
+                  <p className="type-metric">{counts.active}</p>
+                </div>
+                <p className="type-meta max-w-sm">
+                  Four buckets sum to the active total. {counts.archived} archived excluded.
+                </p>
+              </div>
+
+              <ReadinessMixBar counts={counts} total={counts.active} />
+
+              <ul className="grid gap-2 sm:grid-cols-2">
+                {BUCKETS.map((status) => (
+                  <li key={status}>
+                    <StatTile
+                      label={READINESS_LABEL[status]}
+                      value={counts[status]}
+                      tone={READINESS_TONE[status]}
+                      description={READINESS_EXPLANATION[status]}
+                      to={vendorsLink({ readiness: [status] })}
+                      share={counts.active === 0 ? 0 : counts[status] / counts.active}
+                      compact
+                    />
+                  </li>
+                ))}
+              </ul>
             </div>
-            <p className="type-meta max-w-md">
-              Ready, Awaiting review, Not ready and Unconfigured add up to the active total. The{' '}
-              {counts.archived} archived vendor{counts.archived === 1 ? '' : 's'}{' '}
-              {counts.archived === 1 ? 'is' : 'are'} excluded from every count on this page.
-            </p>
+          </Section>
+
+          <div className="grid gap-2 sm:grid-cols-2">
+            <SecondaryMetricLink
+              label="Expiring soon"
+              value={counts.expiring_soon}
+              tone="warn"
+              icon={CalendarClock}
+              to={vendorsLink({ expiringSoonOnly: true })}
+            />
+            <SecondaryMetricLink
+              label="Pending review"
+              value={pendingReviewCount}
+              tone="info"
+              icon={FileCheck2}
+              to="/review"
+            />
           </div>
 
-          <ReadinessMixBar counts={counts} total={counts.active} />
-
-          <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {BUCKETS.map((status) => (
-              <li key={status}>
-                <StatTile
-                  label={READINESS_LABEL[status]}
-                  value={counts[status]}
-                  tone={READINESS_TONE[status]}
-                  description={READINESS_EXPLANATION[status]}
-                  to={vendorsLink({ readiness: [status] })}
-                  share={counts.active === 0 ? 0 : counts[status] / counts.active}
-                />
-              </li>
-            ))}
-          </ul>
+          <Section aria-labelledby="recent" className="hidden xl:block">
+            <SectionHeader
+              id="recent"
+              title="Recent activity"
+              description="Append-only · newest first"
+              action={
+                <Button asChild variant="ghost" size="sm">
+                  <Link to="/activity">
+                    View all
+                    <ArrowRight aria-hidden="true" />
+                  </Link>
+                </Button>
+              }
+              border
+              className="px-3 py-2.5"
+            />
+            {recentActivity.length === 0 ? (
+              <p className="px-3 py-4 text-center text-sm text-muted-foreground">
+                Nothing has happened yet.
+              </p>
+            ) : (
+              <ScrollRegion size="panel" label="Recent activity" className="max-h-44">
+                <ul className="divide-y">
+                  {recentActivity.slice(0, 6).map((event) => (
+                    <li
+                      key={event.id}
+                      className="flex flex-col gap-0.5 px-3 py-2 sm:flex-row sm:items-baseline sm:gap-3"
+                    >
+                      <p className="min-w-0 flex-1 truncate text-sm">
+                        {event.summary}
+                        <span className="text-muted-foreground"> · {event.actor_label}</span>
+                      </p>
+                      <Timestamp
+                        value={event.created_at}
+                        timezone={app.organization.timezone}
+                        className="shrink-0 text-xs text-muted-foreground"
+                      />
+                    </li>
+                  ))}
+                </ul>
+              </ScrollRegion>
+            )}
+          </Section>
         </div>
-      </Section>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <SecondaryMetric
-          label="Expiring soon"
-          value={counts.expiring_soon}
-          tone="warn"
-          icon={CalendarClock}
-          description="Active vendors whose required documents expire within 30 days, including today. They are also counted in one of the four buckets above, so this number overlaps."
-          to={vendorsLink({ expiringSoonOnly: true })}
-          cta="View expiring vendors"
-        />
-        <SecondaryMetric
-          label="Submissions pending review"
-          value={pendingReviewCount}
-          tone="info"
-          icon={FileCheck2}
-          description="Counted as submissions rather than vendors, because one vendor can have several documents waiting. Archived vendors are excluded."
-          to="/review"
-          cta="Open review queue"
-        />
+        <Section aria-labelledby="attention" className="xl:min-h-0">
+          <SectionHeader
+            id="attention"
+            title="Needs attention"
+            description={
+              attention.length === 0
+                ? undefined
+                : 'Severity order · expired, revoked, corrections, missing, expiring, reviews'
+            }
+            action={
+              attention.length > 8 ? (
+                <Button asChild variant="ghost" size="sm">
+                  <Link
+                    to={vendorsLink({ readiness: ['not_ready', 'awaiting_review', 'unconfigured'] })}
+                  >
+                    See all {attention.length}
+                  </Link>
+                </Button>
+              ) : null
+            }
+            border={attention.length > 0}
+            className="px-3 py-2.5"
+          />
+          {attention.length === 0 ? (
+            <div className="space-y-3 px-3 py-6 text-center">
+              <p className="mx-auto max-w-prose text-sm text-muted-foreground">
+                {organizationIsEmpty
+                  ? 'No vendors yet. Add a vendor, assign a checklist, and invite their contact.'
+                  : 'Every active vendor is ready and nothing expires in the next 30 days.'}
+              </p>
+              {organizationIsEmpty && app.can('vendor.manage') ? (
+                <div className="flex flex-wrap justify-center gap-2">
+                  <Button asChild size="sm">
+                    <Link to="/vendors/new">Add your first vendor</Link>
+                  </Button>
+                  <Button asChild variant="outline" size="sm">
+                    <Link to="/requirements">Set up a checklist template</Link>
+                  </Button>
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <ScrollRegion size="panel" label="Vendors that need attention">
+              <ul className="divide-y">
+                {attention.slice(0, 12).map((item) => {
+                  const tone: Tone = item.topBlocker
+                    ? READINESS_TONE[item.status]
+                    : item.expiringSoon
+                      ? 'warn'
+                      : 'neutral'
+                  return (
+                    <li key={item.vendor_id}>
+                      <Link
+                        to={`/vendors/${item.vendor_id}`}
+                        className="group flex flex-col gap-1.5 px-3 py-2.5 transition-colors hover:bg-muted/60 sm:flex-row sm:items-center sm:gap-3"
+                      >
+                        <span className="flex min-w-0 flex-1 items-start gap-2">
+                          <ToneDot tone={tone} className="mt-1.5" />
+                          <span className="min-w-0">
+                            <span className="block truncate text-sm font-medium group-hover:text-clay-text">
+                              {item.company_name}
+                            </span>
+                            <span className="block truncate text-sm text-muted-foreground">
+                              {item.reason}
+                              {item.blockerCount > 1
+                                ? ` · +${item.blockerCount - 1} more blocker${item.blockerCount > 2 ? 's' : ''}`
+                                : ''}
+                            </span>
+                          </span>
+                        </span>
+                        <span className="flex shrink-0 flex-wrap items-center gap-1.5 pl-5 sm:pl-0">
+                          <ReadinessChip status={item.status} size="sm" />
+                          {item.expiringSoon ? (
+                            <ExpiringSoonChip nextExpiration={item.nextExpiration} size="sm" />
+                          ) : null}
+                          <ChevronRight
+                            aria-hidden="true"
+                            className="hidden size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5 sm:block"
+                          />
+                        </span>
+                      </Link>
+                    </li>
+                  )
+                })}
+              </ul>
+            </ScrollRegion>
+          )}
+        </Section>
       </div>
 
-      <Section aria-labelledby="attention">
+      <Section aria-labelledby="recent-mobile" className="xl:hidden">
         <SectionHeader
-          id="attention"
-          title="Needs attention"
-          description={
-            attention.length === 0
-              ? undefined
-              : 'Ordered by severity: expired documents first, then revoked, corrections, missing items, upcoming expirations and reviews.'
-          }
-          action={
-            attention.length > 8 ? (
-              <Button asChild variant="ghost" size="sm">
-                <Link to={vendorsLink({ readiness: ['not_ready', 'awaiting_review', 'unconfigured'] })}>
-                  See all {attention.length}
-                </Link>
-              </Button>
-            ) : null
-          }
-          border={attention.length > 0}
-        />
-        {attention.length === 0 ? (
-          <div className="space-y-4 border-t px-4 py-8 text-center">
-            <p className="mx-auto max-w-prose text-sm text-muted-foreground">
-              {organizationIsEmpty
-                ? 'No vendors yet. Add your first vendor, assign a checklist, and invite their contact to upload documents.'
-                : 'Every active vendor is ready and nothing expires in the next 30 days. New exceptions appear here as soon as they happen.'}
-            </p>
-            {organizationIsEmpty && app.can('vendor.manage') ? (
-              <div className="flex flex-wrap justify-center gap-2">
-                <Button asChild size="sm">
-                  <Link to="/vendors/new">Add your first vendor</Link>
-                </Button>
-                <Button asChild variant="outline" size="sm">
-                  <Link to="/requirements">Set up a checklist template</Link>
-                </Button>
-              </div>
-            ) : null}
-          </div>
-        ) : (
-          <ul className="divide-y">
-            {attention.slice(0, 8).map((item) => {
-              const tone: Tone = item.topBlocker
-                ? READINESS_TONE[item.status]
-                : item.expiringSoon
-                  ? 'warn'
-                  : 'neutral'
-              return (
-                <li key={item.vendor_id}>
-                  {/*
-                   * The whole row is the link so the pointer target matches the visible row and
-                   * the keyboard reaches one stop per vendor instead of two.
-                   */}
-                  <Link
-                    to={`/vendors/${item.vendor_id}`}
-                    className="group flex flex-col gap-2 px-4 py-3.5 transition-colors hover:bg-muted/60 sm:flex-row sm:items-center sm:gap-4"
-                  >
-                    <span className="flex min-w-0 flex-1 items-start gap-2.5">
-                      <ToneDot tone={tone} className="mt-1.5" />
-                      <span className="min-w-0">
-                        <span className="block truncate text-sm font-medium group-hover:text-clay-text">
-                          {item.company_name}
-                        </span>
-                        <span className="block text-sm text-muted-foreground">
-                          {item.reason}
-                          {item.blockerCount > 1
-                            ? ` · +${item.blockerCount - 1} more blocker${item.blockerCount > 2 ? 's' : ''}`
-                            : ''}
-                        </span>
-                      </span>
-                    </span>
-                    <span className="flex shrink-0 flex-wrap items-center gap-2 pl-5 sm:pl-0">
-                      <ReadinessChip status={item.status} size="sm" />
-                      {item.expiringSoon ? (
-                        <ExpiringSoonChip nextExpiration={item.nextExpiration} size="sm" />
-                      ) : null}
-                      <ChevronRight
-                        aria-hidden="true"
-                        className="hidden size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5 sm:block"
-                      />
-                    </span>
-                  </Link>
-                </li>
-              )
-            })}
-          </ul>
-        )}
-      </Section>
-
-      <Section aria-labelledby="recent">
-        <SectionHeader
-          id="recent"
+          id="recent-mobile"
           title="Recent activity"
-          description="Append-only: nothing on this list can be edited or removed."
+          description="Append-only · newest first"
           action={
             <Button asChild variant="ghost" size="sm">
               <Link to="/activity">
-                View all activity
+                View all
                 <ArrowRight aria-hidden="true" />
               </Link>
             </Button>
           }
           border
+          className="px-3 py-2.5"
         />
         {recentActivity.length === 0 ? (
-          <p className="px-4 py-8 text-center text-sm text-muted-foreground">
-            Nothing has happened yet. Every vendor change, submission and decision is recorded here.
+          <p className="px-3 py-6 text-center text-sm text-muted-foreground">
+            Nothing has happened yet.
           </p>
         ) : (
           <ul className="divide-y">
-            {recentActivity.map((event) => (
-              <li key={event.id} className="flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-baseline sm:gap-4">
+            {recentActivity.slice(0, 5).map((event) => (
+              <li
+                key={event.id}
+                className="flex flex-col gap-0.5 px-3 py-2.5 sm:flex-row sm:items-baseline sm:gap-3"
+              >
                 <p className="min-w-0 flex-1 text-sm">
                   {event.summary}
                   <span className="text-muted-foreground"> · {event.actor_label}</span>

@@ -1,12 +1,14 @@
 import { api } from '@/api/client'
 import type { SaveTemplateInput, TemplateItemInput } from '@/services/templateService'
-import { useState } from 'react'
-import { Archive, ArchiveRestore, Pencil, Plus, Trash2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Archive, ArchiveRestore, ChevronDown, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useApp } from '@/app/AppProvider'
 import { useAction } from '@/app/useAction'
 import { useServiceQuery } from '@/app/useServiceQuery'
 import { Page } from '@/components/Page'
 import { PageHeader } from '@/components/PageHeader'
+import { ScrollRegion } from '@/components/ScrollRegion'
+import { Section } from '@/components/Section'
 import { EmptyState, ErrorState, InlineNotice, LoadingState } from '@/components/States'
 import { Chip, RequiredChip } from '@/components/StatusChips'
 import { Button } from '@/components/ui/button'
@@ -22,6 +24,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { cn } from '@/lib/utils'
 
 const BLANK_ITEM: TemplateItemInput = {
   title: '',
@@ -36,14 +39,30 @@ export function RequirementsPage() {
   const templates = useServiceQuery(() => api.listTemplates(), [])
   const action = useAction()
   const [editing, setEditing] = useState<{ id: string | null; input: SaveTemplateInput } | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [itemsOpen, setItemsOpen] = useState(true)
 
   const canManage = app.can('template.manage')
+  const entries = templates.data ?? []
+
+  useEffect(() => {
+    if (!entries.length) {
+      setSelectedId(null)
+      return
+    }
+    if (!selectedId || !entries.some((entry) => entry.template.id === selectedId)) {
+      setSelectedId(entries[0]!.template.id)
+    }
+  }, [entries, selectedId])
+
+  const selected = entries.find((entry) => entry.template.id === selectedId) ?? null
 
   return (
-    <Page>
+    <Page density="workspace">
       <PageHeader
+        compact
         title="Requirement templates"
-        description="A template is the checklist you assign to a vendor. Assignment takes a snapshot, so editing a template never changes the requirements a vendor already holds."
+        description="Assign a snapshot checklist · editing a template never changes vendors already assigned"
         actions={
           canManage ? (
             <Button
@@ -94,109 +113,171 @@ export function RequirementsPage() {
         />
       ) : null}
 
-      <ul className="space-y-3">
-        {(templates.data ?? []).map((entry) => (
-          <li key={entry.template.id} className="surface p-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div className="min-w-0 space-y-1.5">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="type-title">{entry.template.name}</h2>
-                  <Chip tone="neutral" size="sm">
-                    Version {entry.template.version}
-                  </Chip>
-                  {entry.template.archived_at ? (
-                    <Chip tone="warn" size="sm">
-                      Archived
-                    </Chip>
+      {entries.length > 0 ? (
+        <div className="grid gap-3 lg:grid-cols-[minmax(14rem,18rem)_minmax(0,1fr)] lg:items-start">
+          <Section>
+            <p className="type-eyebrow border-b px-3 py-2">Templates</p>
+            <ScrollRegion size="panel" label="Template list">
+              <ul className="divide-y" role="listbox" aria-label="Requirement templates">
+                {entries.map((entry) => {
+                  const active = entry.template.id === selectedId
+                  return (
+                    <li key={entry.template.id}>
+                      <button
+                        type="button"
+                        role="option"
+                        aria-selected={active}
+                        className={cn(
+                          'flex w-full flex-col gap-0.5 px-3 py-2.5 text-left transition-colors',
+                          active ? 'bg-accent' : 'hover:bg-muted/60',
+                        )}
+                        onClick={() => {
+                          setSelectedId(entry.template.id)
+                          setItemsOpen(true)
+                        }}
+                      >
+                        <span className="truncate text-sm font-medium">{entry.template.name}</span>
+                        <span className="type-meta truncate">
+                          v{entry.template.version} · {entry.items.length} items ·{' '}
+                          {entry.assignedVendorCount} vendors
+                          {entry.template.archived_at ? ' · archived' : ''}
+                        </span>
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+            </ScrollRegion>
+          </Section>
+
+          {selected ? (
+            <Section className="min-w-0">
+              <div className="flex flex-col gap-3 p-3 sm:p-3.5">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0 space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="type-title">{selected.template.name}</h2>
+                      <Chip tone="neutral" size="sm">
+                        Version {selected.template.version}
+                      </Chip>
+                      {selected.template.archived_at ? (
+                        <Chip tone="warn" size="sm">
+                          Archived
+                        </Chip>
+                      ) : null}
+                    </div>
+                    <p className="type-meta line-clamp-2">{selected.template.description}</p>
+                    <p className="type-meta">
+                      {selected.items.length} item{selected.items.length === 1 ? '' : 's'} ·{' '}
+                      {selected.requiredCount} required · {selected.optionalCount} optional ·{' '}
+                      {selected.assignedVendorCount} vendor
+                      {selected.assignedVendorCount === 1 ? '' : 's'} hold a snapshot
+                    </p>
+                  </div>
+                  {canManage ? (
+                    <div className="flex shrink-0 flex-wrap gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          setEditing({
+                            id: selected.template.id,
+                            input: {
+                              name: selected.template.name,
+                              description: selected.template.description,
+                              items: selected.items.map((item) => ({
+                                id: item.id,
+                                title: item.title,
+                                instructions: item.instructions,
+                                required: item.required,
+                                expiration_required: item.expiration_required,
+                                collect_issue_date: item.collect_issue_date,
+                              })),
+                            },
+                          })
+                        }
+                      >
+                        <Pencil aria-hidden="true" />
+                        Edit
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={action.pending}
+                        onClick={() =>
+                          void action.run(
+                            () =>
+                              api.setTemplateArchived(
+                                selected.template.id,
+                                !selected.template.archived_at,
+                              ),
+                            {
+                              success: selected.template.archived_at
+                                ? `Restored ${selected.template.name}.`
+                                : `Archived ${selected.template.name}. Existing vendor assignments are unchanged.`,
+                            },
+                          )
+                        }
+                      >
+                        {selected.template.archived_at ? (
+                          <>
+                            <ArchiveRestore aria-hidden="true" />
+                            Restore
+                          </>
+                        ) : (
+                          <>
+                            <Archive aria-hidden="true" />
+                            Archive
+                          </>
+                        )}
+                      </Button>
+                    </div>
                   ) : null}
                 </div>
-                <p className="max-w-prose text-sm text-muted-foreground">
-                  {entry.template.description}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {entry.items.length} item{entry.items.length === 1 ? '' : 's'} ·{' '}
-                  {entry.requiredCount} required · {entry.optionalCount} optional ·{' '}
-                  {entry.assignedVendorCount} vendor
-                  {entry.assignedVendorCount === 1 ? '' : 's'} hold a snapshot
-                </p>
-              </div>
-              {canManage ? (
-                <div className="flex shrink-0 flex-wrap gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() =>
-                      setEditing({
-                        id: entry.template.id,
-                        input: {
-                          name: entry.template.name,
-                          description: entry.template.description,
-                          items: entry.items.map((item) => ({
-                            id: item.id,
-                            title: item.title,
-                            instructions: item.instructions,
-                            required: item.required,
-                            expiration_required: item.expiration_required,
-                            collect_issue_date: item.collect_issue_date,
-                          })),
-                        },
-                      })
-                    }
-                  >
-                    <Pencil aria-hidden="true" />
-                    Edit
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={action.pending}
-                    onClick={() =>
-                      void action.run(
-                        () => api.setTemplateArchived(entry.template.id, !entry.template.archived_at),
-                        {
-                          success: entry.template.archived_at
-                            ? `Restored ${entry.template.name}.`
-                            : `Archived ${entry.template.name}. Existing vendor assignments are unchanged.`,
-                        },
-                      )
-                    }
-                  >
-                    {entry.template.archived_at ? (
-                      <>
-                        <ArchiveRestore aria-hidden="true" />
-                        Restore
-                      </>
-                    ) : (
-                      <>
-                        <Archive aria-hidden="true" />
-                        Archive
-                      </>
-                    )}
-                  </Button>
-                </div>
-              ) : null}
-            </div>
 
-            <ul className="mt-3 divide-y rounded-lg border">
-              {entry.items.map((item) => (
-                <li key={item.id} className="px-3 py-2.5">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-sm font-medium">{item.title}</p>
-                    <RequiredChip required={item.required} />
-                    <span className="text-xs text-muted-foreground">
-                      {item.expiration_required ? 'Expiration required' : 'No expiration'}
-                      {item.collect_issue_date ? ' · issue date collected' : ''}
-                    </span>
-                  </div>
-                  <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-                    {item.instructions}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          </li>
-        ))}
-      </ul>
+                <div className="rounded-lg border">
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left"
+                    aria-expanded={itemsOpen}
+                    onClick={() => setItemsOpen((open) => !open)}
+                  >
+                    <span className="type-subtitle">Checklist items</span>
+                    <ChevronDown
+                      aria-hidden="true"
+                      className={cn(
+                        'size-4 text-muted-foreground transition-transform',
+                        itemsOpen && 'rotate-180',
+                      )}
+                    />
+                  </button>
+                  {itemsOpen ? (
+                    <ScrollRegion size="panel" label="Checklist items" className="border-t">
+                      <ul className="divide-y">
+                        {selected.items.map((item) => (
+                          <li key={item.id} className="px-3 py-2">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="text-sm font-medium">{item.title}</p>
+                              <RequiredChip required={item.required} />
+                              <span className="text-xs text-muted-foreground">
+                                {item.expiration_required ? 'Expiration required' : 'No expiration'}
+                                {item.collect_issue_date ? ' · issue date collected' : ''}
+                              </span>
+                            </div>
+                            <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+                              {item.instructions}
+                            </p>
+                          </li>
+                        ))}
+                      </ul>
+                    </ScrollRegion>
+                  ) : null}
+                </div>
+              </div>
+            </Section>
+          ) : null}
+        </div>
+      ) : null}
 
       {editing ? (
         <TemplateEditorDialog

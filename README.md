@@ -274,6 +274,13 @@ decision box.
 the first thing in that rail. A reviewer who has to scroll away from the file to reach the buttons is
 a reviewer who can accept the wrong document.
 
+**Above-the-fold workspace layout.** List and queue screens use compact page headers, sticky filter
+toolbars, denser table/list rows, and viewport-height `ScrollRegion` panels so status, actions and the
+first results stay visible on a ~1440×900 laptop without scrolling the page. Overview puts readiness
+metrics beside the attention list; Requirements uses a template list + detail split; Settings keeps
+Organization / Members / Password / Delivery behind sticky section tabs; the vendor portal pins status
+and blockers beside a scrollable checklist.
+
 **Vendor portal** leads with one answer — what is still needed — before any per-document detail,
 because a vendor contact opens it perhaps twice a year and is not a trained operator. Its progress bar
 is ink while work remains and green once everything is accepted; a clay bar read as a warning.

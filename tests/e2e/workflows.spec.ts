@@ -308,6 +308,7 @@ test.describe('W5 monitor, remind, import, export, archive', () => {
 
   test('runs the reminder job once per organization-local date', async ({ page }) => {
     await signInAsStaff(page, ADMIN, '/settings')
+    await page.getByRole('tab', { name: 'Delivery' }).click()
     await page.getByRole('button', { name: 'Run the reminder job now' }).click()
     await expect(page.getByText(/Reminder job finished/)).toBeVisible()
     await page.getByRole('button', { name: 'Run the reminder job now' }).click()

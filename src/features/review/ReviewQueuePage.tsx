@@ -5,6 +5,7 @@ import { useApp } from '@/app/AppProvider'
 import { useServiceQuery } from '@/app/useServiceQuery'
 import { Page } from '@/components/Page'
 import { PageHeader } from '@/components/PageHeader'
+import { ScrollRegion } from '@/components/ScrollRegion'
 import { Section } from '@/components/Section'
 import {
   EmptyState,
@@ -51,10 +52,11 @@ export function ReviewQueuePage() {
   const canDecide = app.can('submission.review')
 
   return (
-    <Page>
+    <Page density="workspace">
       <PageHeader
+        compact
         title="Review queue"
-        description="Oldest pending submission first, so nothing waits indefinitely. Archived vendors are excluded, and the count is submissions rather than vendors."
+        description="Oldest pending first · submissions, not vendors · archived excluded"
       />
 
       {queue.loading && !queue.data ? (
@@ -64,7 +66,7 @@ export function ReviewQueuePage() {
 
       {queue.data ? (
         <>
-          <Toolbar label="Queue filters">
+          <Toolbar label="Queue filters" sticky>
             <ToolbarRow>
               <ToolbarField label="Vendor">
                 {(id) => (
@@ -121,7 +123,7 @@ export function ReviewQueuePage() {
             </InlineNotice>
           ) : null}
 
-          <p className="text-sm text-muted-foreground" role="status">
+          <p className="type-meta" role="status">
             {queue.data.items.length === queue.data.total
               ? `${queue.data.total} pending submission${queue.data.total === 1 ? '' : 's'}.`
               : `Showing ${queue.data.items.length} of ${queue.data.total} pending submissions.`}
@@ -142,59 +144,61 @@ export function ReviewQueuePage() {
             )
           ) : (
             <Section>
-              <ul className="divide-y">
-                {queue.data.items.map((item) => (
-                  <li key={item.submission.id}>
-                    <Link
-                      to={`/review/${item.submission.id}`}
-                      className="group flex items-start gap-3 px-4 py-3.5 transition-colors hover:bg-muted/60 sm:items-center sm:gap-4"
-                    >
-                      <span
-                        aria-hidden="true"
-                        className="type-meta mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-accent font-semibold tabular-nums sm:mt-0"
+              <ScrollRegion label="Pending submissions">
+                <ul className="divide-y">
+                  {queue.data.items.map((item) => (
+                    <li key={item.submission.id}>
+                      <Link
+                        to={`/review/${item.submission.id}`}
+                        className="group flex items-start gap-3 px-3 py-2.5 transition-colors hover:bg-muted/60 sm:items-center sm:gap-3"
                       >
-                        {item.position}
-                      </span>
-                      <span className="min-w-0 flex-1 space-y-0.5">
-                        <span className="block text-sm font-medium group-hover:text-clay-text">
-                          {item.requirement.title}
-                          <span className="font-normal text-muted-foreground">
-                            {' · '}v{item.submission.version_number}
-                          </span>
-                        </span>
-                        <span className="block truncate text-sm">{item.vendor.company_name}</span>
-                        <span className="block text-xs text-muted-foreground">
-                          Submitted{' '}
-                          <Timestamp
-                            value={item.submission.submitted_at}
-                            timezone={app.organization.timezone}
-                          />{' '}
-                          by {item.submission.submitted_by_label}
-                          {item.submission.submitted_on_behalf ? ' (on behalf of the vendor)' : ''}
-                          {item.submission.expiration_date
-                            ? ` · expires ${formatDate(item.submission.expiration_date)}`
-                            : ''}
-                        </span>
-                        {item.file ? (
-                          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <Paperclip aria-hidden="true" className="size-3" />
-                            <span className="truncate">{item.file.original_filename}</span>
-                          </span>
-                        ) : null}
-                      </span>
-                      <span className="flex shrink-0 items-center gap-1 text-sm font-medium text-muted-foreground group-hover:text-clay-text">
-                        <span className="hidden sm:inline">
-                          {canDecide ? 'Review' : 'Open'}
-                        </span>
-                        <ChevronRight
+                        <span
                           aria-hidden="true"
-                          className="size-4 transition-transform group-hover:translate-x-0.5"
-                        />
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+                          className="type-meta mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-accent font-semibold tabular-nums sm:mt-0"
+                        >
+                          {item.position}
+                        </span>
+                        <span className="min-w-0 flex-1 space-y-0.5">
+                          <span className="block text-sm font-medium group-hover:text-clay-text">
+                            {item.requirement.title}
+                            <span className="font-normal text-muted-foreground">
+                              {' · '}v{item.submission.version_number}
+                            </span>
+                          </span>
+                          <span className="block truncate text-sm">{item.vendor.company_name}</span>
+                          <span className="block text-xs text-muted-foreground">
+                            Submitted{' '}
+                            <Timestamp
+                              value={item.submission.submitted_at}
+                              timezone={app.organization.timezone}
+                            />{' '}
+                            by {item.submission.submitted_by_label}
+                            {item.submission.submitted_on_behalf ? ' (on behalf of the vendor)' : ''}
+                            {item.submission.expiration_date
+                              ? ` · expires ${formatDate(item.submission.expiration_date)}`
+                              : ''}
+                          </span>
+                          {item.file ? (
+                            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <Paperclip aria-hidden="true" className="size-3" />
+                              <span className="truncate">{item.file.original_filename}</span>
+                            </span>
+                          ) : null}
+                        </span>
+                        <span className="flex shrink-0 items-center gap-1 text-sm font-medium text-muted-foreground group-hover:text-clay-text">
+                          <span className="hidden sm:inline">
+                            {canDecide ? 'Review' : 'Open'}
+                          </span>
+                          <ChevronRight
+                            aria-hidden="true"
+                            className="size-4 transition-transform group-hover:translate-x-0.5"
+                          />
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </ScrollRegion>
             </Section>
           )}
         </>

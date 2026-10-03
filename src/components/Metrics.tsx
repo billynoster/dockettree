@@ -21,6 +21,7 @@ export function StatTile({
   tone,
   to,
   share,
+  compact = false,
 }: {
   label: string
   value: number
@@ -29,11 +30,17 @@ export function StatTile({
   to: string
   /** Portion of the active population, 0–1, drawn as a hairline under the count. */
   share?: number
+  /** Denser tile for above-the-fold overview grids; description stays available to AT. */
+  compact?: boolean
 }) {
   return (
     <Link
       to={to}
-      className="group surface flex h-full flex-col gap-2 p-4 transition-[box-shadow,border-color,transform] duration-(--duration-quick) ease-(--ease-soft) hover:-translate-y-px hover:border-border-strong hover:shadow-raised focus-visible:border-ring"
+      title={description}
+      className={cn(
+        'group surface flex h-full flex-col transition-[box-shadow,border-color,transform] duration-(--duration-quick) ease-(--ease-soft) hover:-translate-y-px hover:border-border-strong hover:shadow-raised focus-visible:border-ring',
+        compact ? 'gap-1.5 p-3' : 'gap-2 p-4',
+      )}
     >
       <span className="type-subtitle flex items-center gap-2">
         <ToneDot tone={tone} />
@@ -43,7 +50,9 @@ export function StatTile({
           className="ml-auto size-3.5 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
         />
       </span>
-      <span className="type-metric-sm">{value}</span>
+      <span className={compact ? 'text-[1.375rem] font-semibold tracking-[-0.022em] tabular-nums' : 'type-metric-sm'}>
+        {value}
+      </span>
       {share === undefined ? null : (
         <span aria-hidden="true" className="h-1 w-full overflow-hidden rounded-full bg-accent">
           <span
@@ -52,7 +61,7 @@ export function StatTile({
           />
         </span>
       )}
-      <span className="type-meta">{description}</span>
+      <span className={cn('type-meta', compact && 'line-clamp-2')}>{description}</span>
     </Link>
   )
 }
