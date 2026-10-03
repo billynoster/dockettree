@@ -4,8 +4,8 @@ import { Link, useNavigate, useSearchParams } from 'react-router'
 import {
   ArrowDown,
   ArrowUp,
-  ChevronRight,
   Download,
+  Ellipsis,
   Plus,
   Search,
   SlidersHorizontal,
@@ -17,10 +17,9 @@ import { useAction } from '@/app/useAction'
 import { useServiceQuery } from '@/app/useServiceQuery'
 import { Page } from '@/components/Page'
 import { PageHeader } from '@/components/PageHeader'
-import { RequirementMeter } from '@/components/Metrics'
 import { Section } from '@/components/Section'
 import { EmptyState, ErrorState, FilteredEmptyState, TableSkeleton } from '@/components/States'
-import { ExpiringSoonChip, ReadinessChip } from '@/components/StatusChips'
+import { ExpiringSoonChip, ReadinessChip, StatusChip } from '@/components/StatusChips'
 import { Timestamp } from '@/components/Timestamp'
 import {
   ClearFiltersButton,
@@ -30,9 +29,15 @@ import {
   ToolbarRow,
 } from '@/components/Toolbar'
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { ActiveFilterChip, FilterChip } from '@/components/ui/filter-chip'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { RemovableChip, ToggleChip } from '@/components/ui/toggle-chip'
 import {
   Select,
   SelectContent,
@@ -50,10 +55,11 @@ import {
   TableSortHeader,
 } from '@/components/ui/table'
 import { formatDate } from '@/domain/dates'
-import { READINESS_LABEL } from '@/domain/readiness'
+import { READINESS_LABEL, type Blocker } from '@/domain/readiness'
 import type { ReadinessStatus } from '@/domain/types'
 import { downloadText } from '@/lib/download'
 import { ScrollRegion } from '@/components/ScrollRegion'
+import { cn } from '@/lib/utils'
 import { ImportVendorsDialog } from './ImportVendorsDialog'
 import { hasActiveFilters, parseVendorQuery, vendorQueryToParams } from '@/domain/vendorQuery'
 
@@ -65,12 +71,50 @@ const READINESS_FILTERS: ReadinessStatus[] = [
 ]
 
 const SORT_LABEL = {
-  name: 'Company name',
-  next_expiration: 'Next expiration',
-  updated: 'Updated',
+  name: 'Vendor name',
+  next_expiration: 'Expiring',
+  updated: 'Last updated',
 } as const
 
 type SortKey = keyof typeof SORT_LABEL
+
+function propertyLabel(tags: string[]): string {
+  if (tags.length === 0) return '—'
+  return tags.join(', ')
+}
+
+function MissingItemsCell({ blockers }: { blockers: Blocker[] }) {
+  if (blockers.length === 0) {
+    return <span className="text-muted-foreground">—</span>
+  }
+  const first = blockers[0]!
+  return (
+    <div className="min-w-0 max-w-[13rem]">
+      <p className="truncate text-sm text-foreground">
+        {blockers.length > 1 ? `${blockers.length} items` : first.requirement_title}
+      </p>
+      <p className="type-meta truncate">
+        {blockers.length > 1 ? first.requirement_title : first.label.replace(`${first.requirement_title} `, '')}
+      </p>
+    </div>
+  )
+}
+
+function ExpiringCell({
+  nextExpiration,
+  expiringSoon,
+}: {
+  nextExpiration: string | null
+  expiringSoon: boolean
+}) {
+  if (!nextExpiration) {
+    return <span className="text-muted-foreground">—</span>
+  }
+  if (expiringSoon) {
+    return <StatusChip status="expiring" size="sm" label={formatDate(nextExpiration)} />
+  }
+  return <span className="text-sm">{formatDate(nextExpiration)}</span>
+}
 
 export function VendorsPage() {
   const app = useApp()
@@ -79,8 +123,7 @@ export function VendorsPage() {
   const query = parseVendorQuery(searchParams)
   const [searchDraft, setSearchDraft] = useState(query.search ?? '')
   const searchRef = useRef<HTMLInputElement>(null)
-  // Category, property and lifecycle are used far less than search and readiness, so they stay
-  // folded away until asked for — which also keeps the toolbar to two rows on a phone.
+  // Category, property and lifecycle stay folded until needed so the toolbar fits above the fold.
   const [moreOpen, setMoreOpen] = useState(
     () => Boolean(query.category || query.property || (query.lifecycle && query.lifecycle !== 'active')),
   )
@@ -97,8 +140,6 @@ export function VendorsPage() {
     setSearchDraft(query.search ?? '')
   }, [query.search])
 
-  // Search applies as you type. The URL is still the source of truth, so a shared link keeps the
-  // exact same result set.
   useEffect(() => {
     if (searchDraft === (query.search ?? '')) return
     const handle = setTimeout(
@@ -112,7 +153,6 @@ export function VendorsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchDraft])
 
-  // "/" is the near-universal shortcut for search in list-heavy tools.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== '/' || event.metaKey || event.ctrlKey || event.altKey) return
@@ -185,7 +225,7 @@ export function VendorsPage() {
       <PageHeader
         compact
         title="Vendors"
-        description="Search and filter active vendors. Include archived from More when needed."
+        description="Who is ready, what is missing or expiring, and who owns the next step."
         actions={
           <>
             {canManage ? (
@@ -306,21 +346,21 @@ export function VendorsPage() {
 
         <ToolbarGroup label="Readiness">
           {READINESS_FILTERS.map((status) => (
-            <ToggleChip
+            <FilterChip
               key={status}
               pressed={(query.readiness ?? []).includes(status)}
               onToggle={() => toggleReadiness(status)}
             >
               {READINESS_LABEL[status]}
-            </ToggleChip>
+            </FilterChip>
           ))}
           <span aria-hidden="true" className="mx-1 hidden h-4 w-px bg-border sm:block" />
-          <ToggleChip
+          <FilterChip
             pressed={query.expiringSoonOnly ?? false}
             onToggle={() => update({ expiringSoonOnly: !query.expiringSoonOnly })}
           >
             Expiring soon
-          </ToggleChip>
+          </FilterChip>
         </ToolbarGroup>
 
         {moreOpen ? (
@@ -345,7 +385,7 @@ export function VendorsPage() {
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="filter-property">Property tag</Label>
+              <Label htmlFor="filter-property">Property</Label>
               <Select
                 value={query.property ?? 'all'}
                 onValueChange={(value) => update({ property: value === 'all' ? null : value })}
@@ -385,16 +425,16 @@ export function VendorsPage() {
         {appliedPills.length > 0 ? (
           <ToolbarGroup label="Applied" className="border-t pt-3">
             {appliedPills.map((pill) => (
-              <RemovableChip key={pill.key} onRemove={pill.clear}>
+              <ActiveFilterChip key={pill.key} onRemove={pill.clear}>
                 {pill.label}
-              </RemovableChip>
+              </ActiveFilterChip>
             ))}
             <ClearFiltersButton onClear={clearAll} />
           </ToolbarGroup>
         ) : null}
       </Toolbar>
 
-      {list.loading && !list.data ? <TableSkeleton label="Loading vendors" rows={6} columns={6} /> : null}
+      {list.loading && !list.data ? <TableSkeleton label="Loading vendors" rows={6} columns={9} /> : null}
       {list.error ? <ErrorState message={list.error} onRetry={list.reload} /> : null}
 
       {list.data ? (
@@ -443,8 +483,8 @@ export function VendorsPage() {
 
               <Section className="hidden md:block">
                 <ScrollRegion label="Vendor results">
-                  <Table>
-                    <TableHeader className="sticky top-0 z-10 bg-card/95 backdrop-blur supports-backdrop-filter:bg-card/90">
+                  <Table density="data">
+                    <TableHeader className="sticky top-0 z-10 border-b bg-card/95 backdrop-blur supports-backdrop-filter:bg-card/90">
                       <TableRow className="hover:bg-transparent">
                         <TableSortHeader
                           active={(query.sort ?? 'name') === 'name'}
@@ -454,40 +494,38 @@ export function VendorsPage() {
                         >
                           Vendor
                         </TableSortHeader>
+                        <TableHead>Property</TableHead>
+                        <TableHead>Category</TableHead>
                         <TableHead>Readiness</TableHead>
-                        <TableHead>Required items</TableHead>
+                        <TableHead>Missing Items</TableHead>
                         <TableSortHeader
                           active={query.sort === 'next_expiration'}
                           direction={query.direction ?? 'asc'}
                           onSort={() => sortBy('next_expiration')}
                         >
-                          Next expiration
+                          Expiring
                         </TableSortHeader>
-                        <TableHead>Primary contact</TableHead>
                         <TableSortHeader
                           active={query.sort === 'updated'}
                           direction={query.direction ?? 'asc'}
                           onSort={() => sortBy('updated')}
                         >
-                          Updated
+                          Last Updated
                         </TableSortHeader>
-                        <TableHead className="w-8 pr-4">
-                          <span className="sr-only">Open</span>
+                        <TableHead>Owner</TableHead>
+                        <TableHead className="w-12 pr-3">
+                          <span className="sr-only">Actions</span>
                         </TableHead>
                       </TableRow>
                     </TableHeader>
-                    <TableBody className="[&_td]:py-2">
+                    <TableBody>
                       {rows.map((row) => (
-                        /*
-                         * The row responds to a click for pointer convenience; the vendor name is a
-                         * real link, which is what the keyboard and assistive technology follow.
-                         */
                         <TableRow
                           key={row.vendor.id}
                           className="group cursor-pointer"
                           onClick={() => navigate(`/vendors/${row.vendor.id}`)}
                         >
-                          <TableCell className="max-w-64 pl-4 font-medium whitespace-normal">
+                          <TableCell className="max-w-52 pl-4 font-medium whitespace-normal">
                             <Link
                               to={`/vendors/${row.vendor.id}`}
                               className="rounded-sm underline-offset-[3px] group-hover:text-clay-text group-hover:underline"
@@ -495,33 +533,36 @@ export function VendorsPage() {
                             >
                               {row.vendor.company_name}
                             </Link>
-                            <p className="text-xs text-muted-foreground">
-                              {row.vendor.category}
-                              {row.vendor.property_tags.length > 0
-                                ? ` · ${row.vendor.property_tags.join(', ')}`
-                                : ''}
-                            </p>
+                          </TableCell>
+                          <TableCell className="max-w-36 whitespace-normal">
+                            <span
+                              className={cn(
+                                'line-clamp-2 text-sm',
+                                row.vendor.property_tags.length === 0 && 'text-muted-foreground',
+                              )}
+                              title={
+                                row.vendor.property_tags.length > 0
+                                  ? row.vendor.property_tags.join(', ')
+                                  : undefined
+                              }
+                            >
+                              {propertyLabel(row.vendor.property_tags)}
+                            </span>
+                          </TableCell>
+                          <TableCell className="max-w-32 whitespace-normal">
+                            <span className="line-clamp-2 text-sm">{row.vendor.category}</span>
                           </TableCell>
                           <TableCell>
-                            <div className="flex flex-col items-start gap-0.5">
-                              <ReadinessChip status={row.readiness.status} size="sm" />
-                              {row.readiness.expiringSoon ? <ExpiringSoonChip size="sm" /> : null}
-                            </div>
+                            <ReadinessChip status={row.readiness.status} size="sm" />
                           </TableCell>
-                          <TableCell>
-                            <RequirementMeter
-                              satisfied={row.readiness.requiredSatisfied}
-                              total={row.readiness.requiredTotal}
+                          <TableCell className="whitespace-normal">
+                            <MissingItemsCell blockers={row.readiness.blockers} />
+                          </TableCell>
+                          <TableCell className="whitespace-normal">
+                            <ExpiringCell
+                              nextExpiration={row.readiness.nextExpiration}
+                              expiringSoon={row.readiness.expiringSoon}
                             />
-                          </TableCell>
-                          <TableCell className="text-sm">
-                            {formatDate(row.readiness.nextExpiration)}
-                          </TableCell>
-                          <TableCell className="max-w-56 whitespace-normal">
-                            <p className="text-sm">{row.vendor.contact_name}</p>
-                            <p className="truncate text-xs text-muted-foreground">
-                              {row.vendor.contact_email}
-                            </p>
                           </TableCell>
                           <TableCell className="text-xs text-muted-foreground">
                             <Timestamp
@@ -529,11 +570,32 @@ export function VendorsPage() {
                               timezone={app.organization.timezone}
                             />
                           </TableCell>
-                          <TableCell className="pr-4">
-                            <ChevronRight
-                              aria-hidden="true"
-                              className="size-4 text-muted-foreground/60 transition-transform group-hover:translate-x-0.5 group-hover:text-foreground"
-                            />
+                          <TableCell className="max-w-44 whitespace-normal">
+                            <p className="truncate text-sm">{row.vendor.contact_name}</p>
+                            <p className="truncate text-xs text-muted-foreground">
+                              {row.vendor.contact_email}
+                            </p>
+                          </TableCell>
+                          <TableCell className="pr-3" onClick={(event) => event.stopPropagation()}>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon-xs"
+                                  aria-label={`Actions for ${row.vendor.company_name}`}
+                                >
+                                  <Ellipsis aria-hidden="true" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="min-w-40">
+                                <DropdownMenuItem
+                                  onSelect={() => navigate(`/vendors/${row.vendor.id}`)}
+                                >
+                                  View vendor
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -548,43 +610,52 @@ export function VendorsPage() {
                     <li key={row.vendor.id}>
                       <Link
                         to={`/vendors/${row.vendor.id}`}
-                        className="surface block space-y-2 p-3 transition-colors active:bg-muted/60"
+                        className="surface block space-y-2.5 p-3 transition-colors active:bg-muted/60"
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
                             <p className="font-medium">{row.vendor.company_name}</p>
-                            <p className="text-xs text-muted-foreground">{row.vendor.category}</p>
+                            <p className="type-meta truncate">
+                              {row.vendor.category}
+                              {row.vendor.property_tags.length > 0
+                                ? ` · ${propertyLabel(row.vendor.property_tags)}`
+                                : ''}
+                            </p>
                           </div>
-                          <ChevronRight
-                            aria-hidden="true"
-                            className="mt-0.5 size-4 shrink-0 text-muted-foreground"
-                          />
-                        </div>
-                        <div className="flex flex-wrap items-center gap-1.5">
                           <ReadinessChip status={row.readiness.status} size="sm" />
-                          {row.readiness.expiringSoon ? (
-                            <ExpiringSoonChip
-                              nextExpiration={row.readiness.nextExpiration}
-                              size="sm"
-                            />
-                          ) : null}
                         </div>
-                        <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm">
-                          <div>
-                            <dt className="text-xs text-muted-foreground">Required items</dt>
+                        <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
+                          <div className="min-w-0">
+                            <dt className="text-xs text-muted-foreground">Missing Items</dt>
                             <dd>
-                              <RequirementMeter
-                                satisfied={row.readiness.requiredSatisfied}
-                                total={row.readiness.requiredTotal}
-                              />
+                              <MissingItemsCell blockers={row.readiness.blockers} />
                             </dd>
                           </div>
-                          <div>
-                            <dt className="text-xs text-muted-foreground">Next expiration</dt>
-                            <dd>{formatDate(row.readiness.nextExpiration)}</dd>
+                          <div className="min-w-0">
+                            <dt className="text-xs text-muted-foreground">Expiring</dt>
+                            <dd>
+                              {row.readiness.expiringSoon ? (
+                                <ExpiringSoonChip
+                                  nextExpiration={row.readiness.nextExpiration}
+                                  size="sm"
+                                />
+                              ) : (
+                                <span
+                                  className={
+                                    row.readiness.nextExpiration
+                                      ? 'text-sm'
+                                      : 'text-sm text-muted-foreground'
+                                  }
+                                >
+                                  {row.readiness.nextExpiration
+                                    ? formatDate(row.readiness.nextExpiration)
+                                    : '—'}
+                                </span>
+                              )}
+                            </dd>
                           </div>
                           <div className="col-span-2 min-w-0">
-                            <dt className="text-xs text-muted-foreground">Primary contact</dt>
+                            <dt className="text-xs text-muted-foreground">Owner</dt>
                             <dd className="truncate">
                               {row.vendor.contact_name} · {row.vendor.contact_email}
                             </dd>

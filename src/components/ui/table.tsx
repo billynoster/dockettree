@@ -1,7 +1,14 @@
 import * as React from "react"
 import { cn } from "cn"
 
-function Table({ className, ...props }: React.ComponentProps<"table">) {
+function Table({
+  className,
+  density,
+  ...props
+}: React.ComponentProps<"table"> & {
+  /** Dense enterprise data rows (~52px) with no vertical rules — Vendors / list screens. */
+  density?: "data"
+}) {
   return (
     <div
       data-slot="table-container"
@@ -9,7 +16,13 @@ function Table({ className, ...props }: React.ComponentProps<"table">) {
     >
       <table
         data-slot="table"
-        className={cn("type-body w-full caption-bottom", className)}
+        data-density={density}
+        className={cn(
+          "type-body w-full caption-bottom",
+          density === "data" &&
+            "[&_th]:h-11 [&_th]:border-r-0 [&_td]:h-[52px] [&_td]:border-r-0 [&_td]:py-0",
+          className,
+        )}
         {...props}
       />
     </div>
