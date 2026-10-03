@@ -469,7 +469,7 @@ export function AppShell() {
           id="desktop-sidebar"
           data-collapsed={sidebarCollapsed ? 'true' : 'false'}
           className={cn(
-            'sticky top-0 hidden h-dvh shrink-0 flex-col overflow-x-hidden border-r border-border bg-background transition-[width] duration-(--duration-settle) ease-(--ease-soft) lg:flex',
+            'sticky top-0 hidden h-dvh shrink-0 flex-col overflow-x-hidden bg-background transition-[width] duration-(--duration-settle) ease-(--ease-soft) lg:flex',
             sidebarCollapsed
               ? 'w-(--sidebar-width-collapsed) min-w-(--sidebar-width-collapsed)'
               : 'w-(--sidebar-width) min-w-(--sidebar-width)',
