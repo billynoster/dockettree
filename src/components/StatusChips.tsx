@@ -1,7 +1,7 @@
 /**
  * Status chips: the product's vocabulary of states, each mapped once to a tone and an icon.
  *
- * `StatusChip` is the central API matching the Ready Vendors UI spec statuses. Domain helpers
+ * `StatusChip` is the central API matching the Docket Tree UI spec statuses. Domain helpers
  * (`ReadinessChip`, etc.) map calculated states onto that API so screens never pick tones themselves.
  */
 import {

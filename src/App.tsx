@@ -26,7 +26,7 @@ function NotFoundPage() {
   return (
     <EmptyState
       title="Page not found"
-      description="That address does not match any screen in Ready Vendors. It may have been renamed, or the record may have been archived."
+      description="That address does not match any screen in Docket Tree. It may have been renamed, or the record may have been archived."
       action={
         <Button asChild size="sm">
           <Link to="/overview">Go to the overview</Link>
@@ -44,12 +44,12 @@ function Loading() {
   return (
     <div className="flex min-h-dvh">
       <p className="sr-only" role="status">
-        Loading Ready Vendors…
+        Loading Docket Tree…
       </p>
       <aside className="hidden h-dvh w-(--sidebar-width) shrink-0 border-r bg-card lg:block" aria-hidden="true">
         <div className="flex h-(--header-height) items-center gap-2.5 border-b px-5">
           <BrandMark />
-          <span className="text-sm font-semibold">Ready Vendors</span>
+          <span className="text-sm font-semibold">Docket Tree</span>
         </div>
         <div className="space-y-2 px-5 py-4">
           {[64, 48, 72, 56, 44].map((width, index) => (
@@ -87,7 +87,7 @@ function ServerUnavailable({ message, onRetry }: { message: string; onRetry: () 
           <h1 className="text-lg font-semibold">The server is not reachable</h1>
           <p className="text-sm text-muted-foreground">{message}</p>
           <p className="text-sm text-muted-foreground">
-            Ready Vendors keeps every record on its own server, so nothing is shown until that
+            Docket Tree keeps every record on its own server, so nothing is shown until that
             server answers. Check that the API process is running, then try again.
           </p>
         </div>

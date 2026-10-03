@@ -1,8 +1,8 @@
-# Ready Vendors — V1
+# Docket Tree — V1
 
 **Know who can work. Know what’s next.**
 
-Ready Vendors is a self-hosted B2B application for property operations teams who need to see which
+Docket Tree is a self-hosted B2B application for property operations teams who need to see which
 vendors are ready to work, what documents are missing or expiring, and what needs review. V1 is a
 real product, not a demo: it authenticates people, enforces permissions on the server, keeps records
 in SQLite and documents in a private directory, and records every notification it produces with its
@@ -217,7 +217,7 @@ composes primitives. The full inventory and the reasoning are written up for hum
 `docs/design-system.md` and `docs/visual-style.md` in the project workspace.
 
 **Warm paper, Ready Teal.** Three warm paper levels on Warm White (`#FAFAF7`), Deep Slate ink
-(`#20313A`), and Ready Teal (`#168C83`) for CTAs, links, focus and the Ready Dot mark. Status accents
+(`#20313A`), and Ready Teal (`#168C83`) for CTAs, links, focus and the Docket Tree mark. Status accents
 use Soft Teal (Ready), Lavender (In Review), Amber (Needs Action / Expiring Soon), and Coral only for
 critical / expired — never a wall of red. All of it is declared once in OKLCH in `src/index.css`.
 
@@ -254,7 +254,7 @@ twice; the effort went into getting one theme right. Deliberate gap, not an over
 **Navigation.** Seven flat links became three groups (Operations / Records / Configuration). Below
 1024px the sidebar becomes a drawer rather than a horizontally scrolling strip, which previously hid
 Notifications, Activity and Settings off the right edge of a phone. Sign out moved into an account
-menu showing identity and role. Product chrome says **Ready Vendors** with the Ready Dot mark.
+menu showing identity and role. Product chrome says **Docket Tree** with the tree mark.
 
 **Server-state signals.** When SMTP is not configured, the one-line banner explaining it is
 dismissible for the session, but an "Email paused" chip stays in the header and links to the
@@ -306,7 +306,7 @@ of it.
 **Passwords** have a reveal toggle everywhere they are entered, because they are usually typed from a
 note an administrator handed over.
 
-**Unauthenticated screens** share a split layout: a Ready Teal brand column with the Ready Vendors
+**Unauthenticated screens** share a split layout: a Ready Teal brand column with the Docket Tree
 wordmark and tagline beside the form on desktop, collapsing to one line of context on a phone.
 
 `scripts/shots.mjs` captures the whole product at 1440 px and 390 px for design review:

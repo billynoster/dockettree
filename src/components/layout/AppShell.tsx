@@ -97,7 +97,7 @@ function initials(name: string): string {
     .join('')
 }
 
-/** Ready Dot mark — teal tile with a warm-white center. No shields or certificates. */
+/** DT mark — teal tile with a simple tree canopy + trunk. No shields or certificates. */
 export function BrandMark({ className }: { className?: string }) {
   return (
     <span
@@ -107,7 +107,10 @@ export function BrandMark({ className }: { className?: string }) {
         className,
       )}
     >
-      <span className="size-2.5 rounded-full bg-primary-foreground" />
+      <svg viewBox="0 0 16 16" className="size-4" fill="currentColor" aria-hidden="true">
+        <circle cx="8" cy="5.5" r="3.25" />
+        <rect x="7.15" y="8.5" width="1.7" height="4.25" rx="0.6" />
+      </svg>
     </span>
   )
 }
@@ -230,7 +233,7 @@ function SidebarBrand({ orgName }: { orgName: string }) {
     >
       <BrandMark />
       <span className="min-w-0">
-        <span className="block truncate text-sm leading-tight font-semibold">Ready Vendors</span>
+        <span className="block truncate text-sm leading-tight font-semibold">Docket Tree</span>
         <span className="block truncate text-xs leading-tight text-muted-foreground">{orgName}</span>
       </span>
     </Link>
@@ -254,7 +257,7 @@ export function AppShell() {
   const firstRender = useRef(true)
   const pendingCount = queue.data?.total ?? null
   const pageTitle =
-    PAGE_TITLES.find((entry) => location.pathname.startsWith(entry.prefix))?.title ?? 'Ready Vendors'
+    PAGE_TITLES.find((entry) => location.pathname.startsWith(entry.prefix))?.title ?? 'Docket Tree'
 
   useEffect(() => {
     setNavOpen(false)
@@ -267,7 +270,7 @@ export function AppShell() {
   }, [location.pathname])
 
   useEffect(() => {
-    document.title = `${pageTitle} · Ready Vendors`
+    document.title = `${pageTitle} · Docket Tree`
   }, [pageTitle])
 
   const signOut = () => {

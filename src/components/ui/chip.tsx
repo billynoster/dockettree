@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
  * changing a token. A chip always carries text, and almost always an icon, because status must
  * never depend on colour alone (requirements section 6).
  *
- * `waiting` is the Sky / Waiting on Vendor tone from the Ready Vendors UI spec.
+ * `waiting` is the Sky / Waiting on Vendor tone from the Docket Tree UI spec.
  */
 export type ChipTone = 'ok' | 'info' | 'waiting' | 'warn' | 'danger' | 'neutral' | 'brand'
 

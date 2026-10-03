@@ -46,7 +46,7 @@ async function main(): Promise<void> {
   }
   serve({ fetch: app.fetch, hostname: config.host, port: config.port })
   const delivery = config.smtp ? `SMTP ${config.smtp.host}:${config.smtp.port}` : 'not configured (messages stay queued)'
-  console.log(`Ready Vendors listening on http://${config.host}:${config.port}`)
+  console.log(`Docket Tree listening on http://${config.host}:${config.port}`)
   console.log(`  database: ${config.databaseFile}`)
   console.log(`  documents: ${config.uploadDir}`)
   console.log(`  email delivery: ${delivery}`)

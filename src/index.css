@@ -17,14 +17,14 @@
 /* ==========================================================================================
  * 1. TOKENS
  *
- * Ready Vendors palette: Ready Teal + Deep Slate + Warm White, with Sky / Soft Teal / Amber /
+ * Docket Tree palette (Ready Vendors UI tokens): Ready Teal + Deep Slate + Warm White, with Sky / Soft Teal / Amber /
  * Coral / Lavender status accents. Declared once in OKLCH; `scripts/check-contrast.mjs` reads
  * these values and fails if a promised pair drops below its minimum ratio.
  * ========================================================================================== */
 
 :root {
     /*
-     * Ready Vendors UI spec tokens (docs/ready-vendors-ui-spec.md).
+     * UI spec tokens (docs/ready-vendors-ui-spec.md) — product name is Docket Tree.
      * Brand hex anchors: bg #F8F9F7 · teal #168C83 · text #202124 · border #E4E7E5.
      * Primary teal is AA-darkened from #168C83 so filled and text uses stay ≥4.5:1.
      */

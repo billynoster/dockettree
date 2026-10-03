@@ -208,7 +208,7 @@ export function ReviewPanel({
         <div className="space-y-1">
           <h2 className="type-title">Extracted metadata</h2>
           <p className="type-meta">
-            Values already stored with this file. Ready Vendors does not invent extra fields.
+            Values already stored with this file. Docket Tree does not invent extra fields.
           </p>
         </div>
         {storedMetadata.length > 0 ? (

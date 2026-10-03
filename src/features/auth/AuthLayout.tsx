@@ -27,10 +27,18 @@ export function AuthLayout({
       <aside className="hidden flex-col justify-between bg-primary px-10 py-12 text-primary-foreground lg:flex">
         <div className="space-y-6">
           <span className="flex size-11 items-center justify-center rounded-xl bg-primary-foreground/15 ring-1 ring-primary-foreground/25">
-            <span aria-hidden="true" className="size-3 rounded-full bg-primary-foreground" />
+            <svg
+              viewBox="0 0 16 16"
+              className="size-5 text-primary-foreground"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <circle cx="8" cy="5.5" r="3.25" />
+              <rect x="7.15" y="8.5" width="1.7" height="4.25" rx="0.6" />
+            </svg>
           </span>
           <div className="space-y-2">
-            <p className="type-display text-primary-foreground">Ready Vendors</p>
+            <p className="type-display text-primary-foreground">Docket Tree</p>
             <p className="text-sm leading-relaxed text-primary-foreground/80">
               Know who can work. Know what&apos;s next.
             </p>
@@ -62,7 +70,7 @@ export function AuthLayout({
           <div className="mb-6 flex items-center gap-2.5 lg:hidden">
             <BrandMark className="size-9" />
             <span>
-              <span className="block text-sm leading-tight font-semibold">Ready Vendors</span>
+              <span className="block text-sm leading-tight font-semibold">Docket Tree</span>
               {organizationName ? (
                 <span className="block text-xs text-muted-foreground">{organizationName}</span>
               ) : (
