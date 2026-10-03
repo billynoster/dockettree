@@ -151,9 +151,13 @@ function NavTooltip({
   children: React.ReactElement
 }) {
   if (!enabled) return children
+  // Wrap in a block span so Radix Slot does not merge onto NavLink.
+  // NavLink's function `className` breaks when Slot replaces it with a string merge.
   return (
     <Tooltip>
-      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipTrigger asChild>
+        <span className="block w-full">{children}</span>
+      </TooltipTrigger>
       <TooltipContent side="right" sideOffset={8}>
         {label}
       </TooltipContent>
@@ -180,8 +184,8 @@ function NavLinkRow({
         title={collapsed ? item.label : undefined}
         className={({ isActive }) =>
           cn(
-            'flex h-11 items-center rounded-xl text-sm font-medium transition-colors duration-(--duration-quick) ease-(--ease-soft)',
-            collapsed ? 'justify-center px-0' : 'gap-3 px-4',
+            'relative flex h-11 items-center rounded-xl text-sm font-medium transition-colors duration-(--duration-quick) ease-(--ease-soft)',
+            collapsed ? 'w-full justify-center px-0' : 'gap-3 px-4',
             isActive
               ? 'bg-[var(--tone-brand-surface)] text-[var(--tone-brand-foreground)]'
               : 'text-muted-foreground hover:bg-muted hover:text-foreground',
@@ -190,21 +194,19 @@ function NavLinkRow({
       >
         {({ isActive }) => (
           <>
-            <span className="relative shrink-0">
-              <item.icon
-                aria-hidden="true"
-                strokeWidth={1.75}
-                className={cn('size-[18px]', isActive ? undefined : 'opacity-80')}
-              />
-              {collapsed && item.badge === 'review' && pendingCount ? (
-                <span
-                  className="absolute -top-1.5 -right-1.5 flex size-4 items-center justify-center rounded-full bg-primary text-[0.5625rem] font-semibold text-primary-foreground tabular-nums"
-                  aria-label={`${pendingCount} pending`}
-                >
-                  {pendingCount > 9 ? '9+' : pendingCount}
-                </span>
-              ) : null}
-            </span>
+            <item.icon
+              aria-hidden="true"
+              strokeWidth={1.75}
+              className={cn('size-[18px] shrink-0', isActive ? undefined : 'opacity-80')}
+            />
+            {collapsed && item.badge === 'review' && pendingCount ? (
+              <span
+                className="absolute top-1.5 right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-0.5 text-[0.5625rem] leading-none font-semibold text-primary-foreground tabular-nums"
+                aria-label={`${pendingCount} pending`}
+              >
+                {pendingCount > 9 ? '9+' : pendingCount}
+              </span>
+            ) : null}
             {collapsed ? (
               <span className="sr-only">{item.label}</span>
             ) : (
@@ -233,7 +235,7 @@ function SoonRow({ item, collapsed = false }: { item: SoonItem; collapsed?: bool
       <span
         className={cn(
           'flex h-11 cursor-not-allowed items-center rounded-xl text-sm font-medium text-muted-foreground/55',
-          collapsed ? 'justify-center px-0' : 'gap-3 px-4',
+          collapsed ? 'w-full justify-center px-0' : 'gap-3 px-4',
         )}
         title={collapsed ? `${item.label} — Coming soon` : 'Coming soon'}
         aria-disabled="true"
@@ -252,6 +254,29 @@ function SoonRow({ item, collapsed = false }: { item: SoonItem; collapsed?: bool
   )
 }
 
+function NavSection({
+  label,
+  collapsed,
+  showDivider,
+  children,
+}: {
+  label?: string
+  collapsed: boolean
+  showDivider?: boolean
+  children: React.ReactNode
+}) {
+  return (
+    <div
+      className={cn(
+        collapsed && showDivider && 'border-t border-border/70 pt-2',
+      )}
+    >
+      {collapsed || !label ? null : <p className="type-eyebrow px-4 pb-1.5">{label}</p>}
+      <ul className="flex flex-col gap-1">{children}</ul>
+    </div>
+  )
+}
+
 function NavItems({
   pendingCount,
   onNavigate,
@@ -262,61 +287,50 @@ function NavItems({
   collapsed?: boolean
 }) {
   return (
-    <div className="space-y-5">
-      <div>
-        {collapsed ? null : <p className="type-eyebrow px-4 pb-1.5">Workspace</p>}
-        <ul className="space-y-0.5">
-          {PRIMARY_NAV.map((item) => (
-            <li key={item.to}>
-              <NavLinkRow
-                item={item}
-                pendingCount={pendingCount}
-                onNavigate={onNavigate}
-                collapsed={collapsed}
-              />
-            </li>
-          ))}
-        </ul>
-      </div>
-      <div>
-        {collapsed ? null : <p className="type-eyebrow px-4 pb-1.5">Records</p>}
-        <ul className="space-y-0.5">
-          {RECORDS_NAV.map((item) => (
-            <li key={item.to}>
-              <NavLinkRow
-                item={item}
-                pendingCount={pendingCount}
-                onNavigate={onNavigate}
-                collapsed={collapsed}
-              />
-            </li>
-          ))}
-        </ul>
-      </div>
-      <div>
-        {collapsed ? null : <p className="type-eyebrow px-4 pb-1.5">Coming later</p>}
-        <ul className="space-y-0.5">
-          {SOON_NAV.map((item) => (
-            <li key={item.label}>
-              <SoonRow item={item} collapsed={collapsed} />
-            </li>
-          ))}
-        </ul>
-      </div>
-      <div>
-        <ul className="space-y-0.5">
-          {SETTINGS_NAV.map((item) => (
-            <li key={item.to}>
-              <NavLinkRow
-                item={item}
-                pendingCount={pendingCount}
-                onNavigate={onNavigate}
-                collapsed={collapsed}
-              />
-            </li>
-          ))}
-        </ul>
-      </div>
+    <div className={cn('flex flex-col', collapsed ? 'gap-2' : 'gap-5')}>
+      <NavSection label="Workspace" collapsed={collapsed}>
+        {PRIMARY_NAV.map((item) => (
+          <li key={item.to}>
+            <NavLinkRow
+              item={item}
+              pendingCount={pendingCount}
+              onNavigate={onNavigate}
+              collapsed={collapsed}
+            />
+          </li>
+        ))}
+      </NavSection>
+      <NavSection label="Records" collapsed={collapsed} showDivider={collapsed}>
+        {RECORDS_NAV.map((item) => (
+          <li key={item.to}>
+            <NavLinkRow
+              item={item}
+              pendingCount={pendingCount}
+              onNavigate={onNavigate}
+              collapsed={collapsed}
+            />
+          </li>
+        ))}
+      </NavSection>
+      <NavSection label="Coming later" collapsed={collapsed} showDivider={collapsed}>
+        {SOON_NAV.map((item) => (
+          <li key={item.label}>
+            <SoonRow item={item} collapsed={collapsed} />
+          </li>
+        ))}
+      </NavSection>
+      <NavSection collapsed={collapsed} showDivider={collapsed}>
+        {SETTINGS_NAV.map((item) => (
+          <li key={item.to}>
+            <NavLinkRow
+              item={item}
+              pendingCount={pendingCount}
+              onNavigate={onNavigate}
+              collapsed={collapsed}
+            />
+          </li>
+        ))}
+      </NavSection>
     </div>
   )
 }
