@@ -41,29 +41,34 @@ function NotFoundPage() {
  */
 function Loading() {
   return (
-    <div className="min-h-dvh">
+    <div className="flex min-h-dvh">
       <p className="sr-only" role="status">
         Loading Ready Vendors…
       </p>
-      <header className="flex h-14 items-center gap-2.5 border-b bg-card px-4">
-        <BrandMark />
-        <span className="text-sm font-semibold">Ready Vendors</span>
-      </header>
-      <div className="mx-auto flex max-w-[1600px] gap-8 px-4 py-8" aria-hidden="true">
-        <div className="hidden w-52 shrink-0 space-y-2 lg:block">
+      <aside className="hidden h-dvh w-(--sidebar-width) shrink-0 border-r bg-card lg:block" aria-hidden="true">
+        <div className="flex h-(--header-height) items-center gap-2.5 border-b px-5">
+          <BrandMark />
+          <span className="text-sm font-semibold">Ready Vendors</span>
+        </div>
+        <div className="space-y-2 px-5 py-4">
           {[64, 48, 72, 56, 44].map((width, index) => (
-            <Skeleton key={index} className="h-8" style={{ width: `${width}%` }} />
+            <Skeleton key={index} className="h-10" style={{ width: `${width}%` }} />
           ))}
         </div>
-        <div className="min-w-0 flex-1 space-y-4">
-          <Skeleton className="h-7 w-48" />
-          <Skeleton className="h-4 w-80" />
+      </aside>
+      <div className="min-w-0 flex-1">
+        <header className="flex h-(--header-height) items-center border-b bg-card px-6">
+          <Skeleton className="h-6 w-40" />
+        </header>
+        <div className="mx-auto max-w-[1600px] space-y-4 px-8 py-8" aria-hidden="true">
+          <Skeleton className="h-8 w-72" />
+          <Skeleton className="h-4 w-96" />
           <div className="grid gap-3 pt-2 sm:grid-cols-2 xl:grid-cols-4">
             {Array.from({ length: 4 }).map((_, index) => (
-              <Skeleton key={index} className="h-24 rounded-xl" />
+              <Skeleton key={index} className="h-32 rounded-2xl" />
             ))}
           </div>
-          <Skeleton className="h-64 rounded-xl" />
+          <Skeleton className="h-64 rounded-2xl" />
         </div>
       </div>
     </div>

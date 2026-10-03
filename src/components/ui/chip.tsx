@@ -5,12 +5,15 @@ import { cn } from '@/lib/utils'
  * Tone atom. Every coloured label in the product is a Chip, so a status can only be recoloured by
  * changing a token. A chip always carries text, and almost always an icon, because status must
  * never depend on colour alone (requirements section 6).
+ *
+ * `waiting` is the Sky / Waiting on Vendor tone from the Ready Vendors UI spec.
  */
-export type ChipTone = 'ok' | 'info' | 'warn' | 'danger' | 'neutral' | 'brand'
+export type ChipTone = 'ok' | 'info' | 'waiting' | 'warn' | 'danger' | 'neutral' | 'brand'
 
 export const TONE_CLASS: Record<ChipTone, string> = {
   ok: 'tone-ok',
   info: 'tone-info',
+  waiting: 'tone-waiting',
   warn: 'tone-warn',
   danger: 'tone-danger',
   neutral: 'tone-neutral',
@@ -21,6 +24,7 @@ export const TONE_CLASS: Record<ChipTone, string> = {
 export const TONE_SOLID: Record<ChipTone, string> = {
   ok: 'bg-tone-ok',
   info: 'bg-tone-info',
+  waiting: 'bg-tone-waiting',
   warn: 'bg-tone-warn',
   danger: 'bg-tone-danger',
   neutral: 'bg-tone-neutral',

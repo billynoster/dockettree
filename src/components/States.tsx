@@ -209,6 +209,7 @@ export function AccessDeniedState({
 const NOTICE_ICON = {
   ok: CheckCircle2,
   info: Info,
+  waiting: Info,
   warn: TriangleAlert,
   danger: CircleAlert,
   neutral: Info,

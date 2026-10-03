@@ -60,7 +60,7 @@ function contrast(tokens, foreground, background) {
 }
 
 const SURFACES = ['paper', 'card', 'muted']
-const TONES = ['ok', 'info', 'warn', 'danger', 'neutral']
+const TONES = ['ok', 'info', 'waiting', 'warn', 'danger', 'neutral']
 
 /** [foreground, background, minimum ratio, why] */
 function buildChecks() {

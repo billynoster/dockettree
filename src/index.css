@@ -23,26 +23,29 @@
  * ========================================================================================== */
 
 :root {
-    /* --- Paper: warm white floor, never pure white and never cool grey. --- */
-    --paper: oklch(0.984 0.004 106.5);
-    --card: oklch(0.995 0.003 106);
-    --muted: oklch(0.958 0.008 180);
-    --accent: oklch(0.948 0.014 180);
+    /*
+     * Ready Vendors UI spec tokens (docs/ready-vendors-ui-spec.md).
+     * Brand hex anchors: bg #F8F9F7 · teal #168C83 · text #202124 · border #E4E7E5.
+     * Primary teal is AA-darkened from #168C83 so filled and text uses stay ≥4.5:1.
+     */
+    --paper: oklch(0.981 0.003 128.5);
+    --card: oklch(1.000 0.000 89.9);
+    --muted: oklch(0.958 0.006 150);
+    --accent: oklch(0.953 0.014 180);
 
-    /* --- Ink: Deep Slate, never black. --- */
-    --foreground: oklch(0.302 0.028 232);
-    --foreground-soft: oklch(0.420 0.025 230);
-    --muted-foreground: oklch(0.500 0.020 220);
+    /* Ink: primary #202124 · secondary #5F6368 (tertiary #80868B fails AA alone). */
+    --foreground: oklch(0.248 0.006 271.2);
+    --foreground-soft: oklch(0.420 0.010 250);
+    --muted-foreground: oklch(0.498 0.009 253.9);
 
-    /* --- Lines. `--border` is decorative hairline; `--input` bounds a control and clears 3:1. --- */
-    --border: oklch(0.900 0.010 180);
-    --border-strong: oklch(0.860 0.012 185);
+    /* Lines: #E4E7E5 hairline; `--input` bounds a control and clears 3:1. */
+    --border: oklch(0.925 0.004 157.2);
+    --border-strong: oklch(0.880 0.006 160);
     --input: oklch(0.620 0.018 210);
 
     /*
-     * --- Action and accent ---
-     * Primary CTAs and the brand mark use Ready Teal. `--clay` / `--clay-text` keep the historical
-     * token names used across components; their values are Ready Teal (links, focus, active nav).
+     * Action / accent — Ready Teal family (#168C83).
+     * `--clay` / `--clay-text` keep historical names used across components.
      */
     --primary: oklch(0.545 0.097 186.7);
     --primary-foreground: oklch(0.985 0.007 106);
@@ -51,37 +54,42 @@
     --clay-text: oklch(0.480 0.095 186.7);
     --ring: oklch(0.545 0.097 186.7);
 
-    /* --- Status tones: Soft Teal / Lavender / Amber / Coral — never a wall of red. --- */
-    --tone-ok-surface: oklch(0.948 0.022 182.5);
-    --tone-ok-border: oklch(0.880 0.040 186);
-    --tone-ok-foreground: oklch(0.430 0.090 186);
+    /* Status tones — surfaces/text from UI spec; solids AA-tuned for dots/meters. */
+    --tone-ok-surface: oklch(0.953 0.019 180.3);
+    --tone-ok-border: oklch(0.900 0.030 182);
+    --tone-ok-foreground: oklch(0.478 0.078 184.2);
     --tone-ok-solid: oklch(0.545 0.097 186.7);
 
-    --tone-info-surface: oklch(0.931 0.023 299.4);
-    --tone-info-border: oklch(0.860 0.040 299);
-    --tone-info-foreground: oklch(0.430 0.080 299);
+    --tone-info-surface: oklch(0.942 0.021 301.1);
+    --tone-info-border: oklch(0.880 0.035 300);
+    --tone-info-foreground: oklch(0.491 0.088 298.2);
     --tone-info-solid: oklch(0.520 0.090 299);
 
-    --tone-warn-surface: oklch(0.955 0.055 80);
-    --tone-warn-border: oklch(0.870 0.090 78);
-    --tone-warn-foreground: oklch(0.450 0.110 65);
-    --tone-warn-solid: oklch(0.660 0.140 80);
+    --tone-waiting-surface: oklch(0.953 0.014 238.0);
+    --tone-waiting-border: oklch(0.890 0.025 235);
+    --tone-waiting-foreground: oklch(0.483 0.065 232.0);
+    --tone-waiting-solid: oklch(0.520 0.070 232);
 
-    --tone-danger-surface: oklch(0.955 0.035 31);
-    --tone-danger-border: oklch(0.870 0.070 31);
-    --tone-danger-foreground: oklch(0.480 0.140 31);
+    --tone-warn-surface: oklch(0.964 0.039 86.1);
+    --tone-warn-border: oklch(0.900 0.070 82);
+    --tone-warn-foreground: oklch(0.508 0.105 79.4);
+    --tone-warn-solid: oklch(0.640 0.145 78);
+
+    --tone-danger-surface: oklch(0.946 0.022 24.4);
+    --tone-danger-border: oklch(0.880 0.050 26);
+    --tone-danger-foreground: oklch(0.498 0.140 28.1);
     --tone-danger-solid: oklch(0.620 0.147 31.3);
 
-    --tone-neutral-surface: oklch(0.948 0.008 200);
-    --tone-neutral-border: oklch(0.888 0.010 200);
-    --tone-neutral-foreground: oklch(0.420 0.020 220);
-    --tone-neutral-solid: oklch(0.560 0.018 210);
+    --tone-neutral-surface: oklch(0.955 0.004 150);
+    --tone-neutral-border: oklch(0.910 0.006 155);
+    --tone-neutral-foreground: oklch(0.420 0.010 250);
+    --tone-neutral-solid: oklch(0.560 0.012 230);
 
-    --tone-brand-surface: oklch(0.948 0.022 182.5);
-    --tone-brand-border: oklch(0.880 0.040 186);
-    --tone-brand-foreground: oklch(0.430 0.090 186);
+    --tone-brand-surface: oklch(0.953 0.019 180.3);
+    --tone-brand-border: oklch(0.900 0.030 182);
+    --tone-brand-foreground: oklch(0.478 0.078 184.2);
 
-    /* --- Aliases the shadcn primitives read. --- */
+    /* Aliases the shadcn primitives read. */
     --background: var(--paper);
     --card-foreground: var(--foreground);
     --popover: var(--card);
@@ -90,41 +98,36 @@
     --secondary-foreground: var(--foreground);
     --accent-foreground: var(--foreground);
     --destructive: var(--tone-danger-foreground);
-    --sidebar: var(--paper);
+    --sidebar: var(--card);
     --sidebar-foreground: var(--foreground);
     --sidebar-primary: var(--primary);
     --sidebar-primary-foreground: var(--primary-foreground);
-    --sidebar-accent: var(--accent);
-    --sidebar-accent-foreground: var(--foreground);
+    --sidebar-accent: var(--tone-brand-surface);
+    --sidebar-accent-foreground: var(--tone-brand-foreground);
     --sidebar-border: var(--border);
     --sidebar-ring: var(--ring);
 
-    /* --- Shape. Soft, not pill: panels are rounder than the controls inside them. --- */
+    /* Shape: controls 10–12px · cards 12–16px · pills 999px (UI spec). */
     --radius: 0.75rem;
 
     /*
-     * --- Elevation ---
-     * Three steps, each a stack of very low-opacity warm-slate shadows rather than one dark drop.
+     * Elevation — default surfaces use borders only.
+     * Shadows reserved for dialogs, dropdowns, popovers, floating menus.
      */
-    --shadow-surface:
-        0 1px 1px oklch(0.30 0.03 232 / 0.035),
-        0 2px 4px -1px oklch(0.30 0.03 232 / 0.035);
-    --shadow-control: inset 0 1px 1px oklch(0.30 0.03 232 / 0.03);
-    --shadow-raised:
-        0 1px 1px oklch(0.30 0.03 232 / 0.04),
-        0 3px 6px -2px oklch(0.30 0.03 232 / 0.05),
-        0 10px 20px -8px oklch(0.30 0.03 232 / 0.06);
+    --shadow-surface: none;
+    --shadow-control: inset 0 1px 1px oklch(0.25 0.01 270 / 0.03);
+    --shadow-raised: 0 2px 8px rgba(32, 33, 36, 0.10);
     --shadow-overlay:
-        0 1px 2px oklch(0.30 0.03 232 / 0.04),
-        0 8px 16px -6px oklch(0.30 0.03 232 / 0.08),
-        0 28px 56px -24px oklch(0.30 0.03 232 / 0.2);
+        0 2px 8px rgba(32, 33, 36, 0.10),
+        0 16px 40px -12px rgba(32, 33, 36, 0.16);
 
-    /* --- Motion: two durations and one easing curve for the whole product. --- */
+    /* Motion: 150–200ms transitions per UI spec. */
     --ease-soft: cubic-bezier(0.22, 0.9, 0.3, 1);
-    --duration-quick: 140ms;
-    --duration-settle: 240ms;
+    --duration-quick: 160ms;
+    --duration-settle: 200ms;
 
-    --header-height: 3.5rem;
+    --header-height: 4.25rem;
+    --sidebar-width: 15.5rem;
 }
 
 @theme inline {
@@ -158,16 +161,18 @@
     --color-clay-text: var(--clay-text);
     --color-tone-ok: var(--tone-ok-solid);
     --color-tone-info: var(--tone-info-solid);
+    --color-tone-waiting: var(--tone-waiting-solid);
     --color-tone-warn: var(--tone-warn-solid);
     --color-tone-danger: var(--tone-danger-solid);
     --color-tone-neutral: var(--tone-neutral-solid);
 
-    --radius-sm: calc(var(--radius) * 0.45);
-    --radius-md: calc(var(--radius) * 0.7);
-    --radius-lg: calc(var(--radius) * 0.85);
-    --radius-xl: var(--radius);
-    --radius-2xl: calc(var(--radius) * 1.35);
-    --radius-3xl: calc(var(--radius) * 1.7);
+    /* 8 / 10 / 12 / 14 / 16px scale anchored on --radius 12px. */
+    --radius-sm: 0.5rem;
+    --radius-md: 0.625rem;
+    --radius-lg: 0.75rem;
+    --radius-xl: 0.875rem;
+    --radius-2xl: 1rem;
+    --radius-3xl: 1.25rem;
 
     --shadow-surface: var(--shadow-surface);
     --shadow-control: var(--shadow-control);
@@ -222,7 +227,7 @@
         background-color: var(--card);
         border: 1px solid var(--border);
         border-radius: var(--radius-2xl);
-        box-shadow: var(--shadow-surface);
+        box-shadow: none;
     }
 
     .surface-raised {
@@ -250,6 +255,12 @@
         background-color: var(--tone-info-surface);
         border-color: var(--tone-info-border);
         color: var(--tone-info-foreground);
+    }
+
+    .tone-waiting {
+        background-color: var(--tone-waiting-surface);
+        border-color: var(--tone-waiting-border);
+        color: var(--tone-waiting-foreground);
     }
 
     .tone-warn {
@@ -280,10 +291,11 @@
      * Manrope speaks at the start of a page or a moment: page titles, dialog titles,
      * empty and error headings, the wordmark. Inter does all the work. Nothing else.
      */
+    /* Page title: 28–32px semibold (UI spec). */
     .type-display {
         font-family: var(--font-display);
         font-size: 1.75rem;
-        line-height: 1.15;
+        line-height: 1.2;
         font-weight: 600;
         letter-spacing: -0.022em;
         text-wrap: balance;
@@ -298,16 +310,17 @@
         text-wrap: balance;
     }
 
-    /* Panel and section headings. */
+    /* Section title: 20–22px semibold (UI spec). */
     .type-title {
-        font-size: 0.9375rem;
+        font-size: 1.25rem;
         line-height: 1.3;
         font-weight: 600;
-        letter-spacing: -0.008em;
+        letter-spacing: -0.012em;
     }
 
+    /* Card title / metric label: 16–18px. */
     .type-subtitle {
-        font-size: 0.8125rem;
+        font-size: 0.9375rem;
         line-height: 1.35;
         font-weight: 500;
     }
@@ -318,12 +331,12 @@
     }
 
     .type-body-lg {
-        font-size: 0.9375rem;
-        line-height: 1.6;
+        font-size: 1rem;
+        line-height: 1.55;
     }
 
     .type-meta {
-        font-size: 0.75rem;
+        font-size: 0.8125rem;
         line-height: 1.45;
         color: var(--muted-foreground);
     }
