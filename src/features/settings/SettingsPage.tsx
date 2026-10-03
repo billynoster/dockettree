@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router'
 import { KeyRound, Play, Save, UserPlus } from 'lucide-react'
 import { api } from '@/api/client'
 import { useApp } from '@/app/AppProvider'
@@ -38,11 +39,23 @@ import { todayInTimeZone } from '@/domain/dates'
 import { ROLE_LABEL, ROLE_SUMMARY } from '@/domain/permissions'
 import type { InternalRole } from '@/domain/types'
 import { COMMON_TIMEZONES } from '@/domain/validation'
+import { BillingSettingsPanel } from './BillingSettingsPanel'
 
 const INTERNAL_ROLE_OPTIONS: InternalRole[] = ['admin', 'coordinator', 'reviewer']
 
+const SETTINGS_TABS = ['organization', 'billing', 'members', 'account', 'delivery'] as const
+type SettingsTab = (typeof SETTINGS_TABS)[number]
+
+function parseSettingsTab(value: string | null): SettingsTab {
+  if (value && (SETTINGS_TABS as readonly string[]).includes(value)) {
+    return value as SettingsTab
+  }
+  return 'organization'
+}
+
 export function SettingsPage() {
   const app = useApp()
+  const [searchParams, setSearchParams] = useSearchParams()
   const canManage = app.can('settings.manage')
   const settings = useServiceQuery(() => api.settings(), [])
   const action = useAction()
@@ -53,6 +66,7 @@ export function SettingsPage() {
     support_email: app.organization.support_email,
     support_contact_name: app.organization.support_contact_name,
   })
+  const activeTab = parseSettingsTab(searchParams.get('tab'))
 
   useEffect(() => {
     setForm({
@@ -70,15 +84,23 @@ export function SettingsPage() {
       <PageHeader
         compact
         title="Settings"
-        description="Organization, members, your password, and message delivery"
+        description="Organization, billing, members, your password, and message delivery"
       />
 
-      <Tabs defaultValue="organization" className="gap-3">
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => {
+          const tab = parseSettingsTab(value)
+          setSearchParams(tab === 'organization' ? {} : { tab }, { replace: true })
+        }}
+        className="gap-3"
+      >
         <TabsList
           variant="line"
           className="sticky top-[calc(var(--header-height)+0.5rem)] z-20 w-full max-w-full justify-start overflow-x-auto bg-background/90 px-0 backdrop-blur supports-backdrop-filter:bg-background/80"
         >
           <TabsTrigger value="organization">Organization</TabsTrigger>
+          <TabsTrigger value="billing">Billing</TabsTrigger>
           <TabsTrigger value="members">Members</TabsTrigger>
           <TabsTrigger value="account">Your password</TabsTrigger>
           <TabsTrigger value="delivery">Delivery</TabsTrigger>
@@ -202,6 +224,10 @@ export function SettingsPage() {
           </form>
         </SectionBody>
       </Section>
+        </TabsContent>
+
+        <TabsContent value="billing" className="mt-0">
+          <BillingSettingsPanel />
         </TabsContent>
 
         <TabsContent value="members" className="mt-0">

@@ -14,6 +14,8 @@ const EVENT_NAMES = [
   'book_demo_clicked',
   'founding_offer_viewed',
   'pricing_clarity_link_clicked',
+  'billing_settings_viewed',
+  'billing_cta_clicked',
 ] as const
 
 export type AnalyticsEventName = (typeof EVENT_NAMES)[number]

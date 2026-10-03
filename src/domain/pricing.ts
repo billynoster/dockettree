@@ -9,6 +9,35 @@ export type BillingInterval = 'monthly' | 'annual'
 
 export type PlanCtaKind = 'start_trial' | 'contact_sales' | 'book_demo'
 
+/** Display-only subscription lifecycle until Stripe is wired. */
+export type SubscriptionStatus =
+  | 'trialing'
+  | 'active'
+  | 'past_due'
+  | 'canceled'
+  | 'expired'
+
+export interface OrgBillingState {
+  planId: PlanId
+  billingInterval: BillingInterval
+  status: SubscriptionStatus
+  /** True when this org locked founding list prices. */
+  foundingRateApplied: boolean
+  /** ISO date (YYYY-MM-DD) when the trial ends, if status is trialing. */
+  trialEndsOn: string | null
+  /** ISO date when the current paid period ends. */
+  currentPeriodEndsOn: string | null
+  /**
+   * When true, Billing settings prefer live active-vendor / property counts from the API.
+   * When false, `stubUsage` drives the meters (useful for demos of near-limit / at-limit UI).
+   */
+  useLiveUsageCounts: boolean
+  stubUsage: {
+    activeVendors: number
+    properties: number
+  }
+}
+
 export type FeatureAvailability = boolean | string
 
 export type ComparisonValue = FeatureAvailability
