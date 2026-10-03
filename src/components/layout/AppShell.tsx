@@ -452,8 +452,10 @@ export function AppShell() {
           id="desktop-sidebar"
           data-collapsed={sidebarCollapsed ? 'true' : 'false'}
           className={cn(
-            'sticky top-0 hidden h-dvh shrink-0 flex-col border-r bg-card transition-[width] duration-(--duration-settle) ease-(--ease-soft) lg:flex',
-            sidebarCollapsed ? 'w-(--sidebar-width-collapsed)' : 'w-(--sidebar-width)',
+            'sticky top-0 hidden h-dvh shrink-0 flex-col overflow-x-hidden border-r bg-card transition-[width] duration-(--duration-settle) ease-(--ease-soft) lg:flex',
+            sidebarCollapsed
+              ? 'w-(--sidebar-width-collapsed) min-w-(--sidebar-width-collapsed)'
+              : 'w-(--sidebar-width) min-w-(--sidebar-width)',
           )}
           aria-label="Workspace"
         >
