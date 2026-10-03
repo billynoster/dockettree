@@ -223,14 +223,13 @@ export function PortalPage() {
                     <ScrollRegion label="Required documents">
                       <ul className="space-y-2.5 pr-0.5">
                         {requiredDocuments.map((entry) => (
-                          <li key={entry.status.requirement.id}>
-                            <RequirementCard
-                              status={entry.status}
-                              vendor={portal.data!.vendor}
-                              correctionReason={entry.correctionReason}
-                              context="portal"
-                            />
-                          </li>
+                          <RequirementCard
+                            key={entry.status.requirement.id}
+                            status={entry.status}
+                            vendor={portal.data!.vendor}
+                            correctionReason={entry.correctionReason}
+                            context="portal"
+                          />
                         ))}
                       </ul>
                     </ScrollRegion>
@@ -247,14 +246,13 @@ export function PortalPage() {
                     </h2>
                     <ul className="space-y-2.5">
                       {portal.data.optionalRequirements.map((entry) => (
-                        <li key={entry.status.requirement.id}>
-                          <RequirementCard
-                            status={entry.status}
-                            vendor={portal.data!.vendor}
-                            correctionReason={entry.correctionReason}
-                            context="portal"
-                          />
-                        </li>
+                        <RequirementCard
+                          key={entry.status.requirement.id}
+                          status={entry.status}
+                          vendor={portal.data!.vendor}
+                          correctionReason={entry.correctionReason}
+                          context="portal"
+                        />
                       ))}
                     </ul>
                   </section>
