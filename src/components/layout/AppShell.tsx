@@ -524,7 +524,7 @@ export function AppShell() {
       </TooltipProvider>
 
       <div className="flex min-w-0 flex-1 flex-col bg-background">
-        {/* Top bar — 68px, page title + search + actions (shell chrome; main panel nests below) */}
+        {/* Top bar — 68px, search + account/alerts (page titles live in-panel via PageHeader) */}
         <header className="sticky top-0 z-40 bg-background">
           <div className="flex h-(--header-height) items-center gap-3 px-4 sm:gap-4 sm:px-6 xl:px-8">
             <Sheet open={navOpen} onOpenChange={setNavOpen}>
@@ -561,10 +561,6 @@ export function AppShell() {
               </SheetContent>
             </Sheet>
 
-            <div className="min-w-0">
-              <h1 className="truncate text-lg font-semibold tracking-tight sm:text-xl">{pageTitle}</h1>
-            </div>
-
             <form
               onSubmit={submitSearch}
               className="relative ml-auto hidden min-w-0 max-w-md flex-1 md:block"
@@ -584,7 +580,7 @@ export function AppShell() {
               />
             </form>
 
-            <div className="flex items-center gap-1.5 sm:gap-2 md:ml-0">
+            <div className="ml-auto flex items-center gap-1.5 sm:gap-2 md:ml-0">
               <Button
                 asChild
                 variant="ghost"
