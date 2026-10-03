@@ -13,6 +13,8 @@ import {
   Mail,
   MailWarning,
   Menu,
+  PanelLeft,
+  PanelLeftClose,
   Search,
   Settings,
   Users,
@@ -34,6 +36,12 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { ROLE_LABEL } from '@/domain/permissions'
 import { vendorsLink } from '@/domain/vendorQuery'
 import { cn } from '@/lib/utils'
@@ -87,6 +95,24 @@ const PAGE_TITLES: { prefix: string; title: string }[] = [
 ]
 
 const NOTICE_KEY = 'vr.deliveryNoticeDismissed'
+const SIDEBAR_COLLAPSED_KEY = 'dt.sidebarCollapsed'
+
+function readSidebarCollapsed(): boolean {
+  if (typeof localStorage === 'undefined') return false
+  try {
+    return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+function writeSidebarCollapsed(collapsed: boolean) {
+  try {
+    localStorage.setItem(SIDEBAR_COLLAPSED_KEY, collapsed ? '1' : '0')
+  } catch {
+    /* private mode / quota — preference is best-effort */
+  }
+}
 
 function initials(name: string): string {
   return name
@@ -115,99 +141,164 @@ export function BrandMark({ className }: { className?: string }) {
   )
 }
 
+function NavTooltip({
+  label,
+  enabled,
+  children,
+}: {
+  label: string
+  enabled: boolean
+  children: React.ReactElement
+}) {
+  if (!enabled) return children
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent side="right" sideOffset={8}>
+        {label}
+      </TooltipContent>
+    </Tooltip>
+  )
+}
+
 function NavLinkRow({
   item,
   pendingCount,
   onNavigate,
+  collapsed = false,
 }: {
   item: NavItem
   pendingCount: number | null
   onNavigate?: () => void
+  collapsed?: boolean
 }) {
   return (
-    <NavLink
-      to={item.to}
-      onClick={onNavigate}
-      className={({ isActive }) =>
-        cn(
-          'flex h-11 items-center gap-3 rounded-xl px-4 text-sm font-medium transition-colors duration-(--duration-quick) ease-(--ease-soft)',
-          isActive
-            ? 'bg-[var(--tone-brand-surface)] text-[var(--tone-brand-foreground)]'
-            : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-        )
-      }
-    >
-      {({ isActive }) => (
-        <>
-          <item.icon
-            aria-hidden="true"
-            strokeWidth={1.75}
-            className={cn('size-[18px] shrink-0', isActive ? undefined : 'opacity-80')}
-          />
-          <span className="truncate">{item.label}</span>
-          {item.badge === 'review' && pendingCount ? (
-            <span
-              className="ml-auto rounded-full bg-primary px-1.5 py-px text-[0.6875rem] font-semibold text-primary-foreground tabular-nums"
-              aria-label={`${pendingCount} pending`}
-            >
-              {pendingCount}
+    <NavTooltip label={item.label} enabled={collapsed}>
+      <NavLink
+        to={item.to}
+        onClick={onNavigate}
+        title={collapsed ? item.label : undefined}
+        className={({ isActive }) =>
+          cn(
+            'flex h-11 items-center rounded-xl text-sm font-medium transition-colors duration-(--duration-quick) ease-(--ease-soft)',
+            collapsed ? 'justify-center px-0' : 'gap-3 px-4',
+            isActive
+              ? 'bg-[var(--tone-brand-surface)] text-[var(--tone-brand-foreground)]'
+              : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+          )
+        }
+      >
+        {({ isActive }) => (
+          <>
+            <span className="relative shrink-0">
+              <item.icon
+                aria-hidden="true"
+                strokeWidth={1.75}
+                className={cn('size-[18px]', isActive ? undefined : 'opacity-80')}
+              />
+              {collapsed && item.badge === 'review' && pendingCount ? (
+                <span
+                  className="absolute -top-1.5 -right-1.5 flex size-4 items-center justify-center rounded-full bg-primary text-[0.5625rem] font-semibold text-primary-foreground tabular-nums"
+                  aria-label={`${pendingCount} pending`}
+                >
+                  {pendingCount > 9 ? '9+' : pendingCount}
+                </span>
+              ) : null}
             </span>
-          ) : null}
-        </>
-      )}
-    </NavLink>
+            {collapsed ? (
+              <span className="sr-only">{item.label}</span>
+            ) : (
+              <>
+                <span className="truncate">{item.label}</span>
+                {item.badge === 'review' && pendingCount ? (
+                  <span
+                    className="ml-auto rounded-full bg-primary px-1.5 py-px text-[0.6875rem] font-semibold text-primary-foreground tabular-nums"
+                    aria-label={`${pendingCount} pending`}
+                  >
+                    {pendingCount}
+                  </span>
+                ) : null}
+              </>
+            )}
+          </>
+        )}
+      </NavLink>
+    </NavTooltip>
   )
 }
 
-function SoonRow({ item }: { item: SoonItem }) {
+function SoonRow({ item, collapsed = false }: { item: SoonItem; collapsed?: boolean }) {
   return (
-    <span
-      className="flex h-11 cursor-not-allowed items-center gap-3 rounded-xl px-4 text-sm font-medium text-muted-foreground/55"
-      title="Coming soon"
-      aria-disabled="true"
-    >
-      <item.icon aria-hidden="true" strokeWidth={1.75} className="size-[18px] shrink-0 opacity-70" />
-      <span className="truncate">{item.label}</span>
-      <span className="ml-auto text-[0.6875rem] font-semibold tracking-wide uppercase">Soon</span>
-    </span>
+    <NavTooltip label={`${item.label} (Soon)`} enabled={collapsed}>
+      <span
+        className={cn(
+          'flex h-11 cursor-not-allowed items-center rounded-xl text-sm font-medium text-muted-foreground/55',
+          collapsed ? 'justify-center px-0' : 'gap-3 px-4',
+        )}
+        title={collapsed ? `${item.label} — Coming soon` : 'Coming soon'}
+        aria-disabled="true"
+      >
+        <item.icon aria-hidden="true" strokeWidth={1.75} className="size-[18px] shrink-0 opacity-70" />
+        {collapsed ? (
+          <span className="sr-only">{item.label} (Soon)</span>
+        ) : (
+          <>
+            <span className="truncate">{item.label}</span>
+            <span className="ml-auto text-[0.6875rem] font-semibold tracking-wide uppercase">Soon</span>
+          </>
+        )}
+      </span>
+    </NavTooltip>
   )
 }
 
 function NavItems({
   pendingCount,
   onNavigate,
+  collapsed = false,
 }: {
   pendingCount: number | null
   onNavigate?: () => void
+  collapsed?: boolean
 }) {
   return (
     <div className="space-y-5">
       <div>
-        <p className="type-eyebrow px-4 pb-1.5">Workspace</p>
+        {collapsed ? null : <p className="type-eyebrow px-4 pb-1.5">Workspace</p>}
         <ul className="space-y-0.5">
           {PRIMARY_NAV.map((item) => (
             <li key={item.to}>
-              <NavLinkRow item={item} pendingCount={pendingCount} onNavigate={onNavigate} />
+              <NavLinkRow
+                item={item}
+                pendingCount={pendingCount}
+                onNavigate={onNavigate}
+                collapsed={collapsed}
+              />
             </li>
           ))}
         </ul>
       </div>
       <div>
-        <p className="type-eyebrow px-4 pb-1.5">Records</p>
+        {collapsed ? null : <p className="type-eyebrow px-4 pb-1.5">Records</p>}
         <ul className="space-y-0.5">
           {RECORDS_NAV.map((item) => (
             <li key={item.to}>
-              <NavLinkRow item={item} pendingCount={pendingCount} onNavigate={onNavigate} />
+              <NavLinkRow
+                item={item}
+                pendingCount={pendingCount}
+                onNavigate={onNavigate}
+                collapsed={collapsed}
+              />
             </li>
           ))}
         </ul>
       </div>
       <div>
-        <p className="type-eyebrow px-4 pb-1.5">Coming later</p>
+        {collapsed ? null : <p className="type-eyebrow px-4 pb-1.5">Coming later</p>}
         <ul className="space-y-0.5">
           {SOON_NAV.map((item) => (
             <li key={item.label}>
-              <SoonRow item={item} />
+              <SoonRow item={item} collapsed={collapsed} />
             </li>
           ))}
         </ul>
@@ -216,7 +307,12 @@ function NavItems({
         <ul className="space-y-0.5">
           {SETTINGS_NAV.map((item) => (
             <li key={item.to}>
-              <NavLinkRow item={item} pendingCount={pendingCount} onNavigate={onNavigate} />
+              <NavLinkRow
+                item={item}
+                pendingCount={pendingCount}
+                onNavigate={onNavigate}
+                collapsed={collapsed}
+              />
             </li>
           ))}
         </ul>
@@ -225,18 +321,68 @@ function NavItems({
   )
 }
 
-function SidebarBrand({ orgName }: { orgName: string }) {
-  return (
+function SidebarBrand({
+  orgName,
+  collapsed = false,
+}: {
+  orgName: string
+  collapsed?: boolean
+}) {
+  const link = (
     <Link
       to="/overview"
-      className="flex min-w-0 items-center gap-3 rounded-xl px-1 py-1 transition-opacity hover:opacity-80"
+      className={cn(
+        'flex min-w-0 items-center rounded-xl py-1 transition-opacity hover:opacity-80',
+        collapsed ? 'justify-center px-0' : 'gap-3 px-1',
+      )}
+      aria-label={collapsed ? 'Docket Tree home' : undefined}
     >
       <BrandMark />
-      <span className="min-w-0">
-        <span className="block truncate text-sm leading-tight font-semibold">Docket Tree</span>
-        <span className="block truncate text-xs leading-tight text-muted-foreground">{orgName}</span>
-      </span>
+      {collapsed ? null : (
+        <span className="min-w-0">
+          <span className="block truncate text-sm leading-tight font-semibold">Docket Tree</span>
+          <span className="block truncate text-xs leading-tight text-muted-foreground">{orgName}</span>
+        </span>
+      )}
     </Link>
+  )
+
+  return (
+    <NavTooltip label="Docket Tree" enabled={collapsed}>
+      {link}
+    </NavTooltip>
+  )
+}
+
+function SidebarCollapseToggle({
+  collapsed,
+  onToggle,
+}: {
+  collapsed: boolean
+  onToggle: () => void
+}) {
+  const label = collapsed ? 'Expand sidebar' : 'Collapse sidebar'
+  const Icon = collapsed ? PanelLeft : PanelLeftClose
+
+  return (
+    <NavTooltip label={label} enabled={collapsed}>
+      <Button
+        type="button"
+        variant="ghost"
+        size={collapsed ? 'icon-sm' : 'sm'}
+        className={cn(
+          'text-muted-foreground',
+          collapsed ? 'mx-auto' : 'w-full justify-start gap-3 px-3',
+        )}
+        aria-label={label}
+        aria-expanded={!collapsed}
+        aria-controls="desktop-sidebar"
+        onClick={onToggle}
+      >
+        <Icon aria-hidden="true" strokeWidth={1.75} className="size-[18px] shrink-0" />
+        {collapsed ? null : <span>Collapse</span>}
+      </Button>
+    </NavTooltip>
   )
 }
 
@@ -247,6 +393,7 @@ export function AppShell() {
   const queue = useServiceQuery(() => api.reviewQueue(), [])
   const [signingOut, setSigningOut] = useState(false)
   const [navOpen, setNavOpen] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarCollapsed)
   const [searchDraft, setSearchDraft] = useState('')
   // Dismissing the delivery notice only hides the banner: the "Email paused" chip in the header
   // stays, so the condition is never silently forgotten, and a new session shows the banner again.
@@ -273,6 +420,14 @@ export function AppShell() {
     document.title = `${pageTitle} · Docket Tree`
   }, [pageTitle])
 
+  const toggleSidebarCollapsed = () => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev
+      writeSidebarCollapsed(next)
+      return next
+    })
+  }
+
   const signOut = () => {
     setSigningOut(true)
     void app.signOut().finally(() => setSigningOut(false))
@@ -291,24 +446,61 @@ export function AppShell() {
 
   return (
     <div className="flex min-h-dvh bg-background">
-      {/* Desktop sidebar — 248px, light, persistent */}
-      <aside
-        className="sticky top-0 hidden h-dvh w-(--sidebar-width) shrink-0 flex-col border-r bg-card lg:flex"
-        aria-label="Workspace"
-      >
-        <div className="flex h-(--header-height) items-center border-b px-5">
-          <SidebarBrand orgName={app.organization.name} />
-        </div>
-        <nav aria-label="Main" className="flex-1 overflow-y-auto px-3 py-4">
-          <NavItems pendingCount={pendingCount} />
-        </nav>
-        <div className="border-t px-5 py-4">
-          <p className="truncate text-sm font-medium">{app.user.display_name}</p>
-          <p className="truncate text-xs text-muted-foreground">
-            {ROLE_LABEL[app.role]} · {app.user.email}
-          </p>
-        </div>
-      </aside>
+      {/* Desktop sidebar — expanded ~248px, collapsed icon rail ~68px */}
+      <TooltipProvider delayDuration={200}>
+        <aside
+          id="desktop-sidebar"
+          data-collapsed={sidebarCollapsed ? 'true' : 'false'}
+          className={cn(
+            'sticky top-0 hidden h-dvh shrink-0 flex-col border-r bg-card transition-[width] duration-(--duration-settle) ease-(--ease-soft) lg:flex',
+            sidebarCollapsed ? 'w-(--sidebar-width-collapsed)' : 'w-(--sidebar-width)',
+          )}
+          aria-label="Workspace"
+        >
+          <div
+            className={cn(
+              'flex h-(--header-height) items-center border-b',
+              sidebarCollapsed ? 'justify-center px-2' : 'px-5',
+            )}
+          >
+            <SidebarBrand orgName={app.organization.name} collapsed={sidebarCollapsed} />
+          </div>
+          <nav
+            aria-label="Main"
+            className={cn(
+              'flex-1 overflow-y-auto py-4',
+              sidebarCollapsed ? 'px-2' : 'px-3',
+            )}
+          >
+            <NavItems pendingCount={pendingCount} collapsed={sidebarCollapsed} />
+          </nav>
+          <div
+            className={cn(
+              'space-y-2 border-t py-3',
+              sidebarCollapsed ? 'px-2' : 'px-3',
+            )}
+          >
+            <SidebarCollapseToggle collapsed={sidebarCollapsed} onToggle={toggleSidebarCollapsed} />
+            {sidebarCollapsed ? (
+              <NavTooltip label={`${app.user.display_name} · ${ROLE_LABEL[app.role]}`} enabled>
+                <div
+                  className="mx-auto flex size-9 items-center justify-center rounded-full bg-[var(--tone-brand-surface)] text-[0.6875rem] font-semibold text-[var(--tone-brand-foreground)]"
+                  aria-label={`${app.user.display_name}, ${ROLE_LABEL[app.role]}`}
+                >
+                  {initials(app.user.display_name)}
+                </div>
+              </NavTooltip>
+            ) : (
+              <div className="px-2 py-1">
+                <p className="truncate text-sm font-medium">{app.user.display_name}</p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {ROLE_LABEL[app.role]} · {app.user.email}
+                </p>
+              </div>
+            )}
+          </div>
+        </aside>
+      </TooltipProvider>
 
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Top bar — 68px, page title + search + actions */}

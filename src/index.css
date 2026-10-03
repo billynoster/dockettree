@@ -136,7 +136,9 @@
     --duration-settle: 200ms;
 
     --header-height: 4.25rem;
+    /* Expanded desktop rail ≈ 248px; collapsed icon rail ≈ 68px (64–72). */
     --sidebar-width: 15.5rem;
+    --sidebar-width-collapsed: 4.25rem;
 }
 
 @theme inline {
