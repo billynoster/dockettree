@@ -155,8 +155,8 @@ export const pricingPlans: PricingPlan[] = [
       internalSeats: 'unlimited',
     },
     prices: {
-      monthly: { amountCents: 59900, foundingAmountCents: 47900 },
-      annual: { amountCents: 599000, foundingAmountCents: 479000 },
+      monthly: { amountCents: 59900, foundingAmountCents: 44900 },
+      annual: { amountCents: 599000, foundingAmountCents: 449000 },
     },
     features: [
       '1,000 active vendors',
