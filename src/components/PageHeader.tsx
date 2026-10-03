@@ -57,7 +57,9 @@ export function PageHeader({
             <p
               className={cn(
                 'max-w-3xl text-muted-foreground',
-                compact ? 'type-meta line-clamp-2 sm:line-clamp-1' : 'type-body',
+                compact
+                  ? 'type-meta hidden sm:line-clamp-1 sm:block'
+                  : 'type-body',
               )}
             >
               {description}
