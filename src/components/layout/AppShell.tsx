@@ -97,7 +97,7 @@ function initials(name: string): string {
     .join('')
 }
 
-/** DT mark — teal tile with a simple tree canopy + trunk. No shields or certificates. */
+/** DT mark — evergreen tile with a simple tree canopy + trunk. No shields or certificates. */
 export function BrandMark({ className }: { className?: string }) {
   return (
     <span

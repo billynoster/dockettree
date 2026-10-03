@@ -54,14 +54,14 @@ const STATUS_CHIP: Record<
   'needs-action': { label: 'Needs Action', tone: 'warn', icon: CircleAlert },
   'in-review': { label: 'In Review', tone: 'info', icon: Clock3 },
   waiting: { label: 'Waiting on Vendor', tone: 'waiting', icon: Hourglass },
-  expiring: { label: 'Expiring Soon', tone: 'warn', icon: CalendarClock },
+  expiring: { label: 'Expiring Soon', tone: 'expiring', icon: CalendarClock },
   critical: { label: 'Critical', tone: 'danger', icon: CircleAlert },
   'not-started': { label: 'Not Started', tone: 'neutral', icon: CircleDashed },
 }
 
 /**
  * Central status chip. Always text + icon + tinted surface — never colour alone.
- * Example: ✓ Ready (CheckCircle2 + “Ready” on Soft Teal).
+ * Example: ✓ Ready (CheckCircle2 + “Ready” on Ready status green).
  */
 export function StatusChip({
   status,
@@ -162,7 +162,7 @@ export function ExpiringSoonChip({
 
 const DOCUMENT_TONE: Record<CurrentDocumentStatus, ChipTone> = {
   accepted: 'ok',
-  expiring_soon: 'warn',
+  expiring_soon: 'expiring',
   expired: 'danger',
   none: 'neutral',
 }

@@ -8,13 +8,22 @@ import { cn } from '@/lib/utils'
  *
  * `waiting` is the Sky / Waiting on Vendor tone from the Docket Tree UI spec.
  */
-export type ChipTone = 'ok' | 'info' | 'waiting' | 'warn' | 'danger' | 'neutral' | 'brand'
+export type ChipTone =
+  | 'ok'
+  | 'info'
+  | 'waiting'
+  | 'warn'
+  | 'expiring'
+  | 'danger'
+  | 'neutral'
+  | 'brand'
 
 export const TONE_CLASS: Record<ChipTone, string> = {
   ok: 'tone-ok',
   info: 'tone-info',
   waiting: 'tone-waiting',
   warn: 'tone-warn',
+  expiring: 'tone-expiring',
   danger: 'tone-danger',
   neutral: 'tone-neutral',
   brand: 'tone-brand',
@@ -26,6 +35,7 @@ export const TONE_SOLID: Record<ChipTone, string> = {
   info: 'bg-tone-info',
   waiting: 'bg-tone-waiting',
   warn: 'bg-tone-warn',
+  expiring: 'bg-tone-expiring',
   danger: 'bg-tone-danger',
   neutral: 'bg-tone-neutral',
   brand: 'bg-clay',

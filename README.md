@@ -216,16 +216,17 @@ molecules, then page templates. A feature file never declares a colour, a font s
 composes primitives. The full inventory and the reasoning are written up for humans in
 `docs/design-system.md` and `docs/visual-style.md` in the project workspace.
 
-**Warm paper, Ready Teal.** Three warm paper levels on Warm White (`#FAFAF7`), Deep Slate ink
-(`#20313A`), and Ready Teal (`#168C83`) for CTAs, links, focus and the Docket Tree mark. Status accents
-use Soft Teal (Ready), Lavender (In Review), Amber (Needs Action / Expiring Soon), and Coral only for
-critical / expired — never a wall of red. All of it is declared once in OKLCH in `src/index.css`.
+**Warm Ivory, Deep Evergreen.** Application floor is Warm Ivory (`#F8F6F1`), charcoal ink
+(`#202623`), Soft Stone borders (`#E3E4DF`), and Deep Evergreen (`#1F5C4A`) for CTAs, links, focus
+and the Docket Tree mark. Moss (`#78966A`) is secondary brand; Amber Gold (`#D9A441`) is selective
+emphasis. Status accents stay semantically separate from brand evergreen. All of it is declared once
+in OKLCH in `src/index.css` — see `docs/docket-tree-color-migration.md`.
 
-**Primary actions are Ready Teal.** Filled buttons, links, focus rings and active navigation share
-the brand teal family. The historical `--clay` token name still exists in CSS; its value is Ready
-Teal.
+**Primary actions are Deep Evergreen.** Filled buttons, links, focus rings and active navigation
+share the evergreen family. The historical `--clay` token name still exists in CSS; its value is
+Deep Evergreen (not Ready Teal).
 
-**Four status hues, deliberately spread.** Soft Teal for Ready, Lavender for In Review, Amber for
+**Status hues, deliberately spread.** Ready green for Ready, Lavender for In Review, Amber for
 Needs Action / Expiring soon, Coral for expired / critical only. Each is a token triple — tinted
 surface, border, text — plus a solid for dots and meters. A screen picks a tone, never a colour.
 Status is always tone plus icon plus text, so it survives greyscale. Display labels map domain
@@ -261,7 +262,7 @@ dismissible for the session, but an "Email paused" chip stays in the header and 
 notification log. The condition can be acknowledged, never silently forgotten.
 
 **Focus and keyboard.** Controls built on the shadcn primitives keep their own ring; everything else
-takes one global 2px teal outline, so nothing can be focused invisibly. After a route change focus
+takes one global 2px evergreen outline, so nothing can be focused invisibly. After a route change focus
 moves to the content region — it is a container, not a control, so it does not draw a box. `/` focuses
 the vendor search, and the skip link is the first tab stop on every page.
 
@@ -293,7 +294,7 @@ and blockers beside a scrollable checklist.
 
 **Vendor portal** leads with one answer — what is still needed — before any per-document detail,
 because a vendor contact opens it perhaps twice a year and is not a trained operator. Its progress bar
-is teal while work remains and Soft Teal / Ready green once everything is accepted.
+is evergreen while work remains and Ready status green once everything is accepted.
 
 **Loading and error states.** Skeletons mirror the layout that replaces them and sweep rather than
 blink. The pre-session screen draws the chrome it is about to fill instead of a spinner. Empty-state
@@ -306,7 +307,7 @@ of it.
 **Passwords** have a reveal toggle everywhere they are entered, because they are usually typed from a
 note an administrator handed over.
 
-**Unauthenticated screens** share a split layout: a Ready Teal brand column with the Docket Tree
+**Unauthenticated screens** share a split layout: a Deep Evergreen brand column with the Docket Tree
 wordmark and tagline beside the form on desktop, collapsing to one line of context on a phone.
 
 `scripts/shots.mjs` captures the whole product at 1440 px and 390 px for design review:

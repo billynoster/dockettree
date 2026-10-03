@@ -17,77 +17,86 @@
 /* ==========================================================================================
  * 1. TOKENS
  *
- * Docket Tree palette (Ready Vendors UI tokens): Ready Teal + Deep Slate + Warm White, with Sky / Soft Teal / Amber /
- * Coral / Lavender status accents. Declared once in OKLCH; `scripts/check-contrast.mjs` reads
- * these values and fails if a promised pair drops below its minimum ratio.
+ * Docket Tree palette: Deep Evergreen + Moss + Amber Gold on Warm Ivory / Soft Stone, with
+ * readiness status accents (docs/docket-tree-color-migration.md). Declared once in OKLCH;
+ * `scripts/check-contrast.mjs` reads these values and fails if a promised pair drops below
+ * its minimum ratio.
  * ========================================================================================== */
 
 :root {
     /*
-     * UI spec tokens (docs/ready-vendors-ui-spec.md) — product name is Docket Tree.
-     * Brand hex anchors: bg #F8F9F7 · teal #168C83 · text #202124 · border #E4E7E5.
-     * Primary teal is AA-darkened from #168C83 so filled and text uses stay ≥4.5:1.
+     * Brand hex anchors (Docket Tree):
+     * bg #F8F6F1 · evergreen #1F5C4A · moss #78966A · amber #D9A441 · text #202623 · border #E3E4DF.
      */
-    --paper: oklch(0.981 0.003 128.5);
+    --paper: oklch(0.973 0.007 88.6);
     --card: oklch(1.000 0.000 89.9);
-    --muted: oklch(0.958 0.006 150);
-    --accent: oklch(0.953 0.014 180);
+    --muted: oklch(0.960 0.007 132.4);
+    --accent: oklch(0.956 0.007 151.9);
 
-    /* Ink: primary #202124 · secondary #5F6368 (tertiary #80868B fails AA alone). */
-    --foreground: oklch(0.248 0.006 271.2);
-    --foreground-soft: oklch(0.420 0.010 250);
-    --muted-foreground: oklch(0.498 0.009 253.9);
+    /* Ink: charcoal #202623 · secondary #5F6762 · tertiary #808780. */
+    --foreground: oklch(0.262 0.010 164.1);
+    --foreground-soft: oklch(0.420 0.012 158);
+    --muted-foreground: oklch(0.505 0.013 158.5);
 
-    /* Lines: #E4E7E5 hairline; `--input` bounds a control and clears 3:1. */
-    --border: oklch(0.925 0.004 157.2);
-    --border-strong: oklch(0.880 0.006 160);
-    --input: oklch(0.620 0.018 210);
+    /* Soft Stone #E3E4DF; `--input` is darkened so control edges clear 3:1. */
+    --border: oklch(0.917 0.007 115.7);
+    --border-strong: oklch(0.884 0.009 134.9);
+    --input: oklch(0.620 0.014 150);
 
     /*
-     * Action / accent — Ready Teal family (#168C83).
-     * `--clay` / `--clay-text` keep historical names used across components.
+     * Action / brand — Deep Evergreen (#1F5C4A). Moss is secondary brand, not CTA fill.
+     * `--clay` / `--clay-text` keep historical names used across components (now evergreen / link).
      */
-    --primary: oklch(0.545 0.097 186.7);
+    --primary: oklch(0.430 0.070 170.2);
     --primary-foreground: oklch(0.985 0.007 106);
-    --primary-hover: oklch(0.480 0.095 186.7);
-    --clay: oklch(0.545 0.097 186.7);
-    --clay-text: oklch(0.480 0.095 186.7);
-    --ring: oklch(0.545 0.097 186.7);
+    --primary-hover: oklch(0.374 0.060 170.3);
+    --clay: oklch(0.430 0.070 170.2);
+    --clay-text: oklch(0.477 0.072 170.5);
+    --ring: oklch(0.430 0.070 170.2);
+    --moss: oklch(0.638 0.072 135.9);
+    --amber-gold: oklch(0.751 0.130 79.8);
 
-    /* Status tones — surfaces/text from UI spec; solids AA-tuned for dots/meters. */
-    --tone-ok-surface: oklch(0.953 0.019 180.3);
-    --tone-ok-border: oklch(0.900 0.030 182);
-    --tone-ok-foreground: oklch(0.478 0.078 184.2);
-    --tone-ok-solid: oklch(0.545 0.097 186.7);
+    /* Status tones — semantically distinct from brand evergreen (migration brief). */
+    --tone-ok-surface: oklch(0.948 0.014 162.5);
+    --tone-ok-border: oklch(0.895 0.026 158.2);
+    --tone-ok-foreground: oklch(0.437 0.070 166.4);
+    --tone-ok-solid: oklch(0.437 0.070 166.4);
 
-    --tone-info-surface: oklch(0.942 0.021 301.1);
-    --tone-info-border: oklch(0.880 0.035 300);
-    --tone-info-foreground: oklch(0.491 0.088 298.2);
-    --tone-info-solid: oklch(0.520 0.090 299);
+    --tone-info-surface: oklch(0.941 0.014 295.3);
+    --tone-info-border: oklch(0.880 0.030 295);
+    --tone-info-foreground: oklch(0.501 0.062 293.5);
+    --tone-info-solid: oklch(0.501 0.062 293.5);
 
-    --tone-waiting-surface: oklch(0.953 0.014 238.0);
-    --tone-waiting-border: oklch(0.890 0.025 235);
-    --tone-waiting-foreground: oklch(0.483 0.065 232.0);
-    --tone-waiting-solid: oklch(0.520 0.070 232);
+    --tone-waiting-surface: oklch(0.951 0.009 225.1);
+    --tone-waiting-border: oklch(0.890 0.020 225);
+    --tone-waiting-foreground: oklch(0.512 0.033 224.3);
+    --tone-waiting-solid: oklch(0.512 0.033 224.3);
 
-    --tone-warn-surface: oklch(0.964 0.039 86.1);
-    --tone-warn-border: oklch(0.900 0.070 82);
-    --tone-warn-foreground: oklch(0.508 0.105 79.4);
-    --tone-warn-solid: oklch(0.640 0.145 78);
+    --tone-warn-surface: oklch(0.967 0.036 86.2);
+    --tone-warn-border: oklch(0.900 0.060 80);
+    --tone-warn-foreground: oklch(0.514 0.100 78.5);
+    --tone-warn-solid: oklch(0.620 0.130 79);
 
-    --tone-danger-surface: oklch(0.946 0.022 24.4);
-    --tone-danger-border: oklch(0.880 0.050 26);
-    --tone-danger-foreground: oklch(0.498 0.140 28.1);
-    --tone-danger-solid: oklch(0.620 0.147 31.3);
+    /* Expiring Soon — warmer amber than Needs Action (#FDECD2 / #8C5B16). */
+    --tone-expiring-surface: oklch(0.950 0.039 78.6);
+    --tone-expiring-border: oklch(0.900 0.055 75);
+    --tone-expiring-foreground: oklch(0.513 0.102 69.7);
+    --tone-expiring-solid: oklch(0.600 0.125 72);
 
-    --tone-neutral-surface: oklch(0.955 0.004 150);
-    --tone-neutral-border: oklch(0.910 0.006 155);
-    --tone-neutral-foreground: oklch(0.420 0.010 250);
-    --tone-neutral-solid: oklch(0.560 0.012 230);
+    --tone-danger-surface: oklch(0.943 0.023 31.1);
+    --tone-danger-border: oklch(0.880 0.045 30);
+    --tone-danger-foreground: oklch(0.497 0.120 28.7);
+    --tone-danger-solid: oklch(0.560 0.140 28);
 
-    --tone-brand-surface: oklch(0.953 0.019 180.3);
-    --tone-brand-border: oklch(0.900 0.030 182);
-    --tone-brand-foreground: oklch(0.478 0.078 184.2);
+    --tone-neutral-surface: oklch(0.950 0.007 115.7);
+    --tone-neutral-border: oklch(0.910 0.008 115);
+    --tone-neutral-foreground: oklch(0.505 0.013 158.5);
+    --tone-neutral-solid: oklch(0.560 0.012 150);
+
+    /* Active nav / selected filter tint — Warm Evergreen wash, not solid CTA. */
+    --tone-brand-surface: oklch(0.945 0.011 158.8);
+    --tone-brand-border: oklch(0.845 0.028 157.3);
+    --tone-brand-foreground: oklch(0.371 0.046 171.8);
 
     /* Aliases the shadcn primitives read. */
     --background: var(--paper);
@@ -159,10 +168,13 @@
     --color-ring: var(--ring);
     --color-clay: var(--clay);
     --color-clay-text: var(--clay-text);
+    --color-moss: var(--moss);
+    --color-amber-gold: var(--amber-gold);
     --color-tone-ok: var(--tone-ok-solid);
     --color-tone-info: var(--tone-info-solid);
     --color-tone-waiting: var(--tone-waiting-solid);
     --color-tone-warn: var(--tone-warn-solid);
+    --color-tone-expiring: var(--tone-expiring-solid);
     --color-tone-danger: var(--tone-danger-solid);
     --color-tone-neutral: var(--tone-neutral-solid);
 
@@ -267,6 +279,12 @@
         background-color: var(--tone-warn-surface);
         border-color: var(--tone-warn-border);
         color: var(--tone-warn-foreground);
+    }
+
+    .tone-expiring {
+        background-color: var(--tone-expiring-surface);
+        border-color: var(--tone-expiring-border);
+        color: var(--tone-expiring-foreground);
     }
 
     .tone-danger {

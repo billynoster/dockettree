@@ -24,7 +24,7 @@ export function ToggleChip({
       className={cn(
         'type-subtitle inline-flex h-8 items-center gap-1.5 rounded-full border px-3 transition-[background-color,border-color,color] duration-(--duration-quick) ease-(--ease-soft)',
         pressed
-          ? 'border-primary bg-primary text-primary-foreground'
+          ? 'border-[var(--tone-brand-border)] bg-[var(--tone-brand-surface)] text-[var(--tone-brand-foreground)]'
           : 'border-border-strong bg-card text-foreground-soft hover:border-input hover:bg-muted hover:text-foreground',
         className,
       )}
