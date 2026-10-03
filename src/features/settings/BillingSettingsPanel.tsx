@@ -337,8 +337,8 @@ export function BillingSettingsPanel() {
 
           {showFounding ? (
             <InlineNotice tone="warn">
-              Founding list pricing is applied to this stub. Toggle `foundingPricingEnabled` or
-              `foundingRateApplied` when the public founding offer ends.
+              Founding list pricing is locked on this organization stub. Public founding rates can be
+              turned off from the pricing config when the early-adopter offer ends.
             </InlineNotice>
           ) : null}
 
