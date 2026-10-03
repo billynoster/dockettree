@@ -427,6 +427,12 @@ main:focus-visible,
     outline: none;
 }
 
+/* Landmark focus must not stomp the nested workspace panel radius (global :focus-visible). */
+main:focus,
+main:focus-visible {
+    border-radius: 0;
+}
+
 /* ==========================================================================================
  * 5. MOTION
  *

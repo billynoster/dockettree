@@ -663,8 +663,10 @@ export function AppShell() {
           id="main"
           ref={mainRef}
           tabIndex={-1}
-          className="min-w-0 flex-1 rounded-t-2xl bg-card outline-none"
+          className="min-w-0 flex-1 outline-none"
         >
+          {/* Nested workspace panel: top radii over paper chrome (Google Console–style join). */}
+          <div className="min-h-full rounded-t-2xl bg-card">
           <div className="mx-auto w-full max-w-[1600px] space-y-6 px-4 py-6 sm:px-6 sm:py-8 xl:px-8 xl:py-10">
             {app.delivery.configured || noticeDismissed ? null : (
               <InlineNotice
@@ -687,6 +689,7 @@ export function AppShell() {
               </InlineNotice>
             )}
             <Outlet />
+          </div>
           </div>
         </main>
       </div>
