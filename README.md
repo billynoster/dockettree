@@ -1,12 +1,12 @@
-# Docksy Vendor Readiness — V1
+# Ready Vendors — V1
 
-Know which vendors are ready to work, what's missing, and what expires next.
+**Know who can work. Know what’s next.**
 
-Vendor Readiness is a self-hosted B2B application for operations teams who request vendor
-documents, review submissions, track expirations, and need to see which vendors meet their
-organization's document requirements. V1 is a real product, not a demo: it authenticates people,
-enforces permissions on the server, keeps records in SQLite and documents in a private directory,
-and records every notification it produces with its true delivery state.
+Ready Vendors is a self-hosted B2B application for property operations teams who need to see which
+vendors are ready to work, what documents are missing or expiring, and what needs review. V1 is a
+real product, not a demo: it authenticates people, enforces permissions on the server, keeps records
+in SQLite and documents in a private directory, and records every notification it produces with its
+true delivery state.
 
 - One Node process serves the API and the browser client.
 - Staff and vendor contacts sign in with an email and password; roles come from stored memberships.
@@ -14,6 +14,20 @@ and records every notification it produces with its true delivery state.
 - Email is optional: with no SMTP configured, messages are queued and the app says so rather than
   claiming delivery.
 - No API keys, cloud accounts or external services are needed to run it.
+
+### Status display labels
+
+Section 3–5 calculations and domain enums are unchanged. The UI softens presentation:
+
+| Domain status | Display label |
+| --- | --- |
+| `ready` | Ready |
+| `awaiting_review` | In Review |
+| `not_ready` | Needs Action |
+| `unconfigured` | Not Started |
+| `archived` | Archived |
+
+Avoid compliant / failed / violation language in product copy.
 
 ---
 
@@ -41,8 +55,8 @@ npm run db:seed
 ```
 
 This **replaces** the contents of the database with the fictional "Cedar Grove Property Operations"
-dataset from the requirements: 12 vendors (4 Ready — 2 of them Expiring soon, 2 Awaiting review,
-3 Not ready, 1 Unconfigured, 2 Archived), real generated sample PDFs and images marked
+dataset from the requirements: 12 vendors (4 Ready — 2 of them Expiring soon, 2 In Review,
+3 Needs Action, 1 Not Started, 2 Archived), real generated sample PDFs and images marked
 `SAMPLE — NOT VALID FOR BUSINESS USE`, and fictional history. It prints the accounts it creates:
 
 | Account | Role | Password |
@@ -202,39 +216,37 @@ molecules, then page templates. A feature file never declares a colour, a font s
 composes primitives. The full inventory and the reasoning are written up for humans in
 `docs/design-system.md` and `docs/visual-style.md` in the project workspace.
 
-**Warm paper, not glass.** Three warm paper levels — a cream page, a warm-white panel, a recessed
-step — with a warm near-black ink ramp. Nothing is `#ffffff`, nothing is `#000000`, and no neutral
-carries more than 0.016 chroma, which is the point past which cream turns beige. All of it is
-declared once in OKLCH in `src/index.css`.
+**Warm paper, Ready Teal.** Three warm paper levels on Warm White (`#FAFAF7`), Deep Slate ink
+(`#20313A`), and Ready Teal (`#168C83`) for CTAs, links, focus and the Ready Dot mark. Status accents
+use Soft Teal (Ready), Lavender (In Review), Amber (Needs Action / Expiring Soon), and Coral only for
+critical / expired — never a wall of red. All of it is declared once in OKLCH in `src/index.css`.
 
-**The primary action is ink, not the accent.** Filled buttons are espresso, which leaves the four
-status hues as the only chromatic colour in the product, so a filled control can never be misread as
-a status. Clay (a burnt sienna) is the single rationed accent: links, focus rings, active navigation
-and the brand mark.
+**Primary actions are Ready Teal.** Filled buttons, links, focus rings and active navigation share
+the brand teal family. The historical `--clay` token name still exists in CSS; its value is Ready
+Teal.
 
-**Four status hues, deliberately spread.** Crimson (16°) for Not ready, amber (80°) for Expiring
-soon, olive-green (142°) for Ready and one cool hue (248°) for Awaiting review. Each is a token
-triple — tinted surface, border, text — plus a solid for dots and meters. A screen picks a tone, never
-a colour. Status is always tone plus icon plus text, so it survives greyscale.
+**Four status hues, deliberately spread.** Soft Teal for Ready, Lavender for In Review, Amber for
+Needs Action / Expiring soon, Coral for expired / critical only. Each is a token triple — tinted
+surface, border, text — plus a solid for dots and meters. A screen picks a tone, never a colour.
+Status is always tone plus icon plus text, so it survives greyscale. Display labels map domain
+`awaiting_review` → “In Review”, `not_ready` → “Needs Action”, `unconfigured` → “Not Started”
+without changing calculations.
 
 **Contrast is measured, not asserted.** `node scripts/check-contrast.mjs` reads the OKLCH values out
 of `src/index.css`, converts them to sRGB and checks 39 pairs: body ink at AAA on all three papers,
 metadata and every tone's chip text at 4.5:1, and every solid fill, input boundary and focus ring at
 3:1. It exits non-zero on failure, so a token cannot be nudged for looks unnoticed.
 
-**Type is Fraunces plus Hanken Grotesk**, both variable and installed from npm — no font service, no
-API key, versions pinned in the lockfile. Fraunces was chosen for its `SOFT` axis, which rounds the
-terminals without changing the letterforms and is the literal softness lever the direction asks for;
-it runs at `SOFT 40` with `WONK 0`, because the wonk axis is what would make it boutique rather than
-enterprise. Hanken Grotesk holds up at the 13px this product lives at and ships equal-width figures
-by default, which a readiness table needs. IBM Plex Mono 400 appears only on machine values a person
-may need to copy. The eleven `.type-*` classes are the whole scale; the serif is used only at the
-start of a page or a moment — page titles, dialog titles, empty and error headings — and never for a
-number, because figures must align in a column.
+**Type is Manrope plus Inter**, both variable and installed from npm — no font service, no API key,
+versions pinned in the lockfile. Manrope carries page titles, dialog titles and empty-state headings;
+Inter does UI and body work and holds up at the 13px this product lives at. IBM Plex Mono 400 appears
+only on machine values a person may need to copy. The eleven `.type-*` classes are the whole scale;
+Manrope is used only at the start of a page or a moment — and never for a number, because figures
+must align in a column.
 
 **Soft, but not pill.** A panel is rounder than the controls inside it (18px panels, 10px buttons and
 fields); only chips and toggles are fully round. Depth is borders first and shadow second, in three
-steps, each a stack of very low-opacity warm shadows — no pure-black shadow anywhere.
+steps, each a stack of very low-opacity warm-slate shadows — no pure-black shadow anywhere.
 
 **No dark mode in V1.** The tokens support it, but a second theme means re-checking every status tone
 twice; the effort went into getting one theme right. Deliberate gap, not an oversight.
@@ -242,18 +254,16 @@ twice; the effort went into getting one theme right. Deliberate gap, not an over
 **Navigation.** Seven flat links became three groups (Operations / Records / Configuration). Below
 1024px the sidebar becomes a drawer rather than a horizontally scrolling strip, which previously hid
 Notifications, Activity and Settings off the right edge of a phone. Sign out moved into an account
-menu showing identity and role.
+menu showing identity and role. Product chrome says **Ready Vendors** with the Ready Dot mark.
 
 **Server-state signals.** When SMTP is not configured, the one-line banner explaining it is
 dismissible for the session, but an "Email paused" chip stays in the header and links to the
 notification log. The condition can be acknowledged, never silently forgotten.
 
 **Focus and keyboard.** Controls built on the shadcn primitives keep their own ring; everything else
-takes one global 2px clay outline, so nothing can be focused invisibly. After a route change focus
+takes one global 2px teal outline, so nothing can be focused invisibly. After a route change focus
 moves to the content region — it is a container, not a control, so it does not draw a box. `/` focuses
-the vendor search, and the skip link is the first tab stop on every page. One residual risk is
-recorded: the clay focus ring and the crimson invalid border are both warm, 32° apart; the invalid
-state also renders a message and `aria-invalid`.
+the vendor search, and the skip link is the first tab stop on every page.
 
 **Rows are links.** Attention rows, review-queue rows and mobile vendor cards are a single link
 covering the visible row, so the pointer target matches what is drawn and the keyboard gets one stop
@@ -262,7 +272,7 @@ a real link on the company name, which is what assistive technology follows.
 
 **Filtering.** Vendor search applies as you type (350ms debounce) and still writes to the URL, so a
 shared link reproduces the exact result set. Readiness is `aria-pressed` toggle chips whose pressed
-fill is ink rather than a status hue; category, property tag and lifecycle fold behind "More";
+fill is primary rather than a status hue; category, property tag and lifecycle fold behind "More";
 everything applied is shown as a removable pill. All four filtering screens compose the same
 `Toolbar`, so "Clear filters" means the same thing everywhere.
 
@@ -283,10 +293,11 @@ and blockers beside a scrollable checklist.
 
 **Vendor portal** leads with one answer — what is still needed — before any per-document detail,
 because a vendor contact opens it perhaps twice a year and is not a trained operator. Its progress bar
-is ink while work remains and green once everything is accepted; a clay bar read as a warning.
+is teal while work remains and Soft Teal / Ready green once everything is accepted.
 
 **Loading and error states.** Skeletons mirror the layout that replaces them and sweep rather than
-blink. The pre-session screen draws the chrome it is about to fill instead of a spinner.
+blink. The pre-session screen draws the chrome it is about to fill instead of a spinner. Empty-state
+copy stays calm and helpful (“Everyone’s ready. Nothing needs your attention right now.”).
 
 **Motion** is one easing curve and two durations (140ms for a control answering the pointer, 240ms for
 something arriving). Nothing loops except the loading sweep, and `prefers-reduced-motion` removes all
@@ -295,8 +306,8 @@ of it.
 **Passwords** have a reveal toggle everywhere they are entered, because they are usually typed from a
 note an administrator handed over.
 
-**Unauthenticated screens** share a split layout: a brand column explaining what the product is
-beside the form on desktop, collapsing to one line of context on a phone.
+**Unauthenticated screens** share a split layout: a Ready Teal brand column with the Ready Vendors
+wordmark and tagline beside the form on desktop, collapsing to one line of context on a phone.
 
 `scripts/shots.mjs` captures the whole product at 1440 px and 390 px for design review:
 `node scripts/shots.mjs <output-dir> [filename-prefix]` against a running dev server.

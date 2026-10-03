@@ -2,7 +2,7 @@
  * Status chips: the product's vocabulary of states, each mapped once to a tone and an icon.
  *
  * These are molecules over the `Chip` atom. A screen never picks a tone for a domain state itself,
- * so "Not ready" is the same colour and the same icon on every surface.
+ * so "Needs Action" is the same colour and the same icon on every surface.
  */
 import {
   Archive,
@@ -26,10 +26,11 @@ import { INVITATION_LABEL, type InvitationStatus } from '@/domain/invitations'
 
 export { Chip, ToneDot, type ChipTone }
 
+/** Needs Action uses amber (warn), not coral — reserve danger for expired / critical only. */
 export const READINESS_TONE: Record<ReadinessStatus, ChipTone> = {
   ready: 'ok',
   awaiting_review: 'info',
-  not_ready: 'danger',
+  not_ready: 'warn',
   unconfigured: 'neutral',
   archived: 'neutral',
 }

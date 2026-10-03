@@ -25,7 +25,7 @@ function NotFoundPage() {
   return (
     <EmptyState
       title="Page not found"
-      description="That address does not match any screen in Vendor Readiness. It may have been renamed, or the record may have been archived."
+      description="That address does not match any screen in Ready Vendors. It may have been renamed, or the record may have been archived."
       action={
         <Button asChild size="sm">
           <Link to="/overview">Go to the overview</Link>
@@ -43,11 +43,11 @@ function Loading() {
   return (
     <div className="min-h-dvh">
       <p className="sr-only" role="status">
-        Loading Vendor Readiness…
+        Loading Ready Vendors…
       </p>
       <header className="flex h-14 items-center gap-2.5 border-b bg-card px-4">
         <BrandMark />
-        <span className="text-sm font-semibold">Vendor Readiness</span>
+        <span className="text-sm font-semibold">Ready Vendors</span>
       </header>
       <div className="mx-auto flex max-w-[1600px] gap-8 px-4 py-8" aria-hidden="true">
         <div className="hidden w-52 shrink-0 space-y-2 lg:block">
@@ -81,7 +81,7 @@ function ServerUnavailable({ message, onRetry }: { message: string; onRetry: () 
           <h1 className="text-lg font-semibold">The server is not reachable</h1>
           <p className="text-sm text-muted-foreground">{message}</p>
           <p className="text-sm text-muted-foreground">
-            Vendor Readiness keeps every record on its own server, so nothing is shown until that
+            Ready Vendors keeps every record on its own server, so nothing is shown until that
             server answers. Check that the API process is running, then try again.
           </p>
         </div>

@@ -74,7 +74,7 @@ export function OverviewPage() {
         title="Overview"
         description={
           <>
-            Readiness across active vendors · today {formatDate(query.data.today)} (
+            Good morning. Here’s what needs attention · today {formatDate(query.data.today)} (
             {app.organization.timezone})
           </>
         }
@@ -125,7 +125,7 @@ export function OverviewPage() {
               to={vendorsLink({ expiringSoonOnly: true })}
             />
             <SecondaryMetricLink
-              label="Pending review"
+              label="In Review"
               value={pendingReviewCount}
               tone="info"
               icon={FileCheck2}
@@ -206,7 +206,7 @@ export function OverviewPage() {
               <p className="mx-auto max-w-prose text-sm text-muted-foreground">
                 {organizationIsEmpty
                   ? 'No vendors yet. Add a vendor, assign a checklist, and invite their contact.'
-                  : 'Every active vendor is ready and nothing expires in the next 30 days.'}
+                  : 'Everyone’s ready. Nothing needs your attention right now.'}
               </p>
               {organizationIsEmpty && app.can('vendor.manage') ? (
                 <div className="flex flex-wrap justify-center gap-2">

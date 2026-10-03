@@ -1,5 +1,5 @@
 /**
- * Entity types for the Vendor Readiness domain (requirements section 8).
+ * Entity types for the Ready Vendors domain (requirements section 8).
  *
  * Readiness is always derived (see `readiness.ts`); it is never stored on an entity.
  */

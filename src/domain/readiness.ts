@@ -273,19 +273,23 @@ export function computeRequirementStatuses(
     )
 }
 
+/**
+ * Brand display labels for readiness. Domain enums and section 3–5 calculations are unchanged;
+ * these strings are presentation only (e.g. awaiting_review → "In Review").
+ */
 export const READINESS_LABEL: Record<ReadinessStatus, string> = {
   ready: 'Ready',
-  awaiting_review: 'Awaiting review',
-  not_ready: 'Not ready',
-  unconfigured: 'Unconfigured',
+  awaiting_review: 'In Review',
+  not_ready: 'Needs Action',
+  unconfigured: 'Not Started',
   archived: 'Archived',
 }
 
 export const READINESS_EXPLANATION: Record<ReadinessStatus, string> = {
-  ready: 'Every required document has been accepted and is current.',
-  awaiting_review: 'Every outstanding required item has a submission waiting for a decision.',
-  not_ready: 'At least one required item is unsatisfied with nothing pending to resolve it.',
-  unconfigured: 'No required items are assigned yet, so readiness cannot be determined.',
+  ready: 'Everything currently required is in place and current.',
+  awaiting_review: 'Documents or information are waiting for a review decision.',
+  not_ready: 'Something still needs attention before this vendor can work.',
+  unconfigured: 'The readiness process has not begun — no required items are assigned yet.',
   archived: 'Archived vendors are excluded from active metrics, review queue and reminders.',
 }
 

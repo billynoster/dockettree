@@ -54,7 +54,7 @@ const TYPE_ICON: Record<Notification['type'], typeof Bell> = {
 const STATUS_LABEL: Record<Notification['status'], string> = {
   queued: 'Queued',
   sent: 'Sent',
-  failed: 'Failed',
+  failed: 'Not sent',
   retry_scheduled: 'Retry scheduled',
 }
 

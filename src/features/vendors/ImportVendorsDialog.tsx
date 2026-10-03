@@ -127,7 +127,7 @@ export function ImportVendorsDialog({ trigger }: { trigger: React.ReactNode }) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">No checklist (vendors stay Unconfigured)</SelectItem>
+                <SelectItem value="none">No checklist (vendors stay Not Started)</SelectItem>
                 {(templates.data ?? [])
                   .filter((entry) => !entry.template.archived_at)
                   .map((entry) => (

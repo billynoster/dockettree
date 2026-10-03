@@ -211,7 +211,7 @@ export function RequirementCard({
                         <>
                           {requirement.title} version {status.effective.version_number} will stop
                           satisfying this requirement immediately. There is no automatic fallback to
-                          an older accepted version, so the vendor may become Not ready.
+                          an older accepted version, so the vendor may become Needs Action.
                         </>
                       }
                       label="Reason for revoking (recorded in history and shown to the vendor)"

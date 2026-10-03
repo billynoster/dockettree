@@ -333,7 +333,7 @@ export async function checkInvitation(
   )
   return {
     company_name: vendor.company_name,
-    organization_name: organization?.name ?? 'Vendor Readiness',
+    organization_name: organization?.name ?? 'Ready Vendors',
     invited_email: usable.invited_email,
     expires_at: usable.expires_at,
     needsPassword: existing?.password_hash === null || existing === undefined,

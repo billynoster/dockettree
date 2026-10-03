@@ -6,11 +6,10 @@
  * Typefaces. Both are variable and installed from npm, so there is no external font service, no
  * API key, and the exact version is pinned in the lockfile.
  *
- * Fraunces is loaded from its full build because the design uses its SOFT axis, which is the
- * literal lever for the soft look: it rounds the terminals without changing the letterforms.
+ * Inter carries UI and body copy; Manrope carries headlines and page titles.
  */
-@import "@fontsource-variable/fraunces/full.css";
-@import "@fontsource-variable/hanken-grotesk";
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/manrope";
 @import "@fontsource/ibm-plex-mono/latin-400.css";
 
 @custom-variant dark (&:is(.dark *));
@@ -18,70 +17,69 @@
 /* ==========================================================================================
  * 1. TOKENS
  *
- * The raw palette is declared once, in OKLCH, and everything else aliases it. Nothing in the
- * product may introduce a colour outside this block; `scripts/check-contrast.mjs` reads these
- * values directly and fails the build if a promised pair drops below its minimum ratio.
+ * Ready Vendors palette: Ready Teal + Deep Slate + Warm White, with Sky / Soft Teal / Amber /
+ * Coral / Lavender status accents. Declared once in OKLCH; `scripts/check-contrast.mjs` reads
+ * these values and fails if a promised pair drops below its minimum ratio.
  * ========================================================================================== */
 
 :root {
-    /* --- Paper: three warm levels. The page is never white and never grey. --- */
-    --paper: oklch(0.971 0.009 84);
-    --card: oklch(0.995 0.004 86);
-    --muted: oklch(0.951 0.013 83);
-    --accent: oklch(0.941 0.016 80);
+    /* --- Paper: warm white floor, never pure white and never cool grey. --- */
+    --paper: oklch(0.984 0.004 106.5);
+    --card: oklch(0.995 0.003 106);
+    --muted: oklch(0.958 0.008 180);
+    --accent: oklch(0.948 0.014 180);
 
-    /* --- Ink: warm dark, never black. --- */
-    --foreground: oklch(0.262 0.019 58);
-    --foreground-soft: oklch(0.402 0.018 60);
-    --muted-foreground: oklch(0.506 0.017 62);
+    /* --- Ink: Deep Slate, never black. --- */
+    --foreground: oklch(0.302 0.028 232);
+    --foreground-soft: oklch(0.420 0.025 230);
+    --muted-foreground: oklch(0.500 0.020 220);
 
     /* --- Lines. `--border` is decorative hairline; `--input` bounds a control and clears 3:1. --- */
-    --border: oklch(0.898 0.014 76);
-    --border-strong: oklch(0.858 0.016 74);
-    --input: oklch(0.640 0.019 70);
+    --border: oklch(0.900 0.010 180);
+    --border-strong: oklch(0.860 0.012 185);
+    --input: oklch(0.620 0.018 210);
 
     /*
      * --- Action and accent ---
-     * The primary action is espresso ink rather than a saturated hue, which leaves the four status
-     * hues as the only chromatic colour in the product. Clay is the single rationed accent: links,
-     * focus, active navigation, meters and the brand mark.
+     * Primary CTAs and the brand mark use Ready Teal. `--clay` / `--clay-text` keep the historical
+     * token names used across components; their values are Ready Teal (links, focus, active nav).
      */
-    --primary: oklch(0.302 0.023 52);
-    --primary-foreground: oklch(0.985 0.007 84);
-    --primary-hover: oklch(0.242 0.023 52);
-    --clay: oklch(0.552 0.118 48);
-    --clay-text: oklch(0.452 0.104 46);
-    --ring: oklch(0.552 0.118 48);
+    --primary: oklch(0.545 0.097 186.7);
+    --primary-foreground: oklch(0.985 0.007 106);
+    --primary-hover: oklch(0.480 0.095 186.7);
+    --clay: oklch(0.545 0.097 186.7);
+    --clay-text: oklch(0.480 0.095 186.7);
+    --ring: oklch(0.545 0.097 186.7);
 
-    /* --- Status tones: surface / border / text / solid, four well-separated hues. --- */
-    --tone-ok-surface: oklch(0.955 0.031 142);
-    --tone-ok-border: oklch(0.872 0.056 142);
-    --tone-ok-foreground: oklch(0.428 0.086 145);
-    --tone-ok-solid: oklch(0.556 0.108 145);
+    /* --- Status tones: Soft Teal / Lavender / Amber / Coral — never a wall of red. --- */
+    --tone-ok-surface: oklch(0.948 0.022 182.5);
+    --tone-ok-border: oklch(0.880 0.040 186);
+    --tone-ok-foreground: oklch(0.430 0.090 186);
+    --tone-ok-solid: oklch(0.545 0.097 186.7);
 
-    --tone-info-surface: oklch(0.955 0.028 248);
-    --tone-info-border: oklch(0.872 0.051 248);
-    --tone-info-foreground: oklch(0.441 0.098 253);
-    --tone-info-solid: oklch(0.551 0.116 253);
+    --tone-info-surface: oklch(0.931 0.023 299.4);
+    --tone-info-border: oklch(0.860 0.040 299);
+    --tone-info-foreground: oklch(0.430 0.080 299);
+    --tone-info-solid: oklch(0.520 0.090 299);
 
-    --tone-warn-surface: oklch(0.962 0.045 82);
-    --tone-warn-border: oklch(0.868 0.082 78);
-    --tone-warn-foreground: oklch(0.449 0.096 62);
-    --tone-warn-solid: oklch(0.626 0.132 70);
+    --tone-warn-surface: oklch(0.955 0.055 80);
+    --tone-warn-border: oklch(0.870 0.090 78);
+    --tone-warn-foreground: oklch(0.450 0.110 65);
+    --tone-warn-solid: oklch(0.660 0.140 80);
 
-    --tone-danger-surface: oklch(0.955 0.030 16);
-    --tone-danger-border: oklch(0.872 0.056 16);
-    --tone-danger-foreground: oklch(0.452 0.144 18);
-    --tone-danger-solid: oklch(0.548 0.170 20);
+    --tone-danger-surface: oklch(0.955 0.035 31);
+    --tone-danger-border: oklch(0.870 0.070 31);
+    --tone-danger-foreground: oklch(0.480 0.140 31);
+    --tone-danger-solid: oklch(0.620 0.147 31.3);
 
-    --tone-neutral-surface: oklch(0.948 0.013 80);
-    --tone-neutral-border: oklch(0.888 0.015 78);
-    --tone-neutral-foreground: oklch(0.428 0.017 70);
-    --tone-neutral-solid: oklch(0.572 0.016 75);
+    --tone-neutral-surface: oklch(0.948 0.008 200);
+    --tone-neutral-border: oklch(0.888 0.010 200);
+    --tone-neutral-foreground: oklch(0.420 0.020 220);
+    --tone-neutral-solid: oklch(0.560 0.018 210);
 
-    --tone-brand-surface: oklch(0.956 0.023 60);
-    --tone-brand-border: oklch(0.884 0.048 55);
-    --tone-brand-foreground: oklch(0.452 0.104 46);
+    --tone-brand-surface: oklch(0.948 0.022 182.5);
+    --tone-brand-border: oklch(0.880 0.040 186);
+    --tone-brand-foreground: oklch(0.430 0.090 186);
 
     /* --- Aliases the shadcn primitives read. --- */
     --background: var(--paper);
@@ -106,22 +104,20 @@
 
     /*
      * --- Elevation ---
-     * Three steps, each a stack of very low-opacity warm shadows rather than one dark drop, so a
-     * panel reads as resting on paper instead of floating in front of a screen. No pure black.
+     * Three steps, each a stack of very low-opacity warm-slate shadows rather than one dark drop.
      */
     --shadow-surface:
-        0 1px 1px oklch(0.32 0.03 55 / 0.035),
-        0 2px 4px -1px oklch(0.32 0.03 55 / 0.035);
-    /* A warm inset hairline for fields. It is a boundary cue, not an elevation step. */
-    --shadow-control: inset 0 1px 1px oklch(0.32 0.03 55 / 0.03);
+        0 1px 1px oklch(0.30 0.03 232 / 0.035),
+        0 2px 4px -1px oklch(0.30 0.03 232 / 0.035);
+    --shadow-control: inset 0 1px 1px oklch(0.30 0.03 232 / 0.03);
     --shadow-raised:
-        0 1px 1px oklch(0.32 0.03 55 / 0.04),
-        0 3px 6px -2px oklch(0.32 0.03 55 / 0.05),
-        0 10px 20px -8px oklch(0.32 0.03 55 / 0.06);
+        0 1px 1px oklch(0.30 0.03 232 / 0.04),
+        0 3px 6px -2px oklch(0.30 0.03 232 / 0.05),
+        0 10px 20px -8px oklch(0.30 0.03 232 / 0.06);
     --shadow-overlay:
-        0 1px 2px oklch(0.32 0.03 55 / 0.04),
-        0 8px 16px -6px oklch(0.32 0.03 55 / 0.08),
-        0 28px 56px -24px oklch(0.32 0.03 55 / 0.2);
+        0 1px 2px oklch(0.30 0.03 232 / 0.04),
+        0 8px 16px -6px oklch(0.30 0.03 232 / 0.08),
+        0 28px 56px -24px oklch(0.30 0.03 232 / 0.2);
 
     /* --- Motion: two durations and one easing curve for the whole product. --- */
     --ease-soft: cubic-bezier(0.22, 0.9, 0.3, 1);
@@ -132,11 +128,9 @@
 }
 
 @theme inline {
-    --font-sans: 'Hanken Grotesk Variable', ui-sans-serif, system-ui, sans-serif;
-    --font-display: 'Fraunces Variable', ui-serif, Georgia, serif;
+    --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+    --font-display: 'Manrope Variable', ui-sans-serif, system-ui, sans-serif;
     --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
-    /* Dialog and card titles in the shadcn primitives read this, which is exactly where the
-     * display serif belongs. */
     --font-heading: var(--font-display);
 
     --color-background: var(--background);
@@ -283,16 +277,15 @@
     }
 
     /* --- Type scale ---
-     * The display serif speaks at the start of a page or a moment: page titles, dialog titles,
-     * empty and error headings, the wordmark. The sans does all the work. Nothing else.
+     * Manrope speaks at the start of a page or a moment: page titles, dialog titles,
+     * empty and error headings, the wordmark. Inter does all the work. Nothing else.
      */
     .type-display {
         font-family: var(--font-display);
         font-size: 1.75rem;
-        line-height: 1.12;
-        font-weight: 500;
-        letter-spacing: -0.021em;
-        font-variation-settings: 'SOFT' 40, 'WONK' 0, 'opsz' 32;
+        line-height: 1.15;
+        font-weight: 600;
+        letter-spacing: -0.022em;
         text-wrap: balance;
     }
 
@@ -300,9 +293,8 @@
         font-family: var(--font-display);
         font-size: 1.125rem;
         line-height: 1.25;
-        font-weight: 500;
-        letter-spacing: -0.014em;
-        font-variation-settings: 'SOFT' 40, 'WONK' 0, 'opsz' 18;
+        font-weight: 600;
+        letter-spacing: -0.016em;
         text-wrap: balance;
     }
 

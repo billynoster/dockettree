@@ -154,7 +154,7 @@ export function VendorNewPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">
-                  No checklist yet (the vendor will be Unconfigured)
+                  No checklist yet (the vendor will be Not Started)
                 </SelectItem>
                 {(templates.data ?? [])
                   .filter((entry) => !entry.template.archived_at)
@@ -196,7 +196,7 @@ export function VendorNewPage() {
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">
-              A vendor with no required items is reported as Unconfigured until a checklist is
+              A vendor with no required items is reported as Not Started until a checklist is
               assigned.
             </p>
           )}

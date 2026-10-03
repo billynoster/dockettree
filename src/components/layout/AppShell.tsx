@@ -10,7 +10,6 @@ import {
   MailWarning,
   Menu,
   Settings,
-  ShieldCheck,
   Users,
   X,
 } from 'lucide-react'
@@ -91,6 +90,7 @@ function initials(name: string): string {
     .join('')
 }
 
+/** Ready Dot mark — teal tile with a warm-white center. No shields or certificates. */
 export function BrandMark({ className }: { className?: string }) {
   return (
     <span
@@ -100,7 +100,7 @@ export function BrandMark({ className }: { className?: string }) {
         className,
       )}
     >
-      <ShieldCheck className="size-[1.125rem]" />
+      <span className="size-2.5 rounded-full bg-primary-foreground" />
     </span>
   )
 }
@@ -176,7 +176,7 @@ export function AppShell() {
   const firstRender = useRef(true)
   const pendingCount = queue.data?.total ?? null
   const pageTitle =
-    PAGE_TITLES.find((entry) => location.pathname.startsWith(entry.prefix))?.title ?? 'Vendor Readiness'
+    PAGE_TITLES.find((entry) => location.pathname.startsWith(entry.prefix))?.title ?? 'Ready Vendors'
 
   // Moving focus to the content region on navigation means keyboard and screen-reader users start
   // at the new page instead of back at the top of the navigation they just used.
@@ -191,7 +191,7 @@ export function AppShell() {
   }, [location.pathname])
 
   useEffect(() => {
-    document.title = `${pageTitle} · Vendor Readiness`
+    document.title = `${pageTitle} · Ready Vendors`
   }, [pageTitle])
 
   const signOut = () => {
@@ -219,7 +219,7 @@ export function AppShell() {
                 <BrandMark />
                 <span className="min-w-0">
                   <span className="block truncate text-sm leading-tight font-semibold">
-                    Vendor Readiness
+                    Ready Vendors
                   </span>
                   <span className="block truncate text-xs font-normal text-muted-foreground">
                     {app.organization.name}
@@ -251,7 +251,7 @@ export function AppShell() {
             <BrandMark />
             <span className="min-w-0">
               <span className="block truncate text-sm leading-tight font-semibold">
-                Vendor Readiness
+                Ready Vendors
               </span>
               <span className="block truncate text-xs leading-tight text-muted-foreground">
                 {app.organization.name}

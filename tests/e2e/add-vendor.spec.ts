@@ -25,7 +25,7 @@ test.describe('W1 add vendor', () => {
     await expect(page.getByText('No invitation has been sent yet')).toBeVisible()
     await expect(page.getByRole('heading', { level: 1, name: 'Beacon Hill Glass' })).toBeVisible()
     await expect(page.getByText('Not invited')).toBeVisible()
-    await expect(page.getByText('Not ready').first()).toBeVisible()
+    await expect(page.getByText('Needs Action').first()).toBeVisible()
 
     await page.getByRole('button', { name: 'Send invitation', exact: true }).click()
     const dialog = page.getByRole('dialog')

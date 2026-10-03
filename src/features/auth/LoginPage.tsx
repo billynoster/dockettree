@@ -38,8 +38,8 @@ export function LoginPage() {
     <AuthLayout
       organizationName={state.info?.organizationName}
       points={[
-        'See which vendors are ready to work today, and exactly what is missing for the ones that are not.',
-        'Vendors upload insurance and agreements themselves; you review, accept or send them back.',
+        'See which vendors are ready to work, and exactly what still needs attention.',
+        'Vendors upload insurance and agreements themselves; you review and move requests forward.',
         'Every decision, reminder and document version is recorded and cannot be edited after the fact.',
       ]}
     >

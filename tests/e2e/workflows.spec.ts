@@ -29,13 +29,13 @@ test.describe('overview and directory', () => {
     const active = page.locator('section', { has: page.getByRole('heading', { name: 'Active vendors' }) })
     await expect(active).toContainText('10')
     await expect(page.getByRole('link', { name: /^Ready 4/ })).toBeVisible()
-    await expect(page.getByRole('link', { name: /^Awaiting review 2/ })).toBeVisible()
-    await expect(page.getByRole('link', { name: /^Not ready 3/ })).toBeVisible()
-    await expect(page.getByRole('link', { name: /^Unconfigured 1/ })).toBeVisible()
+    await expect(page.getByRole('link', { name: /^In Review 2/ })).toBeVisible()
+    await expect(page.getByRole('link', { name: /^Needs Action 3/ })).toBeVisible()
+    await expect(page.getByRole('link', { name: /^Not Started 1/ })).toBeVisible()
     await expect(page.getByRole('heading', { name: 'Expiring soon' })).toBeVisible()
     await expect(page.getByRole('link', { name: 'Open review queue' })).toBeVisible()
 
-    await page.getByRole('link', { name: /^Not ready 3/ }).click()
+    await page.getByRole('link', { name: /^Needs Action 3/ }).click()
     await expect(page).toHaveURL(/readiness=not_ready/)
     await expect(page.getByText('Showing 1–3 of 3 vendors')).toBeVisible()
 
@@ -195,7 +195,7 @@ test.describe('W2/W3 submit, correct, accept', () => {
     await dialog.locator('#reason-input').fill('The certificate names a different legal entity.')
     await dialog.getByRole('button', { name: 'Revoke acceptance' }).click()
     await expect(page.getByText('Insurance certificate acceptance revoked')).toBeVisible()
-    await expect(page.getByText('Not ready').first()).toBeVisible()
+    await expect(page.getByText('Needs Action').first()).toBeVisible()
   })
 })
 

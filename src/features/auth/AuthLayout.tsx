@@ -1,4 +1,5 @@
-import { CheckCircle2, ShieldCheck } from 'lucide-react'
+import { CheckCircle2 } from 'lucide-react'
+import { BrandMark } from '@/components/layout/AppShell'
 import { cn } from '@/lib/utils'
 
 /**
@@ -26,14 +27,17 @@ export function AuthLayout({
       <aside className="hidden flex-col justify-between bg-primary px-10 py-12 text-primary-foreground lg:flex">
         <div className="space-y-6">
           <span className="flex size-11 items-center justify-center rounded-xl bg-primary-foreground/15 ring-1 ring-primary-foreground/25">
-            <ShieldCheck aria-hidden="true" className="size-6" />
+            <span aria-hidden="true" className="size-3 rounded-full bg-primary-foreground" />
           </span>
           <div className="space-y-2">
-            <p className="type-display">Vendor Readiness</p>
+            <p className="type-display text-primary-foreground">Ready Vendors</p>
+            <p className="text-sm leading-relaxed text-primary-foreground/80">
+              Know who can work. Know what&apos;s next.
+            </p>
             <p className="text-sm leading-relaxed text-primary-foreground/80">
               {organizationName
-                ? `Document compliance for ${organizationName}.`
-                : 'Document compliance for property operations teams.'}
+                ? `Vendor readiness for ${organizationName}.`
+                : 'A clearer way to keep vendors ready for property operations teams.'}
             </p>
           </div>
           {points && points.length > 0 ? (
@@ -56,14 +60,16 @@ export function AuthLayout({
       <div className="flex min-h-dvh flex-col items-center justify-center px-4 py-10 sm:px-8 lg:min-h-0">
         <div className={cn('w-full', wide ? 'max-w-2xl' : 'max-w-sm')}>
           <div className="mb-6 flex items-center gap-2.5 lg:hidden">
-            <span className="flex size-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <ShieldCheck aria-hidden="true" className="size-5" />
-            </span>
+            <BrandMark className="size-9" />
             <span>
-              <span className="block text-sm leading-tight font-semibold">Vendor Readiness</span>
+              <span className="block text-sm leading-tight font-semibold">Ready Vendors</span>
               {organizationName ? (
                 <span className="block text-xs text-muted-foreground">{organizationName}</span>
-              ) : null}
+              ) : (
+                <span className="block text-xs text-muted-foreground">
+                  Know who can work. Know what&apos;s next.
+                </span>
+              )}
             </span>
           </div>
           <div className="surface-raised p-6">{children}</div>
