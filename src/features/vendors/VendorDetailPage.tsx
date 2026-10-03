@@ -182,7 +182,14 @@ export function VendorDetailPage() {
               <RemindVendorDialog
                 vendorId={vendor.id}
                 trigger={
-                  <Button size="sm">
+                  <Button
+                    size="sm"
+                    variant={
+                      readiness.status === 'ready' && !readiness.expiringSoon
+                        ? 'outline'
+                        : 'default'
+                    }
+                  >
                     <BellRing aria-hidden="true" />
                     Request documents
                   </Button>
