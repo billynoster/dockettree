@@ -83,20 +83,22 @@ function propertyLabel(tags: string[]): string {
   return tags.join(', ')
 }
 
+function missingItemsLabel(blockers: Blocker[]): string {
+  if (blockers.length === 0) return '—'
+  const first = blockers[0]!
+  if (blockers.length === 1) return first.label
+  return `${blockers.length} · ${first.requirement_title}`
+}
+
 function MissingItemsCell({ blockers }: { blockers: Blocker[] }) {
   if (blockers.length === 0) {
     return <span className="text-muted-foreground">—</span>
   }
-  const first = blockers[0]!
+  const label = missingItemsLabel(blockers)
   return (
-    <div className="min-w-0 max-w-[13rem]">
-      <p className="truncate text-sm text-foreground">
-        {blockers.length > 1 ? `${blockers.length} items` : first.requirement_title}
-      </p>
-      <p className="type-meta truncate">
-        {blockers.length > 1 ? first.requirement_title : first.label.replace(`${first.requirement_title} `, '')}
-      </p>
-    </div>
+    <span className="block max-w-[14rem] truncate text-sm" title={label}>
+      {label}
+    </span>
   )
 }
 
@@ -570,11 +572,17 @@ export function VendorsPage() {
                               timezone={app.organization.timezone}
                             />
                           </TableCell>
-                          <TableCell className="max-w-44 whitespace-normal">
-                            <p className="truncate text-sm">{row.vendor.contact_name}</p>
-                            <p className="truncate text-xs text-muted-foreground">
-                              {row.vendor.contact_email}
-                            </p>
+                          <TableCell className="max-w-48">
+                            <span
+                              className="block truncate text-sm"
+                              title={`${row.vendor.contact_name} · ${row.vendor.contact_email}`}
+                            >
+                              {row.vendor.contact_name}
+                              <span className="text-muted-foreground">
+                                {' · '}
+                                {row.vendor.contact_email}
+                              </span>
+                            </span>
                           </TableCell>
                           <TableCell className="pr-3" onClick={(event) => event.stopPropagation()}>
                             <DropdownMenu>

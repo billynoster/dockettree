@@ -20,7 +20,7 @@ function Table({
         className={cn(
           "type-body w-full caption-bottom",
           density === "data" &&
-            "[&_th]:h-11 [&_th]:border-r-0 [&_td]:h-[52px] [&_td]:border-r-0 [&_td]:py-0",
+            "[&_th]:h-11 [&_th]:border-r-0 [&_td]:h-[52px] [&_td]:max-h-[52px] [&_td]:border-r-0 [&_td]:py-0 [&_td]:align-middle",
           className,
         )}
         {...props}
