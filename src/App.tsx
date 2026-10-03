@@ -47,7 +47,7 @@ function Loading() {
       <p className="sr-only" role="status">
         Loading Docket Tree…
       </p>
-      <aside className="hidden h-dvh w-(--sidebar-width) shrink-0 border-r bg-card lg:block" aria-hidden="true">
+      <aside className="hidden h-dvh w-(--sidebar-width) shrink-0 bg-card lg:block" aria-hidden="true">
         <div className="flex h-(--header-height) items-center gap-2.5 border-b px-5">
           <BrandMark />
           <span className="text-sm font-semibold">Docket Tree</span>
