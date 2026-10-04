@@ -4,7 +4,6 @@ import {
   Check,
   ChevronDown,
   Minus,
-  TreePine,
 } from 'lucide-react'
 import {
   activeVendorDefinition,
@@ -22,7 +21,7 @@ import {
   pricingSeo,
   trialCopy,
 } from '@/config/pricing'
-import { BrandLockupHorizontal } from '@/components/brand/Brand'
+import { BrandLockupHorizontal, BrandMark } from '@/components/brand/Brand'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { track } from '@/lib/analytics'
@@ -422,7 +421,7 @@ export function PricingPage() {
       <main id="main" className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
         <section className="mx-auto max-w-3xl space-y-5 text-center">
           <p className="inline-flex items-center gap-2 text-sm font-medium text-[var(--clay-text)]">
-            <TreePine aria-hidden="true" className="size-4" />
+            <BrandMark className="size-5" />
             {pricingHero.brand}
           </p>
           <h1 className="type-display text-[1.875rem] sm:text-[2.25rem]">
