@@ -22,7 +22,7 @@ import {
   pricingSeo,
   trialCopy,
 } from '@/config/pricing'
-import { BrandMark } from '@/components/layout/AppShell'
+import { BrandLockupHorizontal } from '@/components/brand/Brand'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { track } from '@/lib/analytics'
@@ -394,9 +394,8 @@ export function PricingPage() {
 
       <header className="border-b border-border/80 bg-card/80 backdrop-blur-sm">
         <div className="mx-auto flex h-(--header-height) max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
-          <Link to="/pricing" className="flex items-center gap-2.5" aria-label="Docket Tree pricing">
-            <BrandMark />
-            <span className="text-sm font-semibold tracking-tight">Docket Tree</span>
+          <Link to="/pricing" className="flex items-center" aria-label="Docket Tree pricing">
+            <BrandLockupHorizontal className="h-8 sm:h-9" />
           </Link>
           <nav className="flex items-center gap-2 sm:gap-3" aria-label="Pricing actions">
             <Button asChild variant="ghost" size="sm">

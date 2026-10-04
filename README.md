@@ -1,6 +1,6 @@
 # Docket Tree — V1
 
-**Know who can work. Know what’s next.**
+**Everything Connected. Nothing Lost.**
 
 Docket Tree is a self-hosted B2B application for property operations teams who need to see which
 vendors are ready to work, what documents are missing or expiring, and what needs review. V1 is a
@@ -279,11 +279,11 @@ molecules, then page templates. A feature file never declares a colour, a font s
 composes primitives. The full inventory and the reasoning are written up for humans in
 `docs/design-system.md` and `docs/visual-style.md` in the project workspace.
 
-**Warm Ivory, Deep Evergreen.** Application floor is Warm Ivory (`#F8F6F1`), charcoal ink
-(`#202623`), Soft Stone borders (`#E3E4DF`), and Deep Evergreen (`#1F5C4A`) for CTAs, links, focus
-and the Docket Tree mark. Moss (`#78966A`) is secondary brand; Amber Gold (`#D9A441`) is selective
-emphasis. Status accents stay semantically separate from brand evergreen. All of it is declared once
-in OKLCH in `src/index.css` — see `docs/docket-tree-color-migration.md`.
+**Ivory, Evergreen, Moss, Amber.** Application floor is Ivory (`#FAF8F3`), charcoal ink
+(`#202623`), Soft Stone borders (`#E3E4DF`), and Evergreen (`#1F5C4A`) for CTAs, links, focus
+and the Docket Tree mark. Moss (`#78966A`) is secondary brand; Amber (`#D9A441`) is selective
+emphasis. Logo lockups and the D + leaves mark live in `public/brand/`. Status accents stay
+semantically separate from brand evergreen. Tokens are declared once in OKLCH in `src/index.css`.
 
 **Primary actions are Deep Evergreen.** Filled buttons, links, focus rings and active navigation
 share the evergreen family. The historical `--clay` token name still exists in CSS; its value is
@@ -370,8 +370,9 @@ of it.
 **Passwords** have a reveal toggle everywhere they are entered, because they are usually typed from a
 note an administrator handed over.
 
-**Unauthenticated screens** share a split layout: a Deep Evergreen brand column with the Docket Tree
-wordmark and tagline beside the form on desktop, collapsing to one line of context on a phone.
+**Unauthenticated screens** share a split layout: an Evergreen brand column with the stacked Docket
+Tree lockup and tagline (“Everything Connected. Nothing Lost.”) beside the form on desktop,
+collapsing to the mark + wordmark on a phone.
 
 `scripts/shots.mjs` captures the whole product at 1440 px and 390 px for design review:
 `node scripts/shots.mjs <output-dir> [filename-prefix]` against a running dev server.

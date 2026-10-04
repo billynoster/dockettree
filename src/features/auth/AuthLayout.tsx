@@ -1,5 +1,10 @@
 import { CheckCircle2 } from 'lucide-react'
-import { BrandMark } from '@/components/layout/AppShell'
+import {
+  BRAND_NAME,
+  BRAND_TAGLINE,
+  BrandLockupStacked,
+  BrandWordmark,
+} from '@/components/brand/Brand'
 import { cn } from '@/lib/utils'
 
 /**
@@ -25,22 +30,13 @@ export function AuthLayout({
   return (
     <div className="min-h-dvh lg:grid lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]">
       <aside className="hidden flex-col justify-between bg-primary px-10 py-12 text-primary-foreground lg:flex">
-        <div className="space-y-6">
-          <span className="flex size-11 items-center justify-center rounded-xl bg-primary-foreground/15 ring-1 ring-primary-foreground/25">
-            <svg
-              viewBox="0 0 16 16"
-              className="size-5 text-primary-foreground"
-              fill="currentColor"
-              aria-hidden="true"
-            >
-              <circle cx="8" cy="5.5" r="3.25" />
-              <rect x="7.15" y="8.5" width="1.7" height="4.25" rx="0.6" />
-            </svg>
-          </span>
+        <div className="space-y-8">
+          <div className="rounded-2xl bg-[var(--paper)] px-6 py-7 shadow-[var(--shadow-raised)]">
+            <BrandLockupStacked className="mx-auto w-40" />
+          </div>
           <div className="space-y-2">
-            <p className="type-display text-primary-foreground">Docket Tree</p>
-            <p className="text-sm leading-relaxed text-primary-foreground/80">
-              Know who can work. Know what&apos;s next.
+            <p className="text-sm font-medium tracking-[0.12em] text-primary-foreground/85 uppercase">
+              {BRAND_TAGLINE}
             </p>
             <p className="text-sm leading-relaxed text-primary-foreground/80">
               {organizationName
@@ -67,18 +63,12 @@ export function AuthLayout({
 
       <div className="flex min-h-dvh flex-col items-center justify-center px-4 py-10 sm:px-8 lg:min-h-0">
         <div className={cn('w-full', wide ? 'max-w-2xl' : 'max-w-sm')}>
-          <div className="mb-6 flex items-center gap-2.5 lg:hidden">
-            <BrandMark className="size-9" />
-            <span>
-              <span className="block text-sm leading-tight font-semibold">Docket Tree</span>
-              {organizationName ? (
-                <span className="block text-xs text-muted-foreground">{organizationName}</span>
-              ) : (
-                <span className="block text-xs text-muted-foreground">
-                  Know who can work. Know what&apos;s next.
-                </span>
-              )}
-            </span>
+          <div className="mb-6 lg:hidden">
+            <BrandWordmark
+              subtitle={organizationName ?? BRAND_TAGLINE}
+              markClassName="size-9"
+            />
+            <span className="sr-only">{BRAND_NAME}</span>
           </div>
           <div className="surface-raised p-6">{children}</div>
         </div>

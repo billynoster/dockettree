@@ -3,7 +3,7 @@ import { CheckCircle2, CircleAlert, LifeBuoy, LogOut } from 'lucide-react'
 import { api } from '@/api/client'
 import { useApp } from '@/app/AppProvider'
 import { useServiceQuery } from '@/app/useServiceQuery'
-import { BrandMark } from '@/components/layout/AppShell'
+import { BrandWordmark } from '@/components/brand/Brand'
 import { ProgressMeter } from '@/components/Metrics'
 import { RequirementCard } from '@/components/RequirementCard'
 import { ScrollRegion } from '@/components/ScrollRegion'
@@ -55,13 +55,9 @@ export function PortalPage() {
       <header className="sticky top-0 z-40 border-b bg-card/90 backdrop-blur supports-backdrop-filter:bg-card/75">
         <div className="mx-auto flex min-h-(--header-height) max-w-5xl flex-wrap items-center gap-3 px-4 py-2">
           <div className="flex min-w-0 items-center gap-2.5">
-            <BrandMark />
-            <div className="min-w-0">
-              <p className="truncate text-sm leading-tight font-semibold">Vendor document portal</p>
-              <p className="truncate text-xs text-muted-foreground">
-                {app.organization.name} · {app.user.display_name}
-              </p>
-            </div>
+            <BrandWordmark
+              subtitle={`${app.organization.name} · ${app.user.display_name}`}
+            />
           </div>
           <div className="ml-auto flex flex-wrap items-center gap-2">
             {app.vendorContexts.length > 1 ? (

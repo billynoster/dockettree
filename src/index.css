@@ -25,10 +25,10 @@
 
 :root {
     /*
-     * Brand hex anchors (Docket Tree):
-     * bg #F8F6F1 · evergreen #1F5C4A · moss #78966A · amber #D9A441 · text #202623 · border #E3E4DF.
+     * Brand hex anchors (Docket Tree kit):
+     * ivory #FAF8F3 · evergreen #1F5C4A · moss #78966A · amber #D9A441 · text #202623 · border #E3E4DF.
      */
-    --paper: oklch(0.973 0.007 88.6);
+    --paper: oklch(0.979 0.007 88.6);
     --card: oklch(1.000 0.000 89.9);
     --muted: oklch(0.960 0.007 132.4);
     --accent: oklch(0.956 0.007 151.9);

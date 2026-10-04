@@ -1,7 +1,8 @@
 import { BrowserRouter, Link, Navigate, Route, Routes, useLocation } from 'react-router'
 import { RotateCcw, ServerCrash } from 'lucide-react'
 import { AppProvider, useApp, useSession } from '@/app/AppProvider'
-import { AppShell, BrandMark } from '@/components/layout/AppShell'
+import { BrandWordmark } from '@/components/brand/Brand'
+import { AppShell } from '@/components/layout/AppShell'
 import { EmptyState } from '@/components/States'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -48,9 +49,8 @@ function Loading() {
         Loading Docket Tree…
       </p>
       <aside className="hidden h-dvh w-(--sidebar-width) shrink-0 bg-card lg:block" aria-hidden="true">
-        <div className="flex h-(--header-height) items-center gap-2.5 border-b px-5">
-          <BrandMark />
-          <span className="text-sm font-semibold">Docket Tree</span>
+        <div className="flex h-(--header-height) items-center border-b px-5">
+          <BrandWordmark />
         </div>
         <div className="space-y-2 px-5 py-4">
           {[64, 48, 72, 56, 44].map((width, index) => (

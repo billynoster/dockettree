@@ -23,6 +23,7 @@ import {
 import { api } from '@/api/client'
 import { useApp } from '@/app/AppProvider'
 import { useServiceQuery } from '@/app/useServiceQuery'
+import { BrandMark, BrandWordmark } from '@/components/brand/Brand'
 import { Chip } from '@/components/StatusChips'
 import { InlineNotice } from '@/components/States'
 import { Button } from '@/components/ui/button'
@@ -123,23 +124,8 @@ function initials(name: string): string {
     .join('')
 }
 
-/** DT mark — evergreen tile with a simple tree canopy + trunk. No shields or certificates. */
-export function BrandMark({ className }: { className?: string }) {
-  return (
-    <span
-      aria-hidden="true"
-      className={cn(
-        'flex size-8 shrink-0 items-center justify-center rounded-[10px] bg-primary text-primary-foreground',
-        className,
-      )}
-    >
-      <svg viewBox="0 0 16 16" className="size-4" fill="currentColor" aria-hidden="true">
-        <circle cx="8" cy="5.5" r="3.25" />
-        <rect x="7.15" y="8.5" width="1.7" height="4.25" rx="0.6" />
-      </svg>
-    </span>
-  )
-}
+/** Re-export for existing call sites; mark lives in `@/components/brand/Brand`. */
+export { BrandMark }
 
 function NavTooltip({
   label,
@@ -347,17 +333,11 @@ function SidebarBrand({
       to="/overview"
       className={cn(
         'flex min-w-0 items-center rounded-xl py-1 transition-opacity hover:opacity-80',
-        collapsed ? 'justify-center px-0' : 'gap-3 px-1',
+        collapsed ? 'justify-center px-0' : 'px-1',
       )}
       aria-label={collapsed ? 'Docket Tree home' : undefined}
     >
-      <BrandMark />
-      {collapsed ? null : (
-        <span className="min-w-0">
-          <span className="block truncate text-sm leading-tight font-semibold">Docket Tree</span>
-          <span className="block truncate text-xs leading-tight text-muted-foreground">{orgName}</span>
-        </span>
-      )}
+      {collapsed ? <BrandMark /> : <BrandWordmark subtitle={orgName} />}
     </Link>
   )
 
