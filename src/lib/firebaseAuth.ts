@@ -20,6 +20,19 @@ export interface PublicConfig {
     provider: string
     firebase: FirebaseWebConfig | null
   }
+  billing?: {
+    mode: 'mock' | 'stripe'
+    trialDays: number
+    publishableKey: string | null
+    prices: {
+      starterMonthly: boolean
+      starterYearly: boolean
+      growthMonthly: boolean
+      growthYearly: boolean
+      portfolioMonthly: boolean
+      portfolioYearly: boolean
+    }
+  }
 }
 
 const GENERIC_FAILURE = 'That email and password do not match an active account.'

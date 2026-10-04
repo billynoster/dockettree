@@ -141,6 +141,8 @@ export class SqliteDatabase implements Database {
       importBatches: this.collection('importBatches'),
       requests: this.collection('requests'),
       documentRequests: this.collection('documentRequests'),
+      organizationBilling: this.collection('organizationBilling'),
+      stripeWebhookEvents: this.collection('stripeWebhookEvents'),
       blobs,
     } as UnitOfWork
   }

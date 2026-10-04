@@ -334,6 +334,38 @@ export const TABLES = {
       by_state: 'state',
     },
   },
+  organizationBilling: {
+    table: 'organization_billing',
+    key: 'organization_id',
+    columns: {
+      organization_id: 'text',
+      stripe_customer_id: 'text',
+      stripe_subscription_id: 'text',
+      stripe_price_id: 'text',
+      plan_id: 'text',
+      billing_interval: 'text',
+      status: 'text',
+      founding_rate_applied: 'bool',
+      trial_ends_at: 'text',
+      current_period_ends_at: 'text',
+      created_at: 'text',
+      updated_at: 'text',
+    },
+    indexes: {
+      by_customer: 'stripe_customer_id',
+      by_subscription: 'stripe_subscription_id',
+    },
+  },
+  stripeWebhookEvents: {
+    table: 'stripe_webhook_events',
+    key: 'id',
+    columns: {
+      id: 'text',
+      type: 'text',
+      processed_at: 'text',
+    },
+    indexes: {},
+  },
 } as const satisfies Record<string, TableSpec>
 
 export type TableName = keyof typeof TABLES

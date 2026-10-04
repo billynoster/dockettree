@@ -98,6 +98,16 @@ npm start              # one process serves the API and the built client on PORT
 | `CLOUD_SQL_CONNECTION_NAME` / `INSTANCE_UNIX_SOCKET` / `DATABASE_URL` | — | When set, production uses Cloud SQL Postgres instead of SQLite |
 | `DATABASE_USER` / `DATABASE_PASSWORD` / `DATABASE_NAME` | — | Postgres credentials (`docksy` / secret / `docksy`). Never commit the password |
 | `GCS_BUCKET` / `DOCKSY_GCS_BUCKET` | — | When set, document uploads go to that GCS bucket (e.g. `docket-tree-uploads`) |
+| `STRIPE_SECRET_KEY` | — | Stripe **Test** secret (`sk_test_…`). Unset → mock Checkout/Portal so local/dev still boots. Live keys are rejected. |
+| `STRIPE_WEBHOOK_SECRET` | — | Webhook signing secret (`whsec_…`) for `/api/billing/webhook` |
+| `STRIPE_PUBLISHABLE_KEY` | — | Optional `pk_test_…` (Checkout is server-redirect; Stripe.js not required) |
+| `STRIPE_PRICE_STARTER_MONTHLY` / `_YEARLY` | Test defaults | Override Starter Price IDs |
+| `STRIPE_PRICE_GROWTH_MONTHLY` / `_YEARLY` | Test defaults | Override Growth Price IDs |
+| `STRIPE_PRICE_PORTFOLIO_MONTHLY` / `_YEARLY` | Test defaults | Override Portfolio Price IDs |
+| `STRIPE_TRIAL_DAYS` | `30` | Trial length on Checkout subscription_data |
+
+Stripe Billing (Test mode): Prebuilt Checkout + Customer Portal. See `docs/stripe-billing.md` for
+Secret Manager / Cloud Run setup, webhook events, and the Price ID table. **Never commit secret keys.**
 
 When all four required `FIREBASE_*` values are set, the browser signs in with the Firebase
 Email/Password SDK, then `POST /api/auth/login` with the ID token. The server verifies that JWT

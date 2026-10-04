@@ -107,6 +107,29 @@ export interface Organization extends Timestamps {
   record_version: number
 }
 
+/** Persisted Stripe subscription mapping for one organization (Test mode). */
+export interface OrganizationBilling {
+  organization_id: UUID
+  stripe_customer_id: string | null
+  stripe_subscription_id: string | null
+  stripe_price_id: string | null
+  plan_id: string | null
+  billing_interval: string | null
+  status: string
+  founding_rate_applied: boolean
+  trial_ends_at: IsoDateTime | null
+  current_period_ends_at: IsoDateTime | null
+  created_at: IsoDateTime
+  updated_at: IsoDateTime
+}
+
+/** Stripe webhook delivery ledger for idempotent processing. */
+export interface StripeWebhookEvent {
+  id: string
+  type: string
+  processed_at: IsoDateTime
+}
+
 export type UserStatus = 'active' | 'disabled'
 
 export interface User {

@@ -1,21 +1,24 @@
 /**
- * Pricing and plan types. Payment processing (Stripe) is intentionally absent —
- * these shapes are the contract for the public pricing page and a future Billing settings tab.
+ * Pricing and plan types. Stripe Test-mode Checkout + Customer Portal map onto these shapes.
  */
 
 export type PlanId = 'starter' | 'growth' | 'portfolio' | 'enterprise'
 
+export type SelfServePlanId = 'starter' | 'growth' | 'portfolio'
+
 export type BillingInterval = 'monthly' | 'annual'
 
-export type PlanCtaKind = 'start_trial' | 'contact_sales' | 'book_demo'
+export type PlanCtaKind = 'start_trial' | 'contact_sales' | 'book_demo' | 'checkout'
 
-/** Display-only subscription lifecycle until Stripe is wired. */
+/** Subscription lifecycle mirrored from Stripe (plus `none` before Checkout). */
 export type SubscriptionStatus =
+  | 'none'
   | 'trialing'
   | 'active'
   | 'past_due'
   | 'canceled'
   | 'expired'
+  | 'incomplete'
 
 export interface OrgBillingState {
   planId: PlanId
@@ -27,6 +30,11 @@ export interface OrgBillingState {
   trialEndsOn: string | null
   /** ISO date when the current paid period ends. */
   currentPeriodEndsOn: string | null
+  stripeCustomerId?: string | null
+  stripeSubscriptionId?: string | null
+  stripePriceId?: string | null
+  /** `mock` when Stripe secret is unset; `stripe` when Test-mode keys are configured. */
+  billingMode?: 'mock' | 'stripe'
   /**
    * When true, Billing settings prefer live active-vendor / property counts from the API.
    * When false, `stubUsage` drives the meters (useful for demos of near-limit / at-limit UI).

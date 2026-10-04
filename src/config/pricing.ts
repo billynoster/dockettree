@@ -7,10 +7,11 @@ import type {
 } from '@/domain/pricing'
 
 /**
- * Central pricing configuration. Stripe / subscription billing is not wired yet —
- * CTAs route to setup, login, mailto, or placeholder demo links documented below.
+ * Central pricing configuration. Self-serve CTAs start Stripe Checkout (Test mode)
+ * when the caller is an org admin; otherwise they fall back to setup / login.
  *
  * Keep `/cursor/stores/.../docs/docket-tree-pricing.md` in sync when changing this file.
+ * Stripe Price IDs live in server env / `server/billing/prices.ts` — never commit secret keys.
  */
 
 /** Flip to surface founding / early-adopter list prices on the public pricing page. */
@@ -34,22 +35,23 @@ export const pricingHero = {
 
 export const trialCopy = {
   days: 30,
-  summary: 'Every paid plan includes a 30-day free trial. No credit card required in this build.',
+  summary:
+    'Every paid plan includes a 30-day free trial via Stripe Checkout (Test mode). Local/dev without keys uses a mock checkout.',
   bookDemoLabel: 'Book a Demo',
   bookDemoHref: 'mailto:sales@dockettree.example?subject=Docket%20Tree%20demo',
 } as const
 
 /**
- * CTA destinations until Stripe exists.
- * - start_trial → `/setup` (first-run org creation) when the server still needs setup;
- *   otherwise `/login` with `from=/pricing` so staff can sign in and continue.
- * - contact_sales / book_demo → mailto placeholder (documented; no calendly yet).
+ * Non-checkout destinations.
+ * - start_trial_setup / login — greenfield or sign-in before Checkout
+ * - contact_sales / book_demo → mailto placeholder (documented; no calendly yet)
  */
 export const pricingCtaRoutes = {
   start_trial_setup: '/setup',
   start_trial_login: '/login?from=/pricing&intent=trial',
   contact_sales: 'mailto:sales@dockettree.example?subject=Docket%20Tree%20Enterprise',
   book_demo: trialCopy.bookDemoHref,
+  billing_settings: '/settings?tab=billing',
 } as const
 
 export const foundingOffer = {
@@ -368,7 +370,7 @@ export const pricingFaq: PricingFaqItem[] = [
     id: 'trial',
     question: 'Is there a free trial?',
     answer:
-      'Yes. Starter, Growth, and Portfolio include a 30-day free trial. Payment processing is not wired in this build; the trial CTA opens setup or sign-in so you can evaluate the product.',
+      'Yes. Starter, Growth, and Portfolio include a 30-day free trial started through Stripe Checkout (Test mode). Without Stripe keys locally, Checkout runs in mock mode and marks the org as trialing.',
   },
   {
     id: 'vendors-pay',

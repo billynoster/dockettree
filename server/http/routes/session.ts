@@ -32,11 +32,27 @@ sessionRoutes.get(
   '/public-config',
   handle(async (c) => {
     const deps = c.get('deps')
+    const { loadStripeBillingConfig } = await import('../../billing/config')
+    const stripe = loadStripeBillingConfig()
     c.header('Cache-Control', 'no-store')
     return {
       auth: {
         provider: deps.identityProvider.name,
         firebase: deps.config.firebase,
+      },
+      billing: {
+        mode: stripe.mode,
+        trialDays: stripe.trialDays,
+        /** Publishable key only when present; Checkout itself is server-redirect. */
+        publishableKey: stripe.publishableKey,
+        prices: {
+          starterMonthly: Boolean(stripe.prices.starter_monthly),
+          starterYearly: Boolean(stripe.prices.starter_yearly),
+          growthMonthly: Boolean(stripe.prices.growth_monthly),
+          growthYearly: Boolean(stripe.prices.growth_yearly),
+          portfolioMonthly: Boolean(stripe.prices.portfolio_monthly),
+          portfolioYearly: Boolean(stripe.prices.portfolio_yearly),
+        },
       },
     }
   }),

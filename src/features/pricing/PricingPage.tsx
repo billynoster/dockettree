@@ -1,10 +1,12 @@
 import { useEffect, useId, useMemo, useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import {
   Check,
   ChevronDown,
   Minus,
+  LoaderCircle,
 } from 'lucide-react'
+import { useSession } from '@/app/AppProvider'
 import {
   activeVendorDefinition,
   annualSavingsPercent,
@@ -23,9 +25,11 @@ import {
 } from '@/config/pricing'
 import { BrandLockupHorizontal, BrandMark } from '@/components/brand/Brand'
 import { Button } from '@/components/ui/button'
+import { startCheckout } from '@/lib/billingActions'
 import { cn } from '@/lib/utils'
 import { track } from '@/lib/analytics'
-import type { BillingInterval, PlanCtaKind, PlanId, PricingPlan } from '@/domain/pricing'
+import type { BillingInterval, PlanId, PricingPlan } from '@/domain/pricing'
+import { toast } from 'sonner'
 
 function useDocumentSeo(title: string, description: string) {
   useEffect(() => {
@@ -48,22 +52,6 @@ function useDocumentSeo(title: string, description: string) {
   }, [title, description])
 }
 
-function ctaHref(kind: PlanCtaKind): string {
-  switch (kind) {
-    case 'start_trial':
-      // Prefer setup for greenfield; routing will send completed installs to login/overview.
-      return pricingCtaRoutes.start_trial_setup
-    case 'contact_sales':
-      return pricingCtaRoutes.contact_sales
-    case 'book_demo':
-      return pricingCtaRoutes.book_demo
-  }
-}
-
-function isExternalHref(href: string): boolean {
-  return href.startsWith('mailto:') || href.startsWith('http')
-}
-
 function CtaButton({
   plan,
   interval,
@@ -73,31 +61,80 @@ function CtaButton({
   interval: BillingInterval
   className?: string
 }) {
-  const href = ctaHref(plan.cta.kind)
-  const onClick = () => {
-    track('plan_cta_clicked', {
-      plan_id: plan.id,
-      cta_kind: plan.cta.kind,
-      billing_interval: interval,
-      founding: foundingPricingEnabled,
-    })
-  }
+  const navigate = useNavigate()
+  const { state } = useSession()
+  const [busy, setBusy] = useState(false)
+  const session = state.info
+  const authenticated = Boolean(session?.authenticated)
+  const canManageBilling = Boolean(session?.capabilities?.includes('settings.manage'))
+  const setupRequired = Boolean(session?.setupRequired)
 
-  if (isExternalHref(href)) {
+  if (plan.cta.kind === 'contact_sales' || plan.enterprise) {
     return (
       <Button asChild className={className} size="lg" variant={plan.highlighted ? 'default' : 'outline'}>
-        <a href={href} onClick={onClick}>
+        <a
+          href={pricingCtaRoutes.contact_sales}
+          onClick={() =>
+            track('plan_cta_clicked', {
+              plan_id: plan.id,
+              cta_kind: 'contact_sales',
+              billing_interval: interval,
+              founding: foundingPricingEnabled,
+            })
+          }
+        >
           {plan.cta.label}
         </a>
       </Button>
     )
   }
 
+  const onCheckout = async () => {
+    if (setupRequired || state.status === 'loading') {
+      track('plan_cta_clicked', {
+        plan_id: plan.id,
+        cta_kind: 'start_trial',
+        billing_interval: interval,
+        source: 'pricing_card_setup',
+      })
+      navigate(pricingCtaRoutes.start_trial_setup)
+      return
+    }
+    if (!authenticated) {
+      track('plan_cta_clicked', {
+        plan_id: plan.id,
+        cta_kind: 'start_trial',
+        billing_interval: interval,
+        source: 'pricing_card_login',
+      })
+      navigate(
+        `/login?from=${encodeURIComponent(`/pricing?checkout=1&plan=${plan.id}&interval=${interval}`)}&intent=checkout`,
+      )
+      return
+    }
+    if (!canManageBilling) {
+      toast.error('Ask an organization admin to start Checkout or manage billing.')
+      return
+    }
+    setBusy(true)
+    const result = await startCheckout({
+      planId: plan.id,
+      interval,
+      source: 'pricing_card',
+    })
+    if (result !== 'redirected') setBusy(false)
+  }
+
   return (
-    <Button asChild className={className} size="lg" variant={plan.highlighted ? 'default' : 'outline'}>
-      <Link to={href} onClick={onClick}>
-        {plan.cta.label}
-      </Link>
+    <Button
+      className={className}
+      size="lg"
+      variant={plan.highlighted ? 'default' : 'outline'}
+      disabled={busy || state.status === 'loading'}
+      onClick={() => void onCheckout()}
+    >
+      {busy ? <LoaderCircle aria-hidden="true" className="size-4 animate-spin" /> : null}
+      {busy ? 'Starting Checkout…' : plan.cta.label}
     </Button>
   )
 }
@@ -470,20 +507,10 @@ export function PricingPage() {
             </p>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-2">
-            <Button asChild size="lg">
-              <Link
-                to={pricingCtaRoutes.start_trial_setup}
-                onClick={() =>
-                  track('plan_cta_clicked', {
-                    plan_id: 'growth',
-                    cta_kind: 'start_trial',
-                    source: 'trial_band',
-                  })
-                }
-              >
-                Start Free Trial
-              </Link>
-            </Button>
+            <CtaButton
+              plan={pricingPlans.find((plan) => plan.id === 'growth')!}
+              interval={interval}
+            />
             <Button asChild size="lg" variant="outline">
               <a
                 href={trialCopy.bookDemoHref}
@@ -569,8 +596,8 @@ export function PricingPage() {
 
         <footer className="mt-16 border-t border-border pt-8 text-center text-sm text-muted-foreground">
           <p>
-            Payment processing is not enabled yet. Trial and sales CTAs open setup, sign-in, or
-            email — see the pricing config for destinations.
+            Self-serve plans open Stripe Checkout (Test mode when keys are set; local mock
+            otherwise). Enterprise stays Contact Sales.
           </p>
           <p className="mt-2">
             <Link className="text-clay-text underline-offset-4 hover:underline" to="/login">

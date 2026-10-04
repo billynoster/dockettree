@@ -14,9 +14,11 @@ import type {
   Membership,
   Notification,
   Organization,
+  OrganizationBilling,
   RequestRecord,
   RequirementTemplate,
   ReviewEvent,
+  StripeWebhookEvent,
   Submission,
   TemplateItem,
   User,
@@ -67,6 +69,8 @@ export interface UnitOfWork {
   importBatches: Collection<ImportBatch>
   requests: Collection<RequestRecord>
   documentRequests: Collection<DocumentRequest>
+  organizationBilling: Collection<OrganizationBilling>
+  stripeWebhookEvents: Collection<StripeWebhookEvent>
   blobs: BlobStore
 }
 

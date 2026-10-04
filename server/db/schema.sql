@@ -291,3 +291,31 @@ CREATE INDEX IF NOT EXISTS document_requests_by_vendor ON document_requests (ven
 CREATE INDEX IF NOT EXISTS document_requests_by_requirement ON document_requests (requirement_id);
 CREATE INDEX IF NOT EXISTS document_requests_by_notification ON document_requests (notification_id);
 CREATE INDEX IF NOT EXISTS document_requests_by_state ON document_requests (state);
+
+-- Stripe Test-mode subscription mapping (org ↔ customer / subscription status).
+CREATE TABLE IF NOT EXISTS organization_billing (
+  organization_id         TEXT PRIMARY KEY REFERENCES organizations (id) ON DELETE CASCADE,
+  stripe_customer_id      TEXT,
+  stripe_subscription_id  TEXT,
+  stripe_price_id         TEXT,
+  plan_id                 TEXT,
+  billing_interval        TEXT,
+  status                  TEXT NOT NULL DEFAULT 'none',
+  founding_rate_applied   INTEGER NOT NULL DEFAULT 0,
+  trial_ends_at           TEXT,
+  current_period_ends_at  TEXT,
+  created_at              TEXT NOT NULL,
+  updated_at              TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS organization_billing_by_customer
+  ON organization_billing (stripe_customer_id)
+  WHERE stripe_customer_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS organization_billing_by_subscription
+  ON organization_billing (stripe_subscription_id)
+  WHERE stripe_subscription_id IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS stripe_webhook_events (
+  id          TEXT PRIMARY KEY,
+  type        TEXT NOT NULL,
+  processed_at TEXT NOT NULL
+);

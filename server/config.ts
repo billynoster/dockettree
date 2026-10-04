@@ -1,7 +1,7 @@
 /**
  * Server configuration. Everything has a working local default: the app runs with no
- * environment variables and no API keys. SMTP, Firebase Auth, Cloud SQL, and GCS are
- * optional integrations.
+ * environment variables and no API keys. SMTP, Firebase Auth, Cloud SQL, GCS, and Stripe
+ * Billing (Test mode) are optional integrations.
  */
 import path from 'node:path'
 

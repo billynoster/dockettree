@@ -24,3 +24,10 @@ console.log(
 console.log(
   `  identity: ${config.firebase ? `firebase (${config.firebase.projectId})` : 'local-password'}`,
 )
+const { loadStripeBillingConfig } = await import('./billing/config')
+const stripe = loadStripeBillingConfig()
+console.log(
+  `  billing: ${
+    stripe.mode === 'stripe' ? 'Stripe Test mode (Checkout + Portal)' : 'mock (STRIPE_SECRET_KEY unset)'
+  }`,
+)

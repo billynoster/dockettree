@@ -22,6 +22,7 @@ import type {
   Role,
   UUID,
 } from '@/domain/types'
+import type { BillingInterval, PlanId, SubscriptionStatus } from '@/domain/pricing'
 import type {
   DocumentRequestDetail,
   DocumentRequestListResult,
@@ -328,6 +329,35 @@ export const api = {
   retryNotification: (notificationId: UUID) =>
     post<{ queued: boolean }>(`/notifications/${notificationId}/retry`),
   runReminderJob: () => post<DailyJobResult>('/notifications/run-job'),
+
+  billing: () =>
+    get<{
+      planId: PlanId
+      billingInterval: BillingInterval
+      status: SubscriptionStatus
+      foundingRateApplied: boolean
+      trialEndsOn: string | null
+      currentPeriodEndsOn: string | null
+      stripeCustomerId: string | null
+      stripeSubscriptionId: string | null
+      stripePriceId: string | null
+      billingMode: 'mock' | 'stripe'
+      hasCustomer: boolean
+      hasSubscription: boolean
+      pricesConfigured: Record<string, string | null>
+    }>('/billing'),
+  createCheckoutSession: (input: {
+    planId: PlanId | string
+    interval: BillingInterval
+    successUrl?: string
+    cancelUrl?: string
+  }) =>
+    post<{ mode: 'mock' | 'stripe'; url: string; sessionId: string | null; message?: string }>(
+      '/billing/checkout',
+      input,
+    ),
+  createBillingPortalSession: (input: { returnUrl?: string } = {}) =>
+    post<{ mode: 'mock' | 'stripe'; url: string; message?: string }>('/billing/portal', input),
 }
 
 /** XHR upload so the dialog can show real progress and allow retry (FR-04). */

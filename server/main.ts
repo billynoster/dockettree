@@ -49,6 +49,13 @@ async function main(): Promise<void> {
       config.firebase ? `firebase (${config.firebase.projectId})` : 'local-password'
     }`,
   )
+  const { loadStripeBillingConfig } = await import('./billing/config')
+  const stripe = loadStripeBillingConfig()
+  console.log(
+    `  billing: ${
+      stripe.mode === 'stripe' ? 'Stripe Test mode (Checkout + Portal)' : 'mock (STRIPE_SECRET_KEY unset)'
+    }`,
+  )
 }
 
 if (process.argv[1] && import.meta.url === `file://${process.argv[1]}`) {

@@ -1,22 +1,20 @@
 import type { OrgBillingState } from '@/domain/pricing'
 
 /**
- * Stub organization billing until Stripe + persisted subscription records exist.
- *
- * Default demo posture: **Growth · Annual · Trialing** with founding rate applied,
- * and stubbed usage near the Growth vendor limit (~84%) so approaching-limit copy
- * is visible. Flip `useLiveUsageCounts` to `true` to drive meters from overview /
- * vendor-list totals instead.
+ * Fallback organization billing when the API has no Stripe row yet (status `none`)
+ * or the billing request fails. Usage meters still use stub counts unless
+ * `useLiveUsageCounts` is flipped.
  *
  * Documented in docs/docket-tree-pricing.md (Billing settings section).
  */
 export const orgBillingStub: OrgBillingState = {
   planId: 'growth',
   billingInterval: 'annual',
-  status: 'trialing',
+  status: 'none',
   foundingRateApplied: true,
-  trialEndsOn: '2026-11-02',
+  trialEndsOn: null,
   currentPeriodEndsOn: null,
+  billingMode: 'mock',
   useLiveUsageCounts: false,
   stubUsage: {
     activeVendors: 210,
