@@ -49,10 +49,14 @@ export async function createTestServer(
   const db = new SqliteDatabase({ file: path.join(dataDir, 'api.sqlite'), blobs })
   const clock = fixedClock(TEST_INSTANT)
   const mailer = options.mailer ?? createCapturingMailer()
+  const databaseFile = path.join(dataDir, 'api.sqlite')
+  const uploadDir = path.join(dataDir, 'uploads')
   const config = loadConfig({
     dataDir,
-    databaseFile: path.join(dataDir, 'api.sqlite'),
-    uploadDir: path.join(dataDir, 'uploads'),
+    databaseFile,
+    uploadDir,
+    database: { kind: 'sqlite', file: databaseFile },
+    blobs: { kind: 'local', directory: uploadDir },
     runBackgroundJobs: false,
     publicUrl: 'http://127.0.0.1:43217',
     smtp: null,

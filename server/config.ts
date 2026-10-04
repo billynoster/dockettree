@@ -1,6 +1,7 @@
 /**
  * Server configuration. Everything has a working local default: the app runs with no
- * environment variables and no API keys. SMTP and Firebase Auth are optional integrations.
+ * environment variables and no API keys. SMTP, Firebase Auth, Cloud SQL, and GCS are
+ * optional integrations.
  */
 import path from 'node:path'
 
@@ -23,12 +24,25 @@ export interface FirebaseWebConfig {
   messagingSenderId?: string
 }
 
+export type PostgresConnection =
+  | { mode: 'url'; url: string }
+  | { mode: 'socket'; socketPath: string; user: string; password: string; database: string }
+  | { mode: 'connector'; connectionName: string; user: string; password: string; database: string }
+
+export type DatabaseConfig =
+  | { kind: 'sqlite'; file: string }
+  | { kind: 'postgres'; connection: PostgresConnection }
+
+export type BlobConfig = { kind: 'local'; directory: string } | { kind: 'gcs'; bucket: string }
+
 export interface ServerConfig {
   port: number
   host: string
   dataDir: string
   databaseFile: string
   uploadDir: string
+  database: DatabaseConfig
+  blobs: BlobConfig
   /** Sent with the Secure cookie flag when the app is served over HTTPS. */
   secureCookies: boolean
   publicUrl: string
@@ -47,7 +61,7 @@ function bool(value: string | undefined, fallback: boolean): boolean {
   return value === 'true' || value === '1' || value === 'yes'
 }
 
-function env(...keys: string[]): string | undefined {
+export function env(...keys: string[]): string | undefined {
   for (const key of keys) {
     const value = process.env[key]?.trim()
     if (value) return value
@@ -84,17 +98,68 @@ export function loadFirebaseConfig(): FirebaseWebConfig | null {
   }
 }
 
+export function postgresEnvIsSet(): boolean {
+  return Boolean(
+    env('DATABASE_URL') ||
+      env('CLOUD_SQL_CONNECTION_NAME') ||
+      env('INSTANCE_CONNECTION_NAME') ||
+      env('INSTANCE_UNIX_SOCKET'),
+  )
+}
+
+export function gcsBucketFromEnv(): string | undefined {
+  const raw = env('GCS_BUCKET', 'DOCKSY_GCS_BUCKET')
+  return raw ? raw.replace(/^gs:\/\//, '') : undefined
+}
+
+export function resolvePostgresConnection(): PostgresConnection {
+  const url = env('DATABASE_URL')
+  if (url) return { mode: 'url', url }
+
+  const connectionName =
+    env('CLOUD_SQL_CONNECTION_NAME', 'INSTANCE_CONNECTION_NAME') ??
+    'docket-tree-510523:us-central1:docket-tree-db'
+  const user = env('DATABASE_USER', 'PGUSER', 'DB_USER') ?? 'docksy'
+  const password = env('DATABASE_PASSWORD', 'PGPASSWORD', 'DB_PASS') ?? ''
+  const database = env('DATABASE_NAME', 'PGDATABASE', 'DB_NAME') ?? 'docksy'
+  const socketPath =
+    env('INSTANCE_UNIX_SOCKET') ?? `/cloudsql/${connectionName}`
+  const forceConnector = bool(env('CLOUD_SQL_USE_CONNECTOR'), false)
+
+  if (!forceConnector) {
+    return { mode: 'socket', socketPath, user, password, database }
+  }
+  return { mode: 'connector', connectionName, user, password, database }
+}
+
+export function loadDatabaseConfig(databaseFile: string, override?: DatabaseConfig): DatabaseConfig {
+  if (override) return override
+  if (postgresEnvIsSet()) return { kind: 'postgres', connection: resolvePostgresConnection() }
+  return { kind: 'sqlite', file: databaseFile }
+}
+
+export function loadBlobConfig(uploadDir: string, override?: BlobConfig): BlobConfig {
+  if (override) return override
+  const bucket = gcsBucketFromEnv()
+  if (bucket) return { kind: 'gcs', bucket }
+  return { kind: 'local', directory: uploadDir }
+}
+
 export function loadConfig(overrides: Partial<ServerConfig> = {}): ServerConfig {
   const dataDir = overrides.dataDir ?? process.env.DOCKSY_DATA_DIR ?? path.resolve(process.cwd(), 'var')
   const port = overrides.port ?? Number(process.env.PORT ?? 43217)
   const host = overrides.host ?? process.env.HOST ?? '127.0.0.1'
   const smtpHost = process.env.SMTP_HOST
+  const databaseFile = overrides.databaseFile ?? path.join(dataDir, 'docksy.sqlite')
+  const uploadDir = overrides.uploadDir ?? path.join(dataDir, 'uploads')
   return {
     port,
     host,
     dataDir,
-    databaseFile: overrides.databaseFile ?? path.join(dataDir, 'docksy.sqlite'),
-    uploadDir: overrides.uploadDir ?? path.join(dataDir, 'uploads'),
+    databaseFile,
+    uploadDir,
+    database: loadDatabaseConfig(databaseFile, overrides.database),
+    blobs: loadBlobConfig(uploadDir, overrides.blobs),
     secureCookies: overrides.secureCookies ?? bool(process.env.SECURE_COOKIES, false),
     publicUrl: overrides.publicUrl ?? process.env.PUBLIC_URL ?? `http://${host}:${port}`,
     smtp:

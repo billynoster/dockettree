@@ -59,7 +59,11 @@ describe('client bundle boundary', () => {
       for (const file of walk(path.join(ROOT, directory))) {
         if (!/\.tsx?$/.test(file)) continue
         const source = readFileSync(file, 'utf8')
-        if (/from 'better-sqlite3'|from 'node:fs'|from 'nodemailer'|indexedDB/.test(source)) {
+        if (
+          /from 'better-sqlite3'|from 'pg'|from '@google-cloud\/|from 'node:fs'|from 'nodemailer'|indexedDB/.test(
+            source,
+          )
+        ) {
           offenders.push(path.relative(ROOT, file))
         }
       }

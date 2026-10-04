@@ -1,6 +1,7 @@
 /**
  * Repository interfaces. Services depend only on these, so storage can change without
- * touching domain rules or use cases. V1 ships a SQLite + local-disk adapter.
+ * touching domain rules or use cases. Local/dev uses SQLite + local disk; production
+ * uses Postgres + GCS when those env vars are set.
  */
 import type {
   ActivityEvent,

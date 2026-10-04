@@ -24,6 +24,8 @@ RUN apt-get update \
 
 WORKDIR /app
 
+# DOCKSY_DATA_DIR is only used when Cloud SQL / GCS env is unset (ephemeral demo).
+# Production should set CLOUD_SQL_CONNECTION_NAME + GCS_BUCKET instead — never SQLite on GCS FUSE.
 ENV NODE_ENV=production \
     HOST=0.0.0.0 \
     DOCKSY_DATA_DIR=/tmp/docksy-data

@@ -82,7 +82,7 @@ npm start              # one process serves the API and the built client on PORT
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `PORT` / `HOST` | `43217` / `127.0.0.1` | Where the server listens (`HOST=0.0.0.0` for containers) |
-| `DOCKSY_DATA_DIR` | `./var` | SQLite database and stored documents |
+| `DOCKSY_DATA_DIR` | `./var` | Local SQLite database and stored documents (dev / unset cloud storage) |
 | `PUBLIC_URL` | `http://HOST:PORT` | Base URL used in invitation links |
 | `SECURE_COOKIES` | `false` | Set `true` when served over HTTPS |
 | `SMTP_HOST` | — | Enables email delivery; without it messages stay queued |
@@ -95,6 +95,9 @@ npm start              # one process serves the API and the built client on PORT
 | `FIREBASE_STORAGE_BUCKET` | — | Optional; passed through to the browser SDK, Storage is not used |
 | `FIREBASE_MESSAGING_SENDER_ID` | — | Optional; Messaging is not used |
 | `VITE_FIREBASE_*` | — | Optional local aliases for the same keys |
+| `CLOUD_SQL_CONNECTION_NAME` / `INSTANCE_UNIX_SOCKET` / `DATABASE_URL` | — | When set, production uses Cloud SQL Postgres instead of SQLite |
+| `DATABASE_USER` / `DATABASE_PASSWORD` / `DATABASE_NAME` | — | Postgres credentials (`docksy` / secret / `docksy`). Never commit the password |
+| `GCS_BUCKET` / `DOCKSY_GCS_BUCKET` | — | When set, document uploads go to that GCS bucket (e.g. `docket-tree-uploads`) |
 
 When all four required `FIREBASE_*` values are set, the browser signs in with the Firebase
 Email/Password SDK, then `POST /api/auth/login` with the ID token. The server verifies that JWT
@@ -250,8 +253,11 @@ values; `tests/server/layering.test.ts` enforces that boundary.
   still creates the local account; with Firebase the browser also creates the Firebase user, then
   exchanges an ID token for the session cookie. No Firebase Hosting, Firestore, Storage, or
   Analytics.
-- **Database**: SQLite via `better-sqlite3`, WAL, foreign keys on, real columns and indexes.
-- **Documents**: a private directory (`$DOCKSY_DATA_DIR/uploads`), mode 0600, served only through
+- **Database**: SQLite via `better-sqlite3` for local/dev (WAL, foreign keys on). Production Cloud
+  Run uses **Cloud SQL Postgres** when `DATABASE_URL` or `CLOUD_SQL_CONNECTION_NAME` /
+  `INSTANCE_UNIX_SOCKET` is set. Do not put SQLite on GCS FUSE.
+- **Documents**: local private directory (`$DOCKSY_DATA_DIR/uploads`) in dev; **GCS**
+  (`GCS_BUCKET=docket-tree-uploads`) in production. Served only through
   `GET /api/submissions/:id/file` after an authorization check.
 - **Email**: optional SMTP through `nodemailer`. Unconfigured is a supported state, not a failure.
 - **Invitations**: single-use token, hashed with SHA-256, 7-day expiry, revoked on resend. Because a
@@ -372,9 +378,11 @@ wordmark and tagline beside the form on desktop, collapsing to one line of conte
 
 ## Known limitations
 
-- **One process per database.** SQLite gives a database file to one process; do not run two servers
-  against the same `DOCKSY_DATA_DIR`. Automated tests reset data through a test-only endpoint that
-  is mounted only when `DOCKSY_ENABLE_TEST_RESET=true` for exactly this reason.
+- **One process per SQLite file.** Local SQLite is single-writer; do not run two servers against the
+  same `DOCKSY_DATA_DIR`. Cloud SQL Postgres is the durable multi-revision path. Automated tests
+  reset data through a test-only endpoint mounted only when `DOCKSY_ENABLE_TEST_RESET=true`.
+- **No automatic migration from Cloud Run SQLite.** Cutting over to Postgres + GCS means repeating
+  first-run setup; existing ephemeral container data is not copied.
 - **No malware scanning.** Uploads are checked for type and size on the server; `scan_status` is
   recorded as `not_scanned`. Quarantine behaviour is not implemented.
 - **Email delivery is best-effort.** With SMTP configured, messages are retried up to five times

@@ -1,26 +1,20 @@
 /** Server entry point: wire storage, auth, mail and jobs, then listen. */
-import { mkdir } from 'node:fs/promises'
 import { serve } from '@hono/node-server'
 import { systemClock } from '@/domain/clock'
 import { createIdentityProvider } from './auth/identityProvider'
 import { hashToken, newToken } from './auth/tokens'
 import { loadConfig } from './config'
-import { SqliteDatabase } from './db/sqliteDatabase'
-import { LocalBlobStore } from './files/localBlobStore'
 import { createApp } from './http/app'
 import type { AppDependencies } from './http/context'
 import { ReminderScheduler } from './jobs/reminderScheduler'
 import { NotificationDeliveryWorker } from './mail/deliveryWorker'
 import { createMailer } from './mail/mailer'
+import { openStorage } from './storage'
 
 export async function createServer(overrides: Parameters<typeof loadConfig>[0] = {}) {
   const config = loadConfig(overrides)
-  await mkdir(config.dataDir, { recursive: true })
-  await mkdir(config.uploadDir, { recursive: true, mode: 0o700 })
-
+  const { db, databaseLabel, documentsLabel } = await openStorage(config)
   const clock = systemClock()
-  const blobs = new LocalBlobStore(config.uploadDir)
-  const db = new SqliteDatabase({ file: config.databaseFile, blobs })
   const mailer = createMailer(config.smtp)
   const deliveryWorker = new NotificationDeliveryWorker(db, clock, mailer)
   const scheduler = new ReminderScheduler(db, clock)
@@ -35,11 +29,11 @@ export async function createServer(overrides: Parameters<typeof loadConfig>[0] =
     deliveryWorker,
   }
 
-  return { config, db, deps, app: createApp(deps), deliveryWorker, scheduler }
+  return { config, db, deps, app: createApp(deps), deliveryWorker, scheduler, databaseLabel, documentsLabel }
 }
 
 async function main(): Promise<void> {
-  const { config, app, deliveryWorker, scheduler } = await createServer()
+  const { config, app, deliveryWorker, scheduler, databaseLabel, documentsLabel } = await createServer()
   if (config.runBackgroundJobs) {
     deliveryWorker.start()
     scheduler.start()
@@ -47,8 +41,8 @@ async function main(): Promise<void> {
   serve({ fetch: app.fetch, hostname: config.host, port: config.port })
   const delivery = config.smtp ? `SMTP ${config.smtp.host}:${config.smtp.port}` : 'not configured (messages stay queued)'
   console.log(`Docket Tree listening on http://${config.host}:${config.port}`)
-  console.log(`  database: ${config.databaseFile}`)
-  console.log(`  documents: ${config.uploadDir}`)
+  console.log(`  database: ${databaseLabel}`)
+  console.log(`  documents: ${documentsLabel}`)
   console.log(`  email delivery: ${delivery}`)
   console.log(
     `  identity: ${

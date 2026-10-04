@@ -12,39 +12,13 @@ import path from 'node:path'
 import BetterSqlite3 from 'better-sqlite3'
 import { AppError } from '@/domain/errors'
 import type { BlobStore, Collection, Database, UnitOfWork } from '@/repositories/types'
+import { TrackedBlobStore } from '../files/trackedBlobStore'
+import { fromRow, resolveIndexColumn, toRow, upsertSql } from './rowMapping'
 import { TABLES, type TableName, type TableSpec } from './tables'
 
 const SCHEMA_PATH = path.join(import.meta.dirname, 'schema.sql')
 
 type Row = Record<string, unknown>
-
-function toRow(spec: TableSpec, entity: Record<string, unknown>): Row {
-  const row: Row = {}
-  for (const [field, kind] of Object.entries(spec.columns)) {
-    const value = entity[field]
-    if (value === undefined || value === null) {
-      row[field] = null
-      continue
-    }
-    if (kind === 'bool') row[field] = value ? 1 : 0
-    else if (kind === 'json') row[field] = JSON.stringify(value)
-    else if (kind === 'int') row[field] = Number(value)
-    else row[field] = String(value)
-  }
-  return row
-}
-
-function fromRow<T>(spec: TableSpec, row: Row | undefined): T | undefined {
-  if (!row) return undefined
-  const entity: Record<string, unknown> = {}
-  for (const [field, kind] of Object.entries(spec.columns)) {
-    const value = row[field]
-    if (kind === 'bool') entity[field] = value === 1 || value === true
-    else if (kind === 'json') entity[field] = value === null ? null : JSON.parse(String(value))
-    else entity[field] = value ?? null
-  }
-  return entity as T
-}
 
 function wrapError(error: unknown): never {
   if (error instanceof AppError) throw error
@@ -65,36 +39,6 @@ function wrapError(error: unknown): never {
     })
   }
   throw error
-}
-
-class TrackedBlobStore implements BlobStore {
-  private written: string[] = []
-  private readonly inner: BlobStore
-
-  constructor(inner: BlobStore) {
-    this.inner = inner
-  }
-
-  async get(storageKey: string): Promise<Blob | undefined> {
-    return await this.inner.get(storageKey)
-  }
-
-  async put(storageKey: string, blob: Blob): Promise<void> {
-    await this.inner.put(storageKey, blob)
-    this.written.push(storageKey)
-  }
-
-  async delete(storageKey: string): Promise<void> {
-    await this.inner.delete(storageKey)
-  }
-
-  /** Removes files written by a transaction that did not commit. */
-  async discardWrites(): Promise<void> {
-    for (const key of this.written) {
-      await this.inner.delete(key).catch(() => undefined)
-    }
-    this.written = []
-  }
 }
 
 /** Work in progress for the current async context: the open write transaction, if any. */
@@ -139,21 +83,7 @@ export class SqliteDatabase implements Database {
 
   private collection<T>(name: TableName): Collection<T> {
     const spec = TABLES[name] as TableSpec
-    const columns = Object.keys(spec.columns)
-    const insert = `INSERT INTO ${spec.table} (${columns.join(', ')}) VALUES (${columns
-      .map((column) => `@${column}`)
-      .join(', ')}) ON CONFLICT(${spec.key}) DO UPDATE SET ${columns
-      .filter((column) => column !== spec.key)
-      .map((column) => `${column} = excluded.${column}`)
-      .join(', ')}`
-
-    const resolveColumn = (index: string): string => {
-      const column = spec.indexes[index] ?? (index.startsWith('by_') ? index.slice(3) : index)
-      if (!(column in spec.columns)) {
-        throw new Error(`Unknown index ${index} on ${spec.table}`)
-      }
-      return column
-    }
+    const { sql } = upsertSql(spec, 'sqlite')
 
     return {
       get: async (id) =>
@@ -166,18 +96,18 @@ export class SqliteDatabase implements Database {
           (row) => fromRow<T>(spec, row) as T,
         ),
       where: async (index, key) => {
-        const column = resolveColumn(index)
+        const column = resolveIndexColumn(spec, index)
         const rows = this.connection()
           .prepare(`SELECT * FROM ${spec.table} WHERE ${column} = ?`)
           .all(key) as Row[]
         return rows.map((row) => fromRow<T>(spec, row) as T)
       },
       put: async (value) => {
-        this.sql.prepare(insert).run(toRow(spec, value as Record<string, unknown>))
+        this.sql.prepare(sql).run(toRow(spec, value as Record<string, unknown>, 'sqlite'))
       },
       putMany: async (values) => {
-        const statement = this.sql.prepare(insert)
-        for (const value of values) statement.run(toRow(spec, value as Record<string, unknown>))
+        const statement = this.sql.prepare(sql)
+        for (const value of values) statement.run(toRow(spec, value as Record<string, unknown>, 'sqlite'))
       },
       delete: async (id) => {
         this.sql.prepare(`DELETE FROM ${spec.table} WHERE ${spec.key} = ?`).run(id)
