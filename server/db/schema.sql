@@ -25,6 +25,8 @@ CREATE TABLE IF NOT EXISTS users (
   created_at          TEXT NOT NULL
 );
 CREATE UNIQUE INDEX IF NOT EXISTS users_email_unique ON users (email COLLATE NOCASE);
+CREATE UNIQUE INDEX IF NOT EXISTS users_auth_subject_unique ON users (auth_subject)
+  WHERE auth_subject IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS sessions (
   id               TEXT PRIMARY KEY,

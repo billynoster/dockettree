@@ -44,7 +44,7 @@ export const TABLES = {
       last_login_at: 'text',
       created_at: 'text',
     },
-    indexes: { by_email: 'email' },
+    indexes: { by_email: 'email', by_auth_subject: 'auth_subject' },
   },
   sessions: {
     table: 'sessions',

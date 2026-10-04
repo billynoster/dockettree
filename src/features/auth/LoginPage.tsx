@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { LoaderCircle, LogIn } from 'lucide-react'
 import { api } from '@/api/client'
@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { errorMessage, isAppError } from '@/domain/errors'
+import { prefetchPublicConfig } from '@/lib/firebaseAuth'
 import { AuthLayout } from './AuthLayout'
 
 /** Email and password sign-in for staff and vendor contacts. */
@@ -19,6 +20,10 @@ export function LoginPage() {
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    prefetchPublicConfig()
+  }, [])
 
   const submit = async () => {
     setPending(true)

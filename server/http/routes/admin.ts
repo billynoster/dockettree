@@ -1,7 +1,7 @@
 /** Templates, activity, settings, members, notification outbox and invitation acceptance. */
 import { Hono } from 'hono'
 import { setCookie } from 'hono/cookie'
-import { validationError } from '@/domain/errors'
+import { conflict, validationError } from '@/domain/errors'
 import type { ActivityEventType, InternalRole } from '@/domain/types'
 import { listActivity } from '@/services/activityService'
 import {
@@ -30,7 +30,7 @@ import {
   setTemplateArchived,
   updateTemplate,
 } from '@/services/templateService'
-import { SESSION_COOKIE, signIn } from '../../auth/sessions'
+import { SESSION_COOKIE, openSessionForUser, signIn } from '../../auth/sessions'
 import {
   anonymousServiceContext,
   passwordHasherFor,
@@ -167,6 +167,11 @@ adminRoutes.post(
   '/members/:userId/password',
   handle(async (c) => {
     const deps = c.get('deps')
+    if (!deps.identityProvider.managesPasswords) {
+      throw conflict(
+        'Passwords for this server are managed by Firebase Authentication. Reset them in the Firebase console.',
+      )
+    }
     const body = await c.req.json<{ password?: string }>()
     await resetMemberPassword(
       await ctxOf(c),
@@ -262,7 +267,12 @@ adminRoutes.post(
   '/invitations/accept',
   handle(async (c) => {
     const deps = c.get('deps')
-    const body = await c.req.json<{ token?: string; display_name?: string; password?: string }>()
+    const body = await c.req.json<{
+      token?: string
+      display_name?: string
+      password?: string
+      idToken?: string
+    }>()
     if (!body.token) throw validationError('That invitation link is missing its token.')
     const fallback = (await primaryOrganization(deps))?.id
     const organizationId =
@@ -283,9 +293,18 @@ adminRoutes.post(
       },
     )
     // Sign the new contact in straight away so they land in their portal.
-    const signedIn = await signIn(deps.db, deps.clock, deps.identityProvider, {
-      credentials: { kind: 'password', email: result.email, password: body.password ?? '' },
-    })
+    const idToken = body.idToken?.trim()
+    const createdUser = await deps.db.read((uow) => uow.users.get(result.user_id))
+    if (!createdUser) throw validationError('That account could not be created.')
+    const signedIn = idToken
+      ? await signIn(deps.db, deps.clock, deps.identityProvider, {
+          credentials: { kind: 'idToken', idToken },
+        })
+      : deps.identityProvider.managesPasswords
+        ? await signIn(deps.db, deps.clock, deps.identityProvider, {
+            credentials: { kind: 'password', email: result.email, password: body.password ?? '' },
+          })
+        : await openSessionForUser(deps.db, deps.clock, createdUser)
     setCookie(c, SESSION_COOKIE, signedIn.token, {
       path: '/',
       httpOnly: true,

@@ -7,9 +7,11 @@ import { capabilitiesFor } from '@/domain/permissions'
 import type { Membership, Organization, User } from '@/domain/types'
 import { isSyntacticallyValidEmail } from '@/domain/validation'
 import { changeOwnPassword } from '@/services/memberService'
+import { verifyFirebaseIdToken } from '../../auth/firebaseToken'
 import {
   SESSION_COOKIE,
   clearedSessionCookie,
+  openSessionForUser,
   setActiveVendorContext,
   signIn,
   signOut,
@@ -25,6 +27,20 @@ import {
 import { handle } from '../handler'
 
 export const sessionRoutes = new Hono<AppEnv>()
+
+sessionRoutes.get(
+  '/public-config',
+  handle(async (c) => {
+    const deps = c.get('deps')
+    c.header('Cache-Control', 'no-store')
+    return {
+      auth: {
+        provider: deps.identityProvider.name,
+        firebase: deps.config.firebase,
+      },
+    }
+  }),
+)
 
 sessionRoutes.get(
   '/session',
@@ -71,15 +87,22 @@ sessionRoutes.post(
   '/auth/login',
   handle(async (c) => {
     const deps = c.get('deps')
-    const body = await c.req.json<{ email?: string; password?: string }>()
-    if (!body.email || !body.password) {
+    const body = await c.req.json<{ email?: string; password?: string; idToken?: string }>()
+    const idToken = body.idToken?.trim()
+    const credentials =
+      idToken
+        ? ({ kind: 'idToken', idToken } as const)
+        : body.email && body.password
+          ? ({ kind: 'password', email: body.email, password: body.password } as const)
+          : null
+    if (!credentials) {
       throw validationError('Enter your email and password.', {
         email: body.email ? '' : 'Enter your email address.',
         password: body.password ? '' : 'Enter your password.',
       })
     }
     const result = await signIn(deps.db, deps.clock, deps.identityProvider, {
-      credentials: { kind: 'password', email: body.email, password: body.password },
+      credentials,
       throttleKey: c.req.header('x-forwarded-for') ?? 'local',
     })
     setCookie(c, SESSION_COOKIE, result.token, {
@@ -107,6 +130,9 @@ sessionRoutes.post(
   '/auth/password',
   handle(async (c) => {
     const deps = c.get('deps')
+    if (!deps.identityProvider.managesPasswords) {
+      throw conflict('Passwords for this server are managed by Firebase Authentication.')
+    }
     const principal = requirePrincipal(c)
     const body = await c.req.json<{ currentPassword?: string; newPassword?: string }>()
     const ctx = await serviceContextFor(deps, principal)
@@ -154,6 +180,7 @@ sessionRoutes.post(
       adminName?: string
       adminEmail?: string
       adminPassword?: string
+      idToken?: string
     }>()
 
     const fieldErrors: Record<string, string> = {}
@@ -185,6 +212,21 @@ sessionRoutes.post(
     deps.identityProvider.assertPasswordPolicy(adminPassword, 'adminPassword')
     const passwordHash = await deps.identityProvider.hashPassword(adminPassword)
 
+    const idToken = (body.idToken ?? '').trim()
+    let authSubject: string | null = null
+    if (idToken) {
+      if (!deps.config.firebase) {
+        throw validationError('This server is not using Firebase sign-in.')
+      }
+      const claims = await verifyFirebaseIdToken(idToken, deps.config.firebase.projectId)
+      if (claims.email !== adminEmail) {
+        throw validationError('The Firebase account email must match the admin email.', {
+          adminEmail: 'Use the same email you registered with Firebase.',
+        })
+      }
+      authSubject = claims.uid
+    }
+
     const timestamp = deps.clock.nowIso()
     const organization: Organization = {
       id: newId(),
@@ -200,7 +242,7 @@ sessionRoutes.post(
       id: newId(),
       display_name: adminName,
       email: adminEmail,
-      auth_subject: null,
+      auth_subject: authSubject,
       password_hash: passwordHash,
       password_updated_at: timestamp,
       status: 'active',
@@ -219,9 +261,18 @@ sessionRoutes.post(
       await uow.memberships.put(membership)
     })
 
-    const result = await signIn(deps.db, deps.clock, deps.identityProvider, {
-      credentials: { kind: 'password', email: adminEmail, password: adminPassword },
-    })
+    const createdUser = await deps.db.read((uow) => uow.users.get(user.id))
+    if (!createdUser) throw validationError('The administrator account could not be created.')
+    const result =
+      idToken && deps.config.firebase
+        ? await signIn(deps.db, deps.clock, deps.identityProvider, {
+            credentials: { kind: 'idToken', idToken },
+          })
+        : deps.identityProvider.managesPasswords
+          ? await signIn(deps.db, deps.clock, deps.identityProvider, {
+              credentials: { kind: 'password', email: adminEmail, password: adminPassword },
+            })
+          : await openSessionForUser(deps.db, deps.clock, createdUser)
     setCookie(c, SESSION_COOKIE, result.token, {
       path: '/',
       httpOnly: true,

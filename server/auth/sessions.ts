@@ -77,7 +77,7 @@ export async function signIn(
 ): Promise<SignInResult> {
   const nowMs = clock.now().getTime()
   const identifier =
-    input.credentials.kind === 'password' ? input.credentials.email.trim().toLowerCase() : 'unknown'
+    input.credentials.kind === 'password' ? input.credentials.email.trim().toLowerCase() : 'firebase'
   const throttleKey = `${input.throttleKey ?? 'local'}:${identifier}`
   checkAttempts(throttleKey, nowMs)
 
@@ -92,7 +92,16 @@ export async function signIn(
 
   const user = await db.read((uow) => uow.users.get(identity.userId))
   if (!user) throw validationError('That account no longer exists.')
+  return await openSessionForUser(db, clock, user)
+}
 
+/** Opens a first-party session for a user who has already been authenticated. */
+export async function openSessionForUser(
+  db: Database,
+  clock: Clock,
+  user: User,
+): Promise<SignInResult> {
+  const nowMs = clock.now().getTime()
   const token = newToken()
   const timestamp = clock.nowIso()
   const vendorMemberships = await db.read((uow) => uow.vendorMemberships.where('by_user', user.id))

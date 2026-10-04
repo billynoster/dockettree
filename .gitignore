@@ -23,6 +23,11 @@ dist-ssr
 *.sln
 *.sw?
 
+# Local environment files (never commit keys)
+.env
+.env.*
+!.env.example
+
 # Local data: SQLite database and stored documents
 var
 *.sqlite

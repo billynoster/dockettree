@@ -318,11 +318,13 @@ export function SettingsPage() {
                             ))}
                           </SelectContent>
                         </Select>
-                        <ResetPasswordDialog
-                          userId={member.user.id}
-                          name={member.user.display_name}
-                          onDone={() => settings.reload()}
-                        />
+                        {app.session.managesPasswords !== false ? (
+                          <ResetPasswordDialog
+                            userId={member.user.id}
+                            name={member.user.display_name}
+                            onDone={() => settings.reload()}
+                          />
+                        ) : null}
                         {member.user.id === app.user.id ? null : (
                           <Button
                             variant="outline"
@@ -362,14 +364,14 @@ export function SettingsPage() {
         </TabsContent>
 
         <TabsContent value="account" className="mt-0 space-y-3">
-      <ChangePasswordSection />
+      {app.session.managesPasswords !== false ? <ChangePasswordSection /> : null}
       <Section>
         <SectionHeader title="Sign-in" border className="px-3 py-2.5" />
         <SectionBody className="space-y-2 pt-3">
           <p className="text-sm leading-relaxed text-muted-foreground">
-            This server verifies email and password itself and stores a session for each sign-in.
-            Firebase Authentication is the planned provider; it will replace the local adapter
-            without changing any of the workflows above.
+            {settings.data?.identity.managesPasswords
+              ? 'This server verifies email and password itself and stores a session for each sign-in.'
+              : 'Sign-in is verified by Firebase Authentication. After Firebase accepts the email and password, Docket Tree exchanges the ID token for a first-party session cookie. Local password hashes are still stored as a fallback if Firebase env is later removed.'}
           </p>
           {settings.data ? (
             <p className="text-xs text-muted-foreground">
@@ -481,6 +483,7 @@ function ChangePasswordSection() {
 }
 
 function AddMemberForm({ onAdded }: { onAdded: () => void }) {
+  const app = useApp()
   const [values, setValues] = useState({
     display_name: '',
     email: '',
@@ -561,7 +564,11 @@ function AddMemberForm({ onAdded }: { onAdded: () => void }) {
           value={values.password}
           onChange={(value) => setValues({ ...values, password: value })}
           error={action.fieldErrors.password}
-          hint="At least 12 characters. Share it directly and ask them to change it."
+          hint={
+            app.session.managesPasswords === false
+              ? 'At least 12 characters. The same email and password are created in Firebase Authentication so they can sign in.'
+              : 'At least 12 characters. Share it directly and ask them to change it.'
+          }
         />
       </div>
       {action.error && Object.keys(action.fieldErrors).length === 0 ? (

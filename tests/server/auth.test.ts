@@ -29,6 +29,15 @@ afterEach(() => {
 })
 
 describe('sign-in', () => {
+  it('rejects a Firebase ID token while this server is using local passwords', async () => {
+    const response = await server.request('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ idToken: 'not-a-real-token' }),
+    })
+    expect(response.status).toBe(422)
+    expect(response.headers.get('Set-Cookie')).toBeNull()
+  })
+
   it('rejects a wrong password with one message that does not reveal the account', async () => {
     const wrongPassword = await server.request('/api/auth/login', {
       method: 'POST',

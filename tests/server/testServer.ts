@@ -4,10 +4,10 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import type { Hono } from 'hono'
 import { fixedClock, type Clock } from '@/domain/clock'
-import { createLocalPasswordProvider } from '../../server/auth/identityProvider'
+import { createIdentityProvider, type IdentityProvider } from '../../server/auth/identityProvider'
 import { clearLoginThrottle } from '../../server/auth/sessions'
 import { hashToken, newToken } from '../../server/auth/tokens'
-import { loadConfig } from '../../server/config'
+import { loadConfig, type FirebaseWebConfig } from '../../server/config'
 import { SqliteDatabase } from '../../server/db/sqliteDatabase'
 import { LocalBlobStore } from '../../server/files/localBlobStore'
 import { createApp } from '../../server/http/app'
@@ -36,7 +36,12 @@ export interface TestServer {
 }
 
 export async function createTestServer(
-  options: { seed?: boolean; mailer?: Mailer } = {},
+  options: {
+    seed?: boolean
+    mailer?: Mailer
+    firebase?: FirebaseWebConfig | null
+    createIdentityProvider?: (db: SqliteDatabase, clock: Clock) => IdentityProvider
+  } = {},
 ): Promise<TestServer> {
   clearLoginThrottle()
   const dataDir = mkdtempSync(path.join(tmpdir(), 'docksy-api-'))
@@ -51,13 +56,16 @@ export async function createTestServer(
     runBackgroundJobs: false,
     publicUrl: 'http://127.0.0.1:43217',
     smtp: null,
+    firebase: options.firebase ?? null,
   })
   const deps: AppDependencies = {
     config,
     db,
     clock,
     mailer,
-    identityProvider: createLocalPasswordProvider(db, clock),
+    identityProvider: options.createIdentityProvider
+      ? options.createIdentityProvider(db, clock)
+      : createIdentityProvider(db, clock, options.firebase ?? null),
     tokens: { create: newToken, hash: hashToken },
     deliveryWorker: new NotificationDeliveryWorker(db, clock, mailer),
   }

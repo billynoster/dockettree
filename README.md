@@ -10,10 +10,13 @@ true delivery state.
 
 - One Node process serves the API and the browser client.
 - Staff and vendor contacts sign in with an email and password; roles come from stored memberships.
+  Production can use **Firebase Authentication** when `FIREBASE_*` env is set; otherwise the
+  server keeps the V1 local-password + session-cookie path (this is the cloud preview).
 - Documents never leave the server except through an authorized route.
 - Email is optional: with no SMTP configured, messages are queued and the app says so rather than
   claiming delivery.
-- No API keys, cloud accounts or external services are needed to run it.
+- No API keys, cloud accounts or external services are needed to run it locally. Firebase Auth is
+  optional and enabled only when its env vars are present.
 
 ### Status display labels
 
@@ -85,10 +88,36 @@ npm start              # one process serves the API and the built client on PORT
 | `SMTP_HOST` | — | Enables email delivery; without it messages stay queued |
 | `SMTP_PORT` / `SMTP_SECURE` / `SMTP_USER` / `SMTP_PASSWORD` / `SMTP_FROM` | `587` / `false` / — / — / `docksy@localhost` | SMTP details |
 | `RUN_BACKGROUND_JOBS` | `true` | Daily reminder job and the delivery worker |
+| `FIREBASE_API_KEY` | — | Firebase web API key. With the three keys below, production sign-in uses Firebase |
+| `FIREBASE_AUTH_DOMAIN` | — | e.g. `docket-tree.firebaseapp.com` |
+| `FIREBASE_PROJECT_ID` | — | e.g. `docket-tree` |
+| `FIREBASE_APP_ID` | — | Firebase web app id |
+| `FIREBASE_STORAGE_BUCKET` | — | Optional; passed through to the browser SDK, Storage is not used |
+| `FIREBASE_MESSAGING_SENDER_ID` | — | Optional; Messaging is not used |
+| `VITE_FIREBASE_*` | — | Optional local aliases for the same keys |
+
+When all four required `FIREBASE_*` values are set, the browser signs in with the Firebase
+Email/Password SDK, then `POST /api/auth/login` with the ID token. The server verifies that JWT
+against Google’s public keys and this project id (no service-account JSON file). The Firebase uid is
+stored on `users.auth_subject`; a first sign-in also matches the existing local user by email.
+
+When those env vars are **unset** (the default, including this cloud preview), nothing changes:
+local scrypt passwords and `docksy_session` cookies remain the identity provider.
+
+Do **not** set a measurement id and do **not** initialize Analytics. Authorized production domain
+for Firebase Auth: `app.dockettree.com`.
+
+The browser loads Firebase web config at runtime from `GET /api/public-config` (`Cache-Control:
+no-store`), so Cloud Run env can rotate keys without a client rebuild. The first deploy of this
+code still needs a new image because the server and client code changed.
+
+See `.env.example` for the full list.
 
 ### Cloud Run (GCP)
 
 The repo includes a `Dockerfile` (Node 22, compiles `better-sqlite3`, runs `npm run build`, starts with `HOST=0.0.0.0`). Full copy-paste commands for project `docket-tree-510523` live in the project store checklist `docs/cloud-run-deploy-checklist.md`.
+
+Firebase web config is **runtime** (server env → `GET /api/public-config`). Rotating keys does not need a Vite rebuild, but **this** change still needs a new image because the Auth code is new.
 
 From the repo root (Cloud Shell or any machine with `gcloud`):
 
@@ -135,10 +164,8 @@ Last full run on this branch:
 ```
 npm run typecheck              →  clean (TypeScript 6, strict, client + server)
 npm run build                  →  clean
-npm test                       →  11 files, 108 tests passed
-npm run e2e                    →  33 tests passed (chromium, 1440×900 and 390×780)
+npm test                       →  14 files, 123 tests passed
 npx oxlint                     →  no errors (warnings only: shadcn/ui fast-refresh and set-state-in-effect)
-node scripts/check-contrast.mjs → 39/39 token contrast pairs pass
 ```
 
 **Domain and service tests** (`tests/unit`) run the real service layer against the real SQLite
@@ -190,9 +217,9 @@ administration.
 progress and history, uploads with real progress and retry, and can withdraw a pending submission.
 Contacts authorized for several vendors switch context explicitly.
 
-**Server**: email and password sign-in behind an identity-provider port, sessions as hashed opaque
-tokens in the database with rolling expiry and revocation, the section 3 permission matrix enforced
-on every read, mutation and file access, organization scoping backed by composite foreign keys,
+**Server**: email and password sign-in behind an identity-provider port (Firebase when configured,
+local scrypt otherwise), sessions as hashed opaque tokens in the database with rolling expiry and
+revocation, the section 3 permission matrix enforced on every read, mutation and file access, organization scoping backed by composite foreign keys,
 uploads validated by magic bytes and size on the server, documents stored outside any web root,
 an append-only activity and review history written in the same transaction as the change it
 describes, a notification outbox with idempotency keys and bounded retries, and a daily reminder job
@@ -215,11 +242,14 @@ values; `tests/server/layering.test.ts` enforces that boundary.
 
 ### Decisions taken where the requirements left a choice
 
-- **Auth**: interim email and password (scrypt, minimum 12 characters) behind an
-  `IdentityProvider` port. **Firebase Authentication is the planned provider**; swapping it in means
-  writing one adapter that verifies an ID token and maps the uid onto `users.auth_subject`, with no
-  change to sessions, authorization or any product flow. V1 deliberately ships no Firebase client
-  and needs no API keys.
+- **Auth**: email and password behind an `IdentityProvider` port. **Firebase Authentication is
+  the production provider** when `FIREBASE_*` is set (ID token verified with Google’s public keys,
+  uid mapped onto `users.auth_subject`). **Local scrypt passwords remain the fallback** when those
+  env vars are absent — including this cloud preview. First-run setup still creates a local admin
+  (and a Firebase user from the browser when Firebase is configured). Vendor invitation accept
+  still creates the local account; with Firebase the browser also creates the Firebase user, then
+  exchanges an ID token for the session cookie. No Firebase Hosting, Firestore, Storage, or
+  Analytics.
 - **Database**: SQLite via `better-sqlite3`, WAL, foreign keys on, real columns and indexes.
 - **Documents**: a private directory (`$DOCKSY_DATA_DIR/uploads`), mode 0600, served only through
   `GET /api/submissions/:id/file` after an authorization check.

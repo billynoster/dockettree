@@ -2,7 +2,7 @@
 import { mkdir } from 'node:fs/promises'
 import { serve } from '@hono/node-server'
 import { systemClock } from '@/domain/clock'
-import { createLocalPasswordProvider } from './auth/identityProvider'
+import { createIdentityProvider } from './auth/identityProvider'
 import { hashToken, newToken } from './auth/tokens'
 import { loadConfig } from './config'
 import { SqliteDatabase } from './db/sqliteDatabase'
@@ -30,7 +30,7 @@ export async function createServer(overrides: Parameters<typeof loadConfig>[0] =
     db,
     clock,
     mailer,
-    identityProvider: createLocalPasswordProvider(db, clock),
+    identityProvider: createIdentityProvider(db, clock, config.firebase),
     tokens: { create: newToken, hash: hashToken },
     deliveryWorker,
   }
@@ -50,6 +50,11 @@ async function main(): Promise<void> {
   console.log(`  database: ${config.databaseFile}`)
   console.log(`  documents: ${config.uploadDir}`)
   console.log(`  email delivery: ${delivery}`)
+  console.log(
+    `  identity: ${
+      config.firebase ? `firebase (${config.firebase.projectId})` : 'local-password'
+    }`,
+  )
 }
 
 if (process.argv[1] && import.meta.url === `file://${process.argv[1]}`) {

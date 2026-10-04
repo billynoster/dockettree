@@ -113,7 +113,7 @@ export interface User {
   id: UUID
   display_name: string
   email: string
-  /** Reserved for a future identity provider subject; null for password accounts. */
+  /** Firebase uid when signed in through Firebase Auth; null for local-password accounts. */
   auth_subject: string | null
   /** scrypt digest. Null until the account has been given a password. */
   password_hash: string | null

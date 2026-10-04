@@ -16,6 +16,7 @@ RUN npm run build \
 
 FROM node:22-bookworm-slim AS runtime
 
+# ca-certificates: Firebase ID-token verify fetches Google JWKS over HTTPS.
 RUN apt-get update \
   && apt-get install -y --no-install-recommends ca-certificates \
   && rm -rf /var/lib/apt/lists/* \

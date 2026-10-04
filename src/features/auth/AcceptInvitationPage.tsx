@@ -79,7 +79,11 @@ export function AcceptInvitationPage() {
                 setError(null)
                 setFieldErrors({})
                 void api
-                  .acceptInvitation({ token, ...values })
+                  .acceptInvitation({
+                    token,
+                    ...values,
+                    email: check.data?.invited_email,
+                  })
                   .then(() => reload())
                   .catch((caught: unknown) => {
                     setError(errorMessage(caught))

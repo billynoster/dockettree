@@ -7,6 +7,12 @@
  * bundled into the client (a unit test enforces that boundary).
  */
 import { AppError, type AppErrorCode, type FieldErrors } from '@/domain/errors'
+import type { PublicConfig } from '@/lib/firebaseAuth'
+import {
+  firebaseIdTokenForLogin,
+  provisionFirebasePasswordUser,
+  signOutFirebaseClient,
+} from '@/lib/firebaseAuth'
 import type {
   ActivityEventType,
   DocumentRequestState,
@@ -128,13 +134,22 @@ export interface SessionInfo {
 }
 
 export const api = {
+  publicConfig: () => get<PublicConfig>('/public-config'),
   session: () => get<SessionInfo>('/session'),
-  login: (email: string, password: string) => post<{ user_id: UUID }>('/auth/login', { email, password }),
-  logout: () => post<{ signed_out: boolean }>('/auth/logout'),
+  login: async (email: string, password: string) => {
+    const idToken = await firebaseIdTokenForLogin(email, password)
+    if (idToken) return post<{ user_id: UUID }>('/auth/login', { idToken })
+    return post<{ user_id: UUID }>('/auth/login', { email, password })
+  },
+  logout: async () => {
+    const result = await post<{ signed_out: boolean }>('/auth/logout')
+    await signOutFirebaseClient()
+    return result
+  },
   changePassword: (currentPassword: string, newPassword: string) =>
     post<{ updated: boolean }>('/auth/password', { currentPassword, newPassword }),
   setVendorContext: (vendorId: UUID) => post<{ active_vendor_id: UUID }>('/session/vendor-context', { vendorId }),
-  setup: (input: {
+  setup: async (input: {
     organizationName: string
     timezone: string
     supportEmail: string
@@ -142,7 +157,12 @@ export const api = {
     adminName: string
     adminEmail: string
     adminPassword: string
-  }) => post<{ organization_id: UUID; user_id: UUID }>('/setup', input),
+  }) => {
+    const idToken = await provisionFirebasePasswordUser(input.adminEmail, input.adminPassword, {
+      signInIfExists: true,
+    })
+    return post<{ organization_id: UUID; user_id: UUID }>('/setup', { ...input, idToken: idToken ?? undefined })
+  },
 
   overview: () => get<OverviewData>('/overview'),
 
@@ -171,8 +191,17 @@ export const api = {
   revokeInvitation: (invitationId: UUID) => remove<{ revoked: boolean }>(`/invitations/${invitationId}`),
   checkInvitation: (token: string) =>
     get<InvitationCheck>(`/invitations/check?token=${encodeURIComponent(token)}`),
-  acceptInvitation: (input: { token: string; display_name: string; password: string }) =>
-    post<{ user_id: UUID; vendor_id: UUID; email: string }>('/invitations/accept', input),
+  acceptInvitation: async (input: { token: string; display_name: string; password: string; email?: string }) => {
+    const idToken = input.email
+      ? await provisionFirebasePasswordUser(input.email, input.password, { signInIfExists: true })
+      : null
+    return post<{ user_id: UUID; vendor_id: UUID; email: string }>('/invitations/accept', {
+      token: input.token,
+      display_name: input.display_name,
+      password: input.password,
+      idToken: idToken ?? undefined,
+    })
+  },
 
   previewReminder: (vendorId: UUID) => get<ReminderPreview>(`/vendors/${vendorId}/reminder-preview`),
   sendReminder: (vendorId: UUID, requestKey: string) =>
@@ -260,8 +289,10 @@ export const api = {
     support_contact_name: string
     expectedVersion: number
   }) => patch<Organization>('/settings', input),
-  addMember: (input: { display_name: string; email: string; role: InternalRole; password: string }) =>
-    post<MemberRow>('/members', input),
+  addMember: async (input: { display_name: string; email: string; role: InternalRole; password: string }) => {
+    await provisionFirebasePasswordUser(input.email, input.password)
+    return post<MemberRow>('/members', input)
+  },
   changeMemberRole: (userId: UUID, role: InternalRole) =>
     post<{ updated: boolean }>(`/members/${userId}/role`, { role }),
   setMemberStatus: (userId: UUID, status: 'active' | 'disabled') =>

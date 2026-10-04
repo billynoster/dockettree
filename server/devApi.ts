@@ -21,3 +21,6 @@ console.log(`  database: ${config.databaseFile}`)
 console.log(
   `  email delivery: ${config.smtp ? `SMTP ${config.smtp.host}:${config.smtp.port}` : 'not configured (messages stay queued)'}`,
 )
+console.log(
+  `  identity: ${config.firebase ? `firebase (${config.firebase.projectId})` : 'local-password'}`,
+)
