@@ -78,13 +78,40 @@ npm start              # one process serves the API and the built client on PORT
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `PORT` / `HOST` | `43217` / `127.0.0.1` | Where the server listens |
+| `PORT` / `HOST` | `43217` / `127.0.0.1` | Where the server listens (`HOST=0.0.0.0` for containers) |
 | `DOCKSY_DATA_DIR` | `./var` | SQLite database and stored documents |
 | `PUBLIC_URL` | `http://HOST:PORT` | Base URL used in invitation links |
 | `SECURE_COOKIES` | `false` | Set `true` when served over HTTPS |
 | `SMTP_HOST` | — | Enables email delivery; without it messages stay queued |
 | `SMTP_PORT` / `SMTP_SECURE` / `SMTP_USER` / `SMTP_PASSWORD` / `SMTP_FROM` | `587` / `false` / — / — / `docksy@localhost` | SMTP details |
 | `RUN_BACKGROUND_JOBS` | `true` | Daily reminder job and the delivery worker |
+
+### Cloud Run (GCP)
+
+The repo includes a `Dockerfile` (Node 22, compiles `better-sqlite3`, runs `npm run build`, starts with `HOST=0.0.0.0`). Full copy-paste commands for project `docket-tree-510523` live in the project store checklist `docs/cloud-run-deploy-checklist.md`.
+
+From the repo root (Cloud Shell or any machine with `gcloud`):
+
+```bash
+gcloud config set project docket-tree-510523
+gcloud services enable run.googleapis.com artifactregistry.googleapis.com cloudbuild.googleapis.com
+
+# once
+gcloud artifacts repositories create docket-tree \
+  --repository-format=docker --location=us-central1 \
+  --description="Docket Tree container images"
+
+gcloud builds submit \
+  --tag us-central1-docker.pkg.dev/docket-tree-510523/docket-tree/docket-tree:latest
+
+gcloud run deploy docket-tree \
+  --image=us-central1-docker.pkg.dev/docket-tree-510523/docket-tree/docket-tree:latest \
+  --region=us-central1 --platform=managed \
+  --allow-unauthenticated --max-instances=1 \
+  --set-env-vars="HOST=0.0.0.0,SECURE_COOKIES=true,PUBLIC_URL=https://placeholder.example"
+```
+
+Then set `PUBLIC_URL` to the service’s `https://….run.app` URL. In the console Create form, paste that same Artifact Registry image URL, set **max instances = 1**, allow public access, and add the env vars after create if needed. Do **not** use the demo `hello` container.
 
 Other scripts:
 

@@ -1,5 +1,6 @@
 /** Loading, empty, filtered-empty, error, access-denied and inline-notice surfaces. */
 import {
+  CalendarClock,
   CircleAlert,
   Inbox,
   Info,
@@ -211,6 +212,7 @@ const NOTICE_ICON = {
   info: Info,
   waiting: Info,
   warn: TriangleAlert,
+  expiring: CalendarClock,
   danger: CircleAlert,
   neutral: Info,
   brand: Info,

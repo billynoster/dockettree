@@ -1,0 +1,36 @@
+# Dependencies and build output (rebuilt in the image)
+node_modules
+dist
+dist-ssr
+
+# Local data and secrets
+var
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+.env
+.env.*
+*.local
+
+# Git / IDE / OS
+.git
+.gitignore
+.cursor
+.vscode
+.idea
+.DS_Store
+
+# Tests and tooling artifacts (not needed at runtime)
+tests
+test-results
+playwright-report
+blob-report
+.playwright
+playwright.config.ts
+vitest.config.ts
+coverage
+*.log
+logs
+
+# Docs (not needed to build or run)
+*.md
