@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { Link, useNavigate, useSearchParams } from 'react-router'
 import {
   Check,
   ChevronDown,
@@ -97,7 +97,9 @@ function CtaButton({
         billing_interval: interval,
         source: 'pricing_card_setup',
       })
-      navigate(pricingCtaRoutes.start_trial_setup)
+      navigate(
+        `${pricingCtaRoutes.start_trial_signup}?from=${encodeURIComponent('/pricing')}&intent=trial`,
+      )
       return
     }
     if (!authenticated) {
@@ -105,10 +107,10 @@ function CtaButton({
         plan_id: plan.id,
         cta_kind: 'start_trial',
         billing_interval: interval,
-        source: 'pricing_card_login',
+        source: 'pricing_card_signup',
       })
       navigate(
-        `/login?from=${encodeURIComponent(`/pricing?checkout=1&plan=${plan.id}&interval=${interval}`)}&intent=checkout`,
+        `${pricingCtaRoutes.start_trial_signup}?from=${encodeURIComponent('/pricing')}&intent=checkout&plan=${plan.id}&interval=${interval}`,
       )
       return
     }
@@ -398,6 +400,10 @@ function FaqList() {
 export function PricingPage() {
   const [interval, setInterval] = useState<BillingInterval>('annual')
   const [comparisonOpen, setComparisonOpen] = useState(false)
+  const [searchParams] = useSearchParams()
+  const showTrialHandoff = searchParams.get('trial') === '1'
+  const { state } = useSession()
+  const authenticated = Boolean(state.info?.authenticated)
 
   useDocumentSeo(pricingSeo.title, pricingSeo.description)
 
@@ -434,26 +440,43 @@ export function PricingPage() {
             <BrandLockupHorizontal className="h-8 sm:h-9" />
           </Link>
           <nav className="flex items-center gap-2 sm:gap-3" aria-label="Pricing actions">
-            <Button asChild variant="ghost" size="sm">
-              <Link to="/login">Sign in</Link>
-            </Button>
-            <Button asChild size="sm">
-              <Link
-                to={pricingCtaRoutes.start_trial_setup}
-                onClick={() =>
-                  track('plan_cta_clicked', {
-                    plan_id: 'growth',
-                    cta_kind: 'start_trial',
-                    source: 'header',
-                  })
-                }
-              >
-                Start Free Trial
-              </Link>
-            </Button>
+            {authenticated ? null : (
+              <Button asChild variant="ghost" size="sm">
+                <Link to="/login">Sign in</Link>
+              </Button>
+            )}
+            {authenticated ? (
+              <Button asChild size="sm" variant="outline">
+                <Link to="/overview">Open app</Link>
+              </Button>
+            ) : (
+              <Button asChild size="sm">
+                <Link
+                  to={pricingCtaRoutes.start_trial_signup}
+                  onClick={() =>
+                    track('plan_cta_clicked', {
+                      plan_id: 'growth',
+                      cta_kind: 'start_trial',
+                      source: 'header',
+                    })
+                  }
+                >
+                  Start Free Trial
+                </Link>
+              </Button>
+            )}
           </nav>
         </div>
       </header>
+
+      {showTrialHandoff && authenticated ? (
+        <div className="border-b border-[var(--tone-brand-border)] bg-[color-mix(in_oklch,var(--primary)_8%,var(--paper))]">
+          <p className="mx-auto max-w-6xl px-4 py-3 text-sm text-foreground sm:px-6">
+            Your organization is ready. Choose a plan below to start your {trialCopy.days}-day free
+            trial in Stripe Checkout.
+          </p>
+        </div>
+      ) : null}
 
       <main id="main" className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
         <section className="mx-auto max-w-3xl space-y-5 text-center">

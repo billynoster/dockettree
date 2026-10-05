@@ -118,7 +118,11 @@ export function LoginPage() {
             first.
           </p>
           <p>
-            Evaluating Docket Tree?{' '}
+            New to Docket Tree?{' '}
+            <Link to="/signup" className="text-clay-text underline-offset-4 hover:underline">
+              Start a free trial
+            </Link>
+            {' · '}
             <Link to="/pricing" className="text-clay-text underline-offset-4 hover:underline">
               View pricing
             </Link>
