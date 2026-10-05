@@ -20,6 +20,7 @@ import type {
   Membership,
   Notification,
   Organization,
+  Property,
   RequirementTemplate,
   ReviewEvent,
   Submission,
@@ -29,6 +30,7 @@ import type {
   UUID,
   Vendor,
   VendorMembership,
+  VendorProperty,
 } from '@/domain/types'
 import type { Database } from '@/repositories/types'
 import { createSamplePdf, createSamplePng } from './sampleFiles'
@@ -604,6 +606,8 @@ interface SeedRecords {
   users: User[]
   memberships: Membership[]
   vendors: Vendor[]
+  properties: Property[]
+  vendorProperties: VendorProperty[]
   vendorMemberships: VendorMembership[]
   templates: RequirementTemplate[]
   templateItems: TemplateItem[]
@@ -711,11 +715,43 @@ export async function buildSeedRecords(now: Date, options: SeedOptions): Promise
     })),
   ]
 
+  const propertyMeta: Record<string, { address: string; notes: string }> = {
+    'Riverfront Offices': {
+      address: '1200 Riverfront Ave, Cedar Grove, IL',
+      notes: 'Class-A office tower with lobby vendor access.',
+    },
+    'Maple Business Park': {
+      address: '88 Maple Park Dr, Cedar Grove, IL',
+      notes: 'Multi-building campus; grounds vendors common.',
+    },
+    'Westfield Plaza': {
+      address: '450 Westfield Blvd, Cedar Grove, IL',
+      notes: 'Retail plaza with frequent after-hours service work.',
+    },
+  }
+
+  const properties: Property[] = PROPERTIES.map((name) => ({
+    id: stableId(`property:${name}`),
+    organization_id: ORGANIZATION_ID,
+    name,
+    address: propertyMeta[name]?.address ?? '',
+    notes: propertyMeta[name]?.notes ?? '',
+    lifecycle: 'active',
+    archived_at: null,
+    archive_reason: null,
+    created_at: at(415),
+    updated_at: at(415),
+    record_version: 1,
+  }))
+  const propertyIdByName = new Map(properties.map((property) => [property.name, property.id]))
+
   const records: SeedRecords = {
     organization,
     users,
     memberships,
     vendors: [],
+    properties,
+    vendorProperties: [],
     vendorMemberships: [],
     templates,
     templateItems,
@@ -734,6 +770,22 @@ export async function buildSeedRecords(now: Date, options: SeedOptions): Promise
       id: event.id ?? stableId(`activity:${event.event_type}:${event.vendor_id}:${event.created_at}:${event.target_id ?? ''}`),
       organization_id: ORGANIZATION_ID,
       ...event,
+    })
+  }
+
+  for (const property of properties) {
+    pushActivity({
+      vendor_id: null,
+      actor_id: ADMIN_USER_ID,
+      actor_label: 'Dana Whitfield',
+      actor_role: 'admin',
+      event_type: 'property_created',
+      target_id: property.id,
+      summary: `Added property "${property.name}"`,
+      reason: null,
+      metadata: { address: property.address },
+      vendor_visible: false,
+      created_at: property.created_at,
     })
   }
 
@@ -777,6 +829,17 @@ export async function buildSeedRecords(now: Date, options: SeedOptions): Promise
       record_version: 1,
     }
     records.vendors.push(vendor)
+    for (const tag of spec.property_tags) {
+      const propertyId = propertyIdByName.get(tag)
+      if (!propertyId) continue
+      records.vendorProperties.push({
+        id: stableId(`vendor-property:${spec.slug}:${tag}`),
+        organization_id: ORGANIZATION_ID,
+        vendor_id: vendorId,
+        property_id: propertyId,
+        created_at: vendor.created_at,
+      })
+    }
 
     pushActivity({
       vendor_id: vendorId,
@@ -1250,6 +1313,8 @@ export async function seedSampleData(db: Database, now: Date, options: SeedOptio
     await uow.users.putMany(records.users)
     await uow.memberships.putMany(records.memberships)
     await uow.vendors.putMany(records.vendors)
+    await uow.properties.putMany(records.properties)
+    await uow.vendorProperties.putMany(records.vendorProperties)
     await uow.vendorMemberships.putMany(records.vendorMemberships)
     await uow.templates.putMany(records.templates)
     await uow.templateItems.putMany(records.templateItems)

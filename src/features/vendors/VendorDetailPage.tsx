@@ -682,10 +682,10 @@ export function VendorDetailPage() {
                   className="mx-auto size-8 text-muted-foreground"
                   strokeWidth={1.5}
                 />
-                <p className="text-sm font-medium">No properties tagged yet</p>
+                <p className="text-sm font-medium">No properties linked yet</p>
                 <p className="mx-auto max-w-prose text-sm text-muted-foreground">
-                  Property tags help you find vendors by site. Add them below when you’re ready —
-                  there’s no separate property product here.
+                  Link sites from the Properties directory so filters and reports can group this
+                  vendor by building.
                 </p>
               </div>
             ) : (

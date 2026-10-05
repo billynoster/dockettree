@@ -5,6 +5,7 @@ import { validateImportCsv, type ImportValidation } from '@/domain/csv'
 import type { AssignedRequirement, ImportBatch, UUID, Vendor } from '@/domain/types'
 import { recordActivity } from './activityService'
 import { nowIso, requireCapability, type ServiceContext } from './context'
+import { syncVendorPropertyAssociations } from './propertyService'
 import { requireOwned } from './queries'
 
 export async function previewImport(ctx: ServiceContext, text: string): Promise<ImportValidation> {
@@ -106,6 +107,14 @@ export async function importVendors(
         updated_at: timestamp,
         record_version: 1,
       }
+      await uow.vendors.put(vendor)
+      const propertyTags = await syncVendorPropertyAssociations(
+        uow,
+        ctx,
+        vendor,
+        candidate.property_tags,
+      )
+      vendor.property_tags = propertyTags
       await uow.vendors.put(vendor)
       vendorIds.push(vendor.id)
 

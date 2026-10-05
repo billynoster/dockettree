@@ -54,31 +54,23 @@ interface NavItem {
   badge?: 'review'
 }
 
-interface SoonItem {
-  label: string
-  icon: typeof LayoutDashboard
-}
-
 /**
- * Spec IA mapped onto existing routes. Properties / Reports stay “Soon”
- * until those backends exist. Requests is a real inbox backed by document_requests.
+ * Spec IA mapped onto existing routes. Properties and Reports are first-class
+ * workspace screens. Requests is a real inbox backed by document_requests.
  */
 const PRIMARY_NAV: NavItem[] = [
   { to: '/overview', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/vendors', label: 'Vendors', icon: Users },
+  { to: '/properties', label: 'Properties', icon: Building2 },
   { to: '/requests', label: 'Requests', icon: Inbox },
   { to: '/review', label: 'Reviews', icon: FileCheck2, badge: 'review' },
   { to: '/requirements', label: 'Documents', icon: ClipboardList },
+  { to: '/reports', label: 'Reports', icon: FileBarChart },
 ]
 
 const RECORDS_NAV: NavItem[] = [
   { to: '/notifications', label: 'Notifications', icon: Mail },
   { to: '/activity', label: 'Activity', icon: Activity },
-]
-
-const SOON_NAV: SoonItem[] = [
-  { label: 'Properties', icon: Building2 },
-  { label: 'Reports', icon: FileBarChart },
 ]
 
 const SETTINGS_NAV: NavItem[] = [{ to: '/settings', label: 'Settings', icon: Settings }]
@@ -87,9 +79,11 @@ const PAGE_TITLES: { prefix: string; title: string }[] = [
   { prefix: '/overview', title: 'Dashboard' },
   { prefix: '/vendors/new', title: 'Add vendor' },
   { prefix: '/vendors', title: 'Vendors' },
+  { prefix: '/properties', title: 'Properties' },
   { prefix: '/requests', title: 'Requests' },
   { prefix: '/review', title: 'Reviews' },
   { prefix: '/requirements', title: 'Documents' },
+  { prefix: '/reports', title: 'Reports' },
   { prefix: '/notifications', title: 'Notifications' },
   { prefix: '/activity', title: 'Activity' },
   { prefix: '/settings', title: 'Settings' },
@@ -215,31 +209,6 @@ function NavLinkRow({
   )
 }
 
-function SoonRow({ item, collapsed = false }: { item: SoonItem; collapsed?: boolean }) {
-  return (
-    <NavTooltip label={`${item.label} (Soon)`} enabled={collapsed}>
-      <span
-        className={cn(
-          'flex h-11 cursor-not-allowed items-center rounded-xl text-sm font-medium text-muted-foreground/55',
-          collapsed ? 'w-full justify-center px-0' : 'gap-3 px-4',
-        )}
-        title={collapsed ? `${item.label} — Coming soon` : 'Coming soon'}
-        aria-disabled="true"
-      >
-        <item.icon aria-hidden="true" strokeWidth={1.75} className="size-[18px] shrink-0 opacity-70" />
-        {collapsed ? (
-          <span className="sr-only">{item.label} (Soon)</span>
-        ) : (
-          <>
-            <span className="truncate">{item.label}</span>
-            <span className="ml-auto text-[0.6875rem] font-semibold tracking-wide uppercase">Soon</span>
-          </>
-        )}
-      </span>
-    </NavTooltip>
-  )
-}
-
 function NavSection({
   label,
   collapsed,
@@ -295,13 +264,6 @@ function NavItems({
               onNavigate={onNavigate}
               collapsed={collapsed}
             />
-          </li>
-        ))}
-      </NavSection>
-      <NavSection label="Coming later" collapsed={collapsed} showDivider={collapsed}>
-        {SOON_NAV.map((item) => (
-          <li key={item.label}>
-            <SoonRow item={item} collapsed={collapsed} />
           </li>
         ))}
       </NavSection>

@@ -15,6 +15,7 @@ import type {
   Notification,
   Organization,
   OrganizationBilling,
+  Property,
   RequestRecord,
   RequirementTemplate,
   ReviewEvent,
@@ -25,6 +26,7 @@ import type {
   UUID,
   Vendor,
   VendorMembership,
+  VendorProperty,
 } from '@/domain/types'
 
 export interface Collection<T> {
@@ -56,6 +58,8 @@ export interface UnitOfWork {
   sessions: Collection<AuthSession>
   memberships: Collection<Membership>
   vendors: Collection<Vendor>
+  properties: Collection<Property>
+  vendorProperties: Collection<VendorProperty>
   vendorMemberships: Collection<VendorMembership>
   templates: Collection<RequirementTemplate>
   templateItems: Collection<TemplateItem>

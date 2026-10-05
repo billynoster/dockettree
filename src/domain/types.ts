@@ -86,6 +86,10 @@ export type ActivityEventType =
   | 'template_created'
   | 'template_updated'
   | 'template_archived'
+  | 'property_created'
+  | 'property_updated'
+  | 'property_archived'
+  | 'property_restored'
   | 'settings_updated'
   | 'invitation_accepted'
   | 'member_added'
@@ -179,6 +183,28 @@ export interface Vendor extends Timestamps {
   archived_at: IsoDateTime | null
   archive_reason: string | null
   record_version: number
+}
+
+/** Org-scoped site / property record. Archived properties do not count toward plan limits. */
+export interface Property extends Timestamps {
+  id: UUID
+  organization_id: UUID
+  name: string
+  address: string
+  notes: string
+  lifecycle: VendorLifecycle
+  archived_at: IsoDateTime | null
+  archive_reason: string | null
+  record_version: number
+}
+
+/** Many-to-many link between a vendor and a property within one organization. */
+export interface VendorProperty {
+  id: UUID
+  organization_id: UUID
+  vendor_id: UUID
+  property_id: UUID
+  created_at: IsoDateTime
 }
 
 export interface VendorMembership {

@@ -12,6 +12,7 @@ import { loadPrincipal, type AppDependencies, type AppEnv } from './context'
 import { adminRoutes } from './routes/admin'
 import { billingRoutes } from './routes/billing'
 import { documentRoutes } from './routes/documents'
+import { propertyRoutes } from './routes/properties'
 import { sessionRoutes } from './routes/session'
 import { testingRoutes } from './routes/testing'
 import { vendorRoutes } from './routes/vendors'
@@ -36,6 +37,7 @@ export function createApp(deps: AppDependencies): Hono<AppEnv> {
   app.route('/api', billingRoutes)
   app.route('/api', vendorRoutes)
   app.route('/api', documentRoutes)
+  app.route('/api', propertyRoutes)
   app.route('/api', adminRoutes)
   if (process.env.DOCKSY_ENABLE_TEST_RESET === 'true') {
     app.route('/api', testingRoutes)

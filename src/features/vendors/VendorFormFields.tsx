@@ -125,9 +125,9 @@ export function VendorFormFields({
       </div>
 
       <fieldset className="space-y-2 sm:col-span-2">
-        <legend className="mb-1 text-sm font-medium">Property tags (optional)</legend>
+        <legend className="mb-1 text-sm font-medium">Properties (optional)</legend>
         <p className="text-xs text-muted-foreground">
-          Tags are for filtering only. Document requirements are organization-wide.
+          Link sites from your Properties directory. Requirements stay organization-wide.
         </p>
         <div className="flex flex-wrap gap-x-5 gap-y-2.5 pt-1">
           {properties.map((property) => (

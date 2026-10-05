@@ -41,6 +41,16 @@ export const templateSchema = z.object({
   description: trimmed,
 })
 
+export const propertyInputSchema = z.object({
+  name: trimmed
+    .refine((value) => value.length > 0, 'Enter a property name.')
+    .refine((value) => value.length <= 120, 'Keep the property name under 120 characters.'),
+  address: trimmed.refine((value) => value.length <= 240, 'Keep the address under 240 characters.'),
+  notes: trimmed.refine((value) => value.length <= 2000, 'Keep notes under 2,000 characters.'),
+})
+
+export type PropertyInput = z.infer<typeof propertyInputSchema>
+
 export const templateItemSchema = z.object({
   title: trimmed.refine((value) => value.length > 0, 'Enter a requirement title.'),
   instructions: trimmed.refine(

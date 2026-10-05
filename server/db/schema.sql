@@ -70,6 +70,41 @@ CREATE TABLE IF NOT EXISTS vendors (
 CREATE INDEX IF NOT EXISTS vendors_by_organization ON vendors (organization_id);
 CREATE INDEX IF NOT EXISTS vendors_by_lifecycle ON vendors (lifecycle);
 
+-- First-class properties (sites). Vendor.property_tags stay as denormalized names for filters.
+CREATE TABLE IF NOT EXISTS properties (
+  id              TEXT PRIMARY KEY,
+  organization_id TEXT NOT NULL REFERENCES organizations (id),
+  name            TEXT NOT NULL,
+  address         TEXT NOT NULL DEFAULT '',
+  notes           TEXT NOT NULL DEFAULT '',
+  lifecycle       TEXT NOT NULL CHECK (lifecycle IN ('active', 'archived')),
+  archived_at     TEXT,
+  archive_reason  TEXT,
+  record_version  INTEGER NOT NULL DEFAULT 1,
+  created_at      TEXT NOT NULL,
+  updated_at      TEXT NOT NULL,
+  UNIQUE (organization_id, id)
+);
+CREATE INDEX IF NOT EXISTS properties_by_organization ON properties (organization_id);
+CREATE INDEX IF NOT EXISTS properties_by_lifecycle ON properties (lifecycle);
+CREATE UNIQUE INDEX IF NOT EXISTS properties_name_unique
+  ON properties (organization_id, name COLLATE NOCASE)
+  WHERE lifecycle = 'active';
+
+CREATE TABLE IF NOT EXISTS vendor_properties (
+  id              TEXT PRIMARY KEY,
+  organization_id TEXT NOT NULL,
+  vendor_id       TEXT NOT NULL,
+  property_id     TEXT NOT NULL,
+  created_at      TEXT NOT NULL,
+  UNIQUE (vendor_id, property_id),
+  FOREIGN KEY (organization_id, vendor_id) REFERENCES vendors (organization_id, id),
+  FOREIGN KEY (organization_id, property_id) REFERENCES properties (organization_id, id)
+);
+CREATE INDEX IF NOT EXISTS vendor_properties_by_vendor ON vendor_properties (vendor_id);
+CREATE INDEX IF NOT EXISTS vendor_properties_by_property ON vendor_properties (property_id);
+CREATE INDEX IF NOT EXISTS vendor_properties_by_organization ON vendor_properties (organization_id);
+
 CREATE TABLE IF NOT EXISTS vendor_memberships (
   id              TEXT PRIMARY KEY,
   organization_id TEXT NOT NULL,

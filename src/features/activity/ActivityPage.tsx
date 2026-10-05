@@ -2,6 +2,7 @@ import { useSearchParams } from 'react-router'
 import {
   Archive,
   ArchiveRestore,
+  Building2,
   Check,
   ClipboardList,
   FileUp,
@@ -65,6 +66,10 @@ const EVENT_ICON: Record<ActivityEventType, typeof Check> = {
   template_created: ClipboardList,
   template_updated: Pencil,
   template_archived: Archive,
+  property_created: Building2,
+  property_updated: Pencil,
+  property_archived: Archive,
+  property_restored: Archive,
   settings_updated: Settings,
   member_added: UserPlus,
   member_updated: Pencil,

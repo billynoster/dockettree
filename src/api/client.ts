@@ -38,6 +38,14 @@ import type { MemberRow } from '@/services/memberService'
 import type { OverviewData } from '@/services/overviewService'
 import type { PortalData } from '@/services/portalService'
 import type {
+  PropertyListItem,
+  PropertyListResult,
+  PropertyUsageLimits,
+} from '@/services/propertyService'
+import type { PropertyInput } from '@/domain/validation'
+import type { Property } from '@/domain/types'
+import type { ReadinessReport, ReportExportResult } from '@/services/reportService'
+import type {
   DailyJobResult,
   OutboxEntry,
   ReminderPreview,
@@ -110,6 +118,8 @@ const post = <T>(path: string, body?: unknown) =>
   request<T>(path, { method: 'POST', body: body === undefined ? '{}' : JSON.stringify(body) })
 const patch = <T>(path: string, body: unknown) =>
   request<T>(path, { method: 'PATCH', body: JSON.stringify(body) })
+const put = <T>(path: string, body: unknown) =>
+  request<T>(path, { method: 'PUT', body: JSON.stringify(body) })
 const remove = <T>(path: string) => request<T>(path, { method: 'DELETE' })
 
 function queryString(query: VendorListQuery): string {
@@ -266,6 +276,18 @@ export const api = {
     patch<{ updated: boolean }>(`/templates/${templateId}`, input),
   setTemplateArchived: (templateId: UUID, archived: boolean) =>
     post<{ updated: boolean }>(`/templates/${templateId}/archived`, { archived }),
+
+  listProperties: () => get<PropertyListResult>('/properties'),
+  createProperty: (input: PropertyInput) =>
+    post<{ property_id: UUID; usage: PropertyUsageLimits }>('/properties', input),
+  updateProperty: (propertyId: UUID, input: PropertyInput & { expectedVersion: number }) =>
+    patch<Property>(`/properties/${propertyId}`, input),
+  setPropertyArchived: (propertyId: UUID, archived: boolean, reason?: string) =>
+    post<Property>(`/properties/${propertyId}/archived`, { archived, reason }),
+  setPropertyVendors: (propertyId: UUID, vendorIds: UUID[]) =>
+    put<PropertyListItem>(`/properties/${propertyId}/vendors`, { vendor_ids: vendorIds }),
+  readinessReport: () => get<ReadinessReport>('/reports/readiness'),
+  exportReadinessReport: () => get<ReportExportResult>('/reports/readiness.csv'),
 
   listActivity: (query: ActivityQuery = {}) => {
     const params = new URLSearchParams()

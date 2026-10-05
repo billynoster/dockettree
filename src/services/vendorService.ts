@@ -17,6 +17,7 @@ import type { VendorListQuery } from '@/domain/vendorQuery'
 import { withIdempotency, type UnitOfWork } from '@/repositories/types'
 import { recordActivity } from './activityService'
 import { nowIso, requireCapability, today, type ServiceContext } from './context'
+import { syncVendorPropertyAssociations } from './propertyService'
 import {
   type VendorSnapshot,
   buildSnapshot,
@@ -110,6 +111,16 @@ export async function listVendors(
       ).status,
     }))
 
+    const propertyRecords = await uow.properties.where('by_organization', ctx.organizationId)
+    const propertyNames = [
+      ...new Set([
+        ...propertyRecords
+          .filter((property) => property.lifecycle === 'active')
+          .map((property) => property.name),
+        ...snapshots.flatMap((snapshot) => snapshot.vendor.property_tags),
+      ]),
+    ].sort((a, b) => a.localeCompare(b))
+
     return {
       rows,
       total,
@@ -118,7 +129,7 @@ export async function listVendors(
       totalPages,
       counts,
       categories: [...new Set(snapshots.map((snapshot) => snapshot.vendor.category))].sort(),
-      properties: [...new Set(snapshots.flatMap((snapshot) => snapshot.vendor.property_tags))].sort(),
+      properties: propertyNames,
       filteredEmpty: total === 0 && scoped.length > 0,
     }
   })
@@ -259,13 +270,21 @@ export async function createVendor(
         contact_email: parsed.data.contact_email,
         lifecycle: 'active',
         invited_at: null,
-        property_tags: parsed.data.property_tags,
+        property_tags: [],
         archived_at: null,
         archive_reason: null,
         created_at: timestamp,
         updated_at: timestamp,
         record_version: 1,
       }
+      await uow.vendors.put(vendor)
+      const propertyTags = await syncVendorPropertyAssociations(
+        uow,
+        ctx,
+        vendor,
+        parsed.data.property_tags,
+      )
+      vendor.property_tags = propertyTags
       await uow.vendors.put(vendor)
       // No vendor membership yet: one is created when a contact redeems an invitation.
       await recordActivity(uow, ctx, {
@@ -325,9 +344,16 @@ export async function updateVendor(
     if (vendor.contact_email !== parsed.data.contact_email) changed.push('contact email')
     if (vendor.property_tags.join('|') !== parsed.data.property_tags.join('|')) changed.push('properties')
 
+    const propertyTags = await syncVendorPropertyAssociations(
+      uow,
+      ctx,
+      vendor,
+      parsed.data.property_tags,
+    )
     const updated: Vendor = {
       ...vendor,
       ...parsed.data,
+      property_tags: propertyTags,
       updated_at: nowIso(ctx),
       record_version: vendor.record_version + 1,
     }

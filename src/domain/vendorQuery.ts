@@ -49,6 +49,7 @@ export function parseVendorQuery(params: URLSearchParams): VendorListQuery {
     sort,
     direction: params.get('dir') === 'desc' ? 'desc' : 'asc',
     page: Number.parseInt(params.get('page') ?? '1', 10) || 1,
+    pageSize: Number.parseInt(params.get('pageSize') ?? '', 10) || undefined,
   }
 }
 
@@ -65,6 +66,7 @@ export function vendorQueryToParams(query: VendorListQuery): URLSearchParams {
   if (query.sort && query.sort !== 'name') params.set('sort', query.sort)
   if (query.direction === 'desc') params.set('dir', 'desc')
   if (query.page && query.page > 1) params.set('page', String(query.page))
+  if (query.pageSize) params.set('pageSize', String(query.pageSize))
   return params
 }
 

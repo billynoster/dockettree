@@ -19,6 +19,8 @@ import { RequirementsPage } from '@/features/requirements/RequirementsPage'
 import { ReviewDetailPage } from '@/features/review/ReviewDetailPage'
 import { ReviewQueuePage } from '@/features/review/ReviewQueuePage'
 import { PricingPage } from '@/features/pricing/PricingPage'
+import { PropertiesPage } from '@/features/properties/PropertiesPage'
+import { ReportsPage } from '@/features/reports/ReportsPage'
 import { SettingsPage } from '@/features/settings/SettingsPage'
 import { VendorDetailPage } from '@/features/vendors/VendorDetailPage'
 import { VendorNewPage } from '@/features/vendors/VendorNewPage'
@@ -181,10 +183,12 @@ function InternalRoutes() {
         <Route path="/vendors" element={<VendorsPage />} />
         {app.can('vendor.manage') ? <Route path="/vendors/new" element={<VendorNewPage />} /> : null}
         <Route path="/vendors/:vendorId" element={<VendorDetailPage />} />
+        <Route path="/properties" element={<PropertiesPage />} />
         <Route path="/requests" element={<RequestsPage />} />
         <Route path="/review" element={<ReviewQueuePage />} />
         <Route path="/review/:submissionId" element={<ReviewDetailPage />} />
         <Route path="/requirements" element={<RequirementsPage />} />
+        <Route path="/reports" element={<ReportsPage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/activity" element={<ActivityPage />} />
         <Route path="/settings" element={<SettingsPage />} />

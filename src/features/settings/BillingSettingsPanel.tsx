@@ -302,13 +302,23 @@ export function BillingSettingsPanel() {
       )
     : null
 
+  const propertiesQuery = useServiceQuery(() => api.listProperties(), [])
   const liveUsage = useMemo(() => {
-    if (overview.loading || vendors.loading || !overview.data || !vendors.data) return null
+    if (overview.loading || !overview.data) return null
+    if (propertiesQuery.loading && !propertiesQuery.data) return null
     return {
       activeVendors: overview.data.counts.active,
-      properties: vendors.data.properties.length,
+      properties:
+        propertiesQuery.data?.usage.activeCount ??
+        (vendors.data?.properties.length ?? 0),
     }
-  }, [overview.data, overview.loading, vendors.data, vendors.loading])
+  }, [
+    overview.data,
+    overview.loading,
+    propertiesQuery.data,
+    propertiesQuery.loading,
+    vendors.data?.properties.length,
+  ])
 
   const usage = resolveUsage(billing, liveUsage)
   const loading = billingQuery.loading

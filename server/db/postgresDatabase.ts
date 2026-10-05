@@ -138,6 +138,8 @@ export class PostgresDatabase implements Database {
       sessions: this.collection('sessions'),
       memberships: this.collection('memberships'),
       vendors: this.collection('vendors'),
+      properties: this.collection('properties'),
+      vendorProperties: this.collection('vendorProperties'),
       vendorMemberships: this.collection('vendorMemberships'),
       templates: this.collection('templates'),
       templateItems: this.collection('templateItems'),
