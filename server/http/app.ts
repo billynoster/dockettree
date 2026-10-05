@@ -46,9 +46,12 @@ export function createApp(deps: AppDependencies): Hono<AppEnv> {
   app.get('/api/health', (c) => c.json({ status: 'ok' }))
 
   if (existsSync(CLIENT_DIR)) {
-    app.use('/assets/*', serveStatic({ root: path.relative(process.cwd(), CLIENT_DIR) }))
-    app.get('/favicon.svg', serveStatic({ path: path.join(path.relative(process.cwd(), CLIENT_DIR), 'favicon.svg') }))
-    // Client-side routing: any non-API path returns the app shell.
+    // Serve Vite `public/` copies and hashed `/assets/*` from `dist/` before the SPA shell.
+    // Without this, `/brand/*.png`, favicon PNGs, and apple-touch icons fall through to
+    // index.html (HTML content-type) and look like broken images in production.
+    const clientRoot = path.relative(process.cwd(), CLIENT_DIR) || '.'
+    app.use('*', serveStatic({ root: clientRoot }))
+    // Client-side routing: any non-API path without a matching static file returns the app shell.
     app.get('*', async (c) => {
       if (c.req.path.startsWith('/api/')) return c.notFound()
       const html = await readFile(path.join(CLIENT_DIR, 'index.html'), 'utf8')
