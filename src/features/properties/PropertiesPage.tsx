@@ -183,10 +183,10 @@ export function PropertiesPage() {
               {selected ? (
                 <Section className="min-w-0">
                   <div className="flex flex-col gap-4 p-3 sm:p-3.5">
-                    <div className="flex flex-wrap items-start gap-3">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
                       <div className="min-w-0 flex-1 space-y-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h2 className="truncate text-lg font-semibold tracking-tight">
+                          <h2 className="text-lg font-semibold tracking-tight break-words">
                             {selected.property.name}
                           </h2>
                           {selected.property.lifecycle === 'archived' ? (
@@ -199,7 +199,7 @@ export function PropertiesPage() {
                           {selected.property.address || 'No street address on file'}
                         </p>
                       </div>
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-wrap gap-2 sm:justify-end">
                         {canManage && selected.property.lifecycle === 'active' ? (
                           <Button
                             size="sm"
