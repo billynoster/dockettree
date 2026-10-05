@@ -377,3 +377,47 @@ describe('first-run setup', () => {
     }
   })
 })
+
+describe('self-serve signup', () => {
+  it('creates a second organization when one already exists', async () => {
+    const created = await server.request('/api/signup', {
+      method: 'POST',
+      body: JSON.stringify({
+        organizationName: 'Harborview Ops',
+        timezone: 'America/New_York',
+        supportEmail: 'vendors@harborview.example',
+        supportContactName: 'Harborview vendor desk',
+        adminName: 'Blake Harbor',
+        adminEmail: 'blake.harbor@example.com',
+        adminPassword: 'a-long-enough-password',
+      }),
+    })
+    expect(created.status).toBe(200)
+    const cookie = created.headers.get('Set-Cookie')!.split(';')[0]
+    const session = await server.request('/api/session', { cookie })
+    expect(session.body.authenticated).toBe(true)
+    expect(session.body.role).toBe('admin')
+    expect(session.body.organization.name).toBe('Harborview Ops')
+    // Seeded Cedar Grove still exists; signup must not replace it for other sessions.
+    const seeded = await server.signIn(ADMIN, STAFF_PASSWORD)
+    const seededSession = await server.request('/api/session', { cookie: seeded })
+    expect(seededSession.body.organization.name).not.toBe('Harborview Ops')
+  })
+
+  it('rejects a duplicate admin email', async () => {
+    const duplicate = await server.request('/api/signup', {
+      method: 'POST',
+      body: JSON.stringify({
+        organizationName: 'Someone Else',
+        timezone: 'America/Chicago',
+        supportEmail: 'ops@example.com',
+        supportContactName: 'Ops',
+        adminName: 'Dana Clone',
+        adminEmail: ADMIN,
+        adminPassword: 'a-long-enough-password',
+      }),
+    })
+    expect(duplicate.status).toBe(422)
+    expect(duplicate.body.error.fieldErrors.adminEmail).toBeTruthy()
+  })
+})

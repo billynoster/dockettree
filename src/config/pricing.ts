@@ -43,12 +43,14 @@ export const trialCopy = {
 
 /**
  * Non-checkout destinations.
- * - start_trial_setup / login — greenfield or sign-in before Checkout
+ * - start_trial_signup — self-serve org + admin (marketing Start Free Trial)
+ * - start_trial_setup — first-run only (empty server)
  * - contact_sales / book_demo → mailto placeholder (documented; no calendly yet)
  */
 export const pricingCtaRoutes = {
-  start_trial_setup: '/setup',
-  start_trial_login: '/login?from=/pricing&intent=trial',
+  start_trial_signup: '/signup',
+  start_trial_setup: '/signup',
+  start_trial_login: '/signup?from=/pricing&intent=trial',
   contact_sales: 'mailto:sales@dockettree.example?subject=Docket%20Tree%20Enterprise',
   book_demo: trialCopy.bookDemoHref,
   billing_settings: '/settings?tab=billing',

@@ -174,6 +174,24 @@ export const api = {
     })
     return post<{ organization_id: UUID; user_id: UUID }>('/setup', { ...input, idToken: idToken ?? undefined })
   },
+  /** Self-serve trial signup (marketing Start Free Trial). Does not reuse an existing Firebase email. */
+  signup: async (input: {
+    organizationName: string
+    timezone: string
+    supportEmail: string
+    supportContactName: string
+    adminName: string
+    adminEmail: string
+    adminPassword: string
+  }) => {
+    const idToken = await provisionFirebasePasswordUser(input.adminEmail, input.adminPassword, {
+      signInIfExists: false,
+    })
+    return post<{ organization_id: UUID; user_id: UUID }>('/signup', {
+      ...input,
+      idToken: idToken ?? undefined,
+    })
+  },
 
   overview: () => get<OverviewData>('/overview'),
 

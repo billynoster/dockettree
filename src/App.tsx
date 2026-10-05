@@ -1,4 +1,4 @@
-import { BrowserRouter, Link, Navigate, Route, Routes, useLocation } from 'react-router'
+import { BrowserRouter, Link, Navigate, Route, Routes, useLocation, useSearchParams } from 'react-router'
 import { RotateCcw, ServerCrash } from 'lucide-react'
 import { AppProvider, useApp, useSession } from '@/app/AppProvider'
 import { BrandWordmark } from '@/components/brand/Brand'
@@ -11,6 +11,7 @@ import { ActivityPage } from '@/features/activity/ActivityPage'
 import { AcceptInvitationPage } from '@/features/auth/AcceptInvitationPage'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { SetupPage } from '@/features/auth/SetupPage'
+import { SignupPage } from '@/features/auth/SignupPage'
 import { NotificationsPage } from '@/features/notifications/NotificationsPage'
 import { OverviewPage } from '@/features/overview/OverviewPage'
 import { PortalPage } from '@/features/portal/PortalPage'
@@ -79,6 +80,15 @@ function Loading() {
   )
 }
 
+/** After sign-in / signup, honor a safe internal `from` query (used by pricing Checkout handoff). */
+function AuthLandingRedirect({ fallback }: { fallback: string }) {
+  const [params] = useSearchParams()
+  const from = params.get('from')
+  const target =
+    from && from.startsWith('/') && !from.startsWith('//') ? from : fallback
+  return <Navigate to={target} replace />
+}
+
 function ServerUnavailable({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
     <div className="flex min-h-dvh items-center justify-center p-6">
@@ -118,7 +128,7 @@ function AppRoutes() {
 
   const info = state.info
 
-  // Public marketing surface — available before and after auth so pricing is never gated.
+  // Public marketing surfaces — available before and after auth so pricing / trial entry are never gated.
   if (location.pathname === '/pricing') {
     return (
       <Routes>
@@ -137,10 +147,20 @@ function AppRoutes() {
     )
   }
 
+  // Self-serve trial signup is public whenever the visitor is signed out (including first-run).
+  if (location.pathname === '/signup' && !info.authenticated) {
+    return (
+      <Routes>
+        <Route path="/signup" element={<SignupPage />} />
+      </Routes>
+    )
+  }
+
   if (info.setupRequired) {
     return (
       <Routes>
         <Route path="/setup" element={<SetupPage />} />
+        <Route path="/signup" element={<SignupPage />} />
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="*" element={<Navigate to="/setup" replace />} />
       </Routes>
@@ -151,6 +171,7 @@ function AppRoutes() {
     return (
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="*" element={<Navigate to="/login" replace state={{ from: location.pathname }} />} />
       </Routes>
@@ -175,8 +196,9 @@ function InternalRoutes() {
     <Routes>
       <Route element={<AppShell />}>
         <Route path="/" element={<Navigate to="/overview" replace />} />
-        {/* Signing in from one of the unauthenticated screens lands on the overview. */}
-        <Route path="/login" element={<Navigate to="/overview" replace />} />
+        {/* Signing in / signing up lands on overview, or on a safe `from` handoff (e.g. pricing). */}
+        <Route path="/login" element={<AuthLandingRedirect fallback="/overview" />} />
+        <Route path="/signup" element={<AuthLandingRedirect fallback="/pricing?trial=1" />} />
         <Route path="/setup" element={<Navigate to="/overview" replace />} />
         <Route path="/invitations/accept" element={<Navigate to="/overview" replace />} />
         <Route path="/overview" element={<OverviewPage />} />

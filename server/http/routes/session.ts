@@ -1,5 +1,5 @@
-/** Sign-in, sign-out, the current session and first-run setup. */
-import { Hono } from 'hono'
+/** Sign-in, sign-out, the current session, first-run setup, and self-serve signup. */
+import { Hono, type Context } from 'hono'
 import { setCookie } from 'hono/cookie'
 import { conflict, validationError } from '@/domain/errors'
 import { newId } from '@/domain/ids'
@@ -177,125 +177,165 @@ sessionRoutes.post(
   }),
 )
 
+type RegisterOrgBody = {
+  organizationName?: string
+  timezone?: string
+  supportEmail?: string
+  supportContactName?: string
+  adminName?: string
+  adminEmail?: string
+  adminPassword?: string
+  idToken?: string
+}
+
+/**
+ * Create an organization + first admin and open a session cookie.
+ * Shared by first-run `/setup` and self-serve `/signup` (marketing Start Free Trial).
+ */
+async function registerOrganizationAdmin(
+  c: Context<AppEnv>,
+  options: { allowWhenOrgExists: boolean },
+) {
+  const deps = c.get('deps')
+  if (!options.allowWhenOrgExists && (await primaryOrganization(deps))) {
+    throw conflict('This server is already set up. Sign in instead.')
+  }
+
+  const body = await c.req.json<RegisterOrgBody>()
+
+  const fieldErrors: Record<string, string> = {}
+  const organizationName = (body.organizationName ?? '').trim()
+  const timezone = (body.timezone ?? 'America/Chicago').trim()
+  const supportEmail = (body.supportEmail ?? '').trim().toLowerCase()
+  const supportContactName = (body.supportContactName ?? '').trim()
+  const adminName = (body.adminName ?? '').trim()
+  const adminEmail = (body.adminEmail ?? '').trim().toLowerCase()
+  const adminPassword = body.adminPassword ?? ''
+
+  if (organizationName.length < 2) fieldErrors.organizationName = 'Enter your organization name.'
+  if (supportContactName.length < 2) {
+    fieldErrors.supportContactName = 'Enter the team or person vendors should contact.'
+  }
+  if (!isSyntacticallyValidEmail(supportEmail)) {
+    fieldErrors.supportEmail = 'Enter a valid support email address.'
+  }
+  if (adminName.length < 2) fieldErrors.adminName = 'Enter your name.'
+  if (!isSyntacticallyValidEmail(adminEmail)) fieldErrors.adminEmail = 'Enter a valid email address.'
+  try {
+    new Intl.DateTimeFormat('en-CA', { timeZone: timezone })
+  } catch {
+    fieldErrors.timezone = 'Choose a valid IANA timezone, for example America/Chicago.'
+  }
+  if (Object.keys(fieldErrors).length > 0) {
+    throw validationError('Fix the highlighted fields.', fieldErrors)
+  }
+
+  const existingUser = await deps.db.read(
+    async (uow) => (await uow.users.where('by_email', adminEmail))[0],
+  )
+  if (existingUser) {
+    throw validationError('An account with this email already exists. Sign in instead.', {
+      adminEmail: 'Sign in with this email, or use a different address to start a trial.',
+    })
+  }
+
+  deps.identityProvider.assertPasswordPolicy(adminPassword, 'adminPassword')
+  const passwordHash = await deps.identityProvider.hashPassword(adminPassword)
+
+  const idToken = (body.idToken ?? '').trim()
+  let authSubject: string | null = null
+  if (idToken) {
+    if (!deps.config.firebase) {
+      throw validationError('This server is not using Firebase sign-in.')
+    }
+    const claims = await verifyFirebaseIdToken(idToken, deps.config.firebase.projectId)
+    if (claims.email !== adminEmail) {
+      throw validationError('The Firebase account email must match the admin email.', {
+        adminEmail: 'Use the same email you registered with Firebase.',
+      })
+    }
+    const linked = await deps.db.read(
+      async (uow) => (await uow.users.where('by_auth_subject', claims.uid))[0],
+    )
+    if (linked) {
+      throw validationError('An account with this email already exists. Sign in instead.', {
+        adminEmail: 'Sign in with this email, or use a different address to start a trial.',
+      })
+    }
+    authSubject = claims.uid
+  }
+
+  const timestamp = deps.clock.nowIso()
+  const organization: Organization = {
+    id: newId(),
+    name: organizationName,
+    timezone,
+    support_email: supportEmail,
+    support_contact_name: supportContactName,
+    record_version: 1,
+    created_at: timestamp,
+    updated_at: timestamp,
+  }
+  const user: User = {
+    id: newId(),
+    display_name: adminName,
+    email: adminEmail,
+    auth_subject: authSubject,
+    password_hash: passwordHash,
+    password_updated_at: timestamp,
+    status: 'active',
+    last_login_at: null,
+    created_at: timestamp,
+  }
+  const membership: Membership = {
+    id: newId(),
+    organization_id: organization.id,
+    user_id: user.id,
+    role: 'admin',
+  }
+  await deps.db.write(async (uow) => {
+    await uow.organizations.put(organization)
+    await uow.users.put(user)
+    await uow.memberships.put(membership)
+  })
+
+  const createdUser = await deps.db.read((uow) => uow.users.get(user.id))
+  if (!createdUser) throw validationError('The administrator account could not be created.')
+  const result =
+    idToken && deps.config.firebase
+      ? await signIn(deps.db, deps.clock, deps.identityProvider, {
+          credentials: { kind: 'idToken', idToken },
+        })
+      : deps.identityProvider.managesPasswords
+        ? await signIn(deps.db, deps.clock, deps.identityProvider, {
+            credentials: { kind: 'password', email: adminEmail, password: adminPassword },
+          })
+        : await openSessionForUser(deps.db, deps.clock, createdUser)
+  setCookie(c, SESSION_COOKIE, result.token, {
+    path: '/',
+    httpOnly: true,
+    sameSite: 'Lax',
+    secure: deps.config.secureCookies,
+    maxAge: 7 * 86_400,
+  })
+  return { organization_id: organization.id, user_id: user.id }
+}
+
 /**
  * First-run setup. Available only while the server has no organization, so it cannot be used
- * to add a second administrator later.
+ * to add a second organization later. Self-serve trials use `/signup` instead.
  */
 sessionRoutes.post(
   '/setup',
-  handle(async (c) => {
-    const deps = c.get('deps')
-    if (await primaryOrganization(deps)) {
-      throw conflict('This server is already set up. Sign in instead.')
-    }
-    const body = await c.req.json<{
-      organizationName?: string
-      timezone?: string
-      supportEmail?: string
-      supportContactName?: string
-      adminName?: string
-      adminEmail?: string
-      adminPassword?: string
-      idToken?: string
-    }>()
+  handle(async (c) => registerOrganizationAdmin(c, { allowWhenOrgExists: false })),
+)
 
-    const fieldErrors: Record<string, string> = {}
-    const organizationName = (body.organizationName ?? '').trim()
-    const timezone = (body.timezone ?? 'America/Chicago').trim()
-    const supportEmail = (body.supportEmail ?? '').trim().toLowerCase()
-    const supportContactName = (body.supportContactName ?? '').trim()
-    const adminName = (body.adminName ?? '').trim()
-    const adminEmail = (body.adminEmail ?? '').trim().toLowerCase()
-    const adminPassword = body.adminPassword ?? ''
-
-    if (organizationName.length < 2) fieldErrors.organizationName = 'Enter your organization name.'
-    if (supportContactName.length < 2) {
-      fieldErrors.supportContactName = 'Enter the team or person vendors should contact.'
-    }
-    if (!isSyntacticallyValidEmail(supportEmail)) {
-      fieldErrors.supportEmail = 'Enter a valid support email address.'
-    }
-    if (adminName.length < 2) fieldErrors.adminName = 'Enter your name.'
-    if (!isSyntacticallyValidEmail(adminEmail)) fieldErrors.adminEmail = 'Enter a valid email address.'
-    try {
-      new Intl.DateTimeFormat('en-CA', { timeZone: timezone })
-    } catch {
-      fieldErrors.timezone = 'Choose a valid IANA timezone, for example America/Chicago.'
-    }
-    if (Object.keys(fieldErrors).length > 0) {
-      throw validationError('Fix the highlighted fields.', fieldErrors)
-    }
-    deps.identityProvider.assertPasswordPolicy(adminPassword, 'adminPassword')
-    const passwordHash = await deps.identityProvider.hashPassword(adminPassword)
-
-    const idToken = (body.idToken ?? '').trim()
-    let authSubject: string | null = null
-    if (idToken) {
-      if (!deps.config.firebase) {
-        throw validationError('This server is not using Firebase sign-in.')
-      }
-      const claims = await verifyFirebaseIdToken(idToken, deps.config.firebase.projectId)
-      if (claims.email !== adminEmail) {
-        throw validationError('The Firebase account email must match the admin email.', {
-          adminEmail: 'Use the same email you registered with Firebase.',
-        })
-      }
-      authSubject = claims.uid
-    }
-
-    const timestamp = deps.clock.nowIso()
-    const organization: Organization = {
-      id: newId(),
-      name: organizationName,
-      timezone,
-      support_email: supportEmail,
-      support_contact_name: supportContactName,
-      record_version: 1,
-      created_at: timestamp,
-      updated_at: timestamp,
-    }
-    const user: User = {
-      id: newId(),
-      display_name: adminName,
-      email: adminEmail,
-      auth_subject: authSubject,
-      password_hash: passwordHash,
-      password_updated_at: timestamp,
-      status: 'active',
-      last_login_at: null,
-      created_at: timestamp,
-    }
-    const membership: Membership = {
-      id: newId(),
-      organization_id: organization.id,
-      user_id: user.id,
-      role: 'admin',
-    }
-    await deps.db.write(async (uow) => {
-      await uow.organizations.put(organization)
-      await uow.users.put(user)
-      await uow.memberships.put(membership)
-    })
-
-    const createdUser = await deps.db.read((uow) => uow.users.get(user.id))
-    if (!createdUser) throw validationError('The administrator account could not be created.')
-    const result =
-      idToken && deps.config.firebase
-        ? await signIn(deps.db, deps.clock, deps.identityProvider, {
-            credentials: { kind: 'idToken', idToken },
-          })
-        : deps.identityProvider.managesPasswords
-          ? await signIn(deps.db, deps.clock, deps.identityProvider, {
-              credentials: { kind: 'password', email: adminEmail, password: adminPassword },
-            })
-          : await openSessionForUser(deps.db, deps.clock, createdUser)
-    setCookie(c, SESSION_COOKIE, result.token, {
-      path: '/',
-      httpOnly: true,
-      sameSite: 'Lax',
-      secure: deps.config.secureCookies,
-      maxAge: 7 * 86_400,
-    })
-    return { organization_id: organization.id, user_id: user.id }
-  }),
+/**
+ * Self-serve Start Free Trial signup. Creates a new organization + admin even when other orgs
+ * already exist on this server (multi-tenant SaaS path). Reuses the same Firebase / local-password
+ * patterns as first-run setup.
+ */
+sessionRoutes.post(
+  '/signup',
+  handle(async (c) => registerOrganizationAdmin(c, { allowWhenOrgExists: true })),
 )
