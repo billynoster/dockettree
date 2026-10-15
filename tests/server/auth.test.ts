@@ -29,6 +29,21 @@ afterEach(() => {
 })
 
 describe('sign-in', () => {
+  it('omits the primary organization name from anonymous session probes', async () => {
+    const session = await server.request('/api/session')
+    expect(session.status).toBe(200)
+    expect(session.body.authenticated).toBe(false)
+    expect(session.body.setupRequired).toBe(false)
+    expect(session.body.organizationName).toBeNull()
+  })
+
+  it('returns the caller organization name only after sign-in', async () => {
+    const cookie = await server.signIn(ADMIN, STAFF_PASSWORD)
+    const session = await server.request('/api/session', { cookie })
+    expect(session.body.authenticated).toBe(true)
+    expect(session.body.organizationName).toBe('Cedar Grove Property Operations')
+  })
+
   it('rejects a Firebase ID token while this server is using local passwords', async () => {
     const response = await server.request('/api/auth/login', {
       method: 'POST',
