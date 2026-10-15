@@ -68,7 +68,8 @@ sessionRoutes.get(
       setupRequired: organization === null,
       provider: deps.identityProvider.name,
       signInHint: deps.identityProvider.signInHint,
-      organizationName: organization?.name ?? null,
+      // Never expose the primary org name to anonymous callers (multi-tenant SaaS).
+      organizationName: null as string | null,
       delivery: {
         configured: deps.mailer.configured,
         reason: deps.mailer.unavailableReason,
@@ -81,7 +82,7 @@ sessionRoutes.get(
     const ownOrganization = await deps.db.read((uow) => uow.organizations.get(principal.organizationId))
     return {
       ...base,
-      organizationName: ownOrganization?.name ?? base.organizationName,
+      organizationName: ownOrganization?.name ?? null,
       authenticated: true as const,
       user: {
         id: principal.user.id,

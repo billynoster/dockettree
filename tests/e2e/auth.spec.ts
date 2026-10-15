@@ -17,7 +17,9 @@ test.describe('authentication', () => {
   test('an unauthenticated visitor is sent to sign in and cannot reach any data', async ({ page }) => {
     await page.goto('/overview')
     await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible()
-    await expect(page.getByText('Cedar Grove Property Operations').first()).toBeVisible()
+    // Signed-out session must not brand the login page with a primary/seed org name.
+    await expect(page.getByText('Continue to your vendor documents.')).toBeVisible()
+    await expect(page.getByText('Cedar Grove')).toHaveCount(0)
 
     const api = await page.request.get('/api/overview')
     expect(api.status()).toBe(401)
