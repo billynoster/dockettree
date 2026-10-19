@@ -42,6 +42,7 @@ const TYPE_LABEL: Record<Notification['type'], string> = {
   vendor_digest: 'Vendor reminder digest',
   correction_requested: 'Correction request',
   internal_expiration_notice: 'Internal expiration notice',
+  signup_notice: 'Signup notice',
 }
 
 const TYPE_ICON: Record<Notification['type'], typeof Bell> = {
@@ -49,6 +50,7 @@ const TYPE_ICON: Record<Notification['type'], typeof Bell> = {
   vendor_digest: Bell,
   correction_requested: MessageSquareWarning,
   internal_expiration_notice: CalendarClock,
+  signup_notice: Bell,
 }
 
 const STATUS_LABEL: Record<Notification['status'], string> = {

@@ -25,6 +25,7 @@ import {
   type AppEnv,
 } from '../context'
 import { handle } from '../handler'
+import { notifyOrganizationSignup } from '../../mail/signupNotify'
 
 export const sessionRoutes = new Hono<AppEnv>()
 
@@ -195,7 +196,7 @@ type RegisterOrgBody = {
  */
 async function registerOrganizationAdmin(
   c: Context<AppEnv>,
-  options: { allowWhenOrgExists: boolean },
+  options: { allowWhenOrgExists: boolean; source: 'signup' | 'setup' },
 ) {
   const deps = c.get('deps')
   if (!options.allowWhenOrgExists && (await primaryOrganization(deps))) {
@@ -319,6 +320,18 @@ async function registerOrganizationAdmin(
     secure: deps.config.secureCookies,
     maxAge: 7 * 86_400,
   })
+
+  // Best-effort founder notice via outbox; never fail signup/setup if mail is down.
+  await notifyOrganizationSignup({
+    db: deps.db,
+    clock: deps.clock,
+    deliveryWorker: deps.deliveryWorker,
+    notifyEmail: deps.config.signupNotifyEmail,
+    organization,
+    admin: { display_name: user.display_name, email: user.email },
+    source: options.source,
+  })
+
   return { organization_id: organization.id, user_id: user.id }
 }
 
@@ -328,7 +341,9 @@ async function registerOrganizationAdmin(
  */
 sessionRoutes.post(
   '/setup',
-  handle(async (c) => registerOrganizationAdmin(c, { allowWhenOrgExists: false })),
+  handle(async (c) =>
+    registerOrganizationAdmin(c, { allowWhenOrgExists: false, source: 'setup' }),
+  ),
 )
 
 /**
@@ -338,5 +353,7 @@ sessionRoutes.post(
  */
 sessionRoutes.post(
   '/signup',
-  handle(async (c) => registerOrganizationAdmin(c, { allowWhenOrgExists: true })),
+  handle(async (c) =>
+    registerOrganizationAdmin(c, { allowWhenOrgExists: true, source: 'signup' }),
+  ),
 )

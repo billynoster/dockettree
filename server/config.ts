@@ -52,6 +52,11 @@ export interface ServerConfig {
    * When null, V1 local email/password + session cookies remain the identity provider.
    */
   firebase: FirebaseWebConfig | null
+  /**
+   * Founder inbox for new org signup/setup notices. Unset ⇒ skip send (log and continue).
+   * Production (Cloud Run): set to e.g. bno@billyno.com via --update-env-vars.
+   */
+  signupNotifyEmail: string | null
   /** Set false in tests so timers do not keep the process alive. */
   runBackgroundJobs: boolean
 }
@@ -176,6 +181,10 @@ export function loadConfig(overrides: Partial<ServerConfig> = {}): ServerConfig 
             }
           : null,
     firebase: overrides.firebase !== undefined ? overrides.firebase : loadFirebaseConfig(),
+    signupNotifyEmail:
+      overrides.signupNotifyEmail !== undefined
+        ? overrides.signupNotifyEmail
+        : env('SIGNUP_NOTIFY_EMAIL') ?? null,
     runBackgroundJobs: overrides.runBackgroundJobs ?? bool(process.env.RUN_BACKGROUND_JOBS, true),
   }
 }
