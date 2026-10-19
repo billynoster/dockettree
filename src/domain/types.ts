@@ -43,6 +43,7 @@ export type NotificationType =
   | 'vendor_digest'
   | 'correction_requested'
   | 'internal_expiration_notice'
+  | 'signup_notice'
 
 /**
  * Lifecycle of one document/info ask in the Requests inbox.

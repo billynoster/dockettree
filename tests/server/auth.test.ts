@@ -4,6 +4,7 @@
  * browser (or a hostile client) can reach.
  */
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { createCapturingMailer } from '../../server/mail/mailer'
 import { vendorIdFor } from '../../server/seed/sampleData'
 import {
   STAFF_PASSWORD,
@@ -434,5 +435,142 @@ describe('self-serve signup', () => {
     })
     expect(duplicate.status).toBe(422)
     expect(duplicate.body.error.fieldErrors.adminEmail).toBeTruthy()
+  })
+
+  it('does not queue a founder notice when SIGNUP_NOTIFY_EMAIL is unset', async () => {
+    const before = await server.db.read(async (uow) =>
+      (await uow.notifications.getAll()).filter((row) => row.type === 'signup_notice'),
+    )
+    const created = await server.request('/api/signup', {
+      method: 'POST',
+      body: JSON.stringify({
+        organizationName: 'Quiet Harbor',
+        timezone: 'America/Chicago',
+        supportEmail: 'ops@quietharbor.example',
+        supportContactName: 'Quiet desk',
+        adminName: 'Quinn Quiet',
+        adminEmail: 'quinn.quiet@example.com',
+        adminPassword: 'a-long-enough-password',
+      }),
+    })
+    expect(created.status).toBe(200)
+    const after = await server.db.read(async (uow) =>
+      (await uow.notifications.getAll()).filter((row) => row.type === 'signup_notice'),
+    )
+    expect(after).toHaveLength(before.length)
+  })
+
+  it('queues and delivers a founder notice when SIGNUP_NOTIFY_EMAIL is set', async () => {
+    const mailer = createCapturingMailer()
+    const notify = await createTestServer({
+      mailer,
+      signupNotifyEmail: 'bno@billyno.com',
+    })
+    try {
+      const created = await notify.request('/api/signup', {
+        method: 'POST',
+        body: JSON.stringify({
+          organizationName: 'Notify Harbor',
+          timezone: 'America/Chicago',
+          supportEmail: 'ops@notifyharbor.example',
+          supportContactName: 'Notify desk',
+          adminName: 'Nora Notify',
+          adminEmail: 'nora.notify@example.com',
+          adminPassword: 'a-long-enough-password',
+        }),
+      })
+      expect(created.status).toBe(200)
+      const orgId = created.body.organization_id as string
+
+      // Delivery is kicked async; drain the worker so the assertion is deterministic.
+      await notify.deps.deliveryWorker.runOnce()
+
+      const notices = await notify.db.read(async (uow) =>
+        (await uow.notifications.getAll()).filter((row) => row.type === 'signup_notice'),
+      )
+      expect(notices).toHaveLength(1)
+      expect(notices[0].recipient).toBe('bno@billyno.com')
+      expect(notices[0].organization_id).toBe(orgId)
+      expect(notices[0].subject).toContain('Notify Harbor')
+      expect(notices[0].body).toContain('Nora Notify')
+      expect(notices[0].body).toContain('nora.notify@example.com')
+      expect(notices[0].body).toContain(orgId)
+      expect(notices[0].body).not.toContain('a-long-enough-password')
+      expect(notices[0].status).toBe('sent')
+
+      expect(mailer.sent).toHaveLength(1)
+      expect(mailer.sent[0].to).toBe('bno@billyno.com')
+      expect(mailer.sent[0].subject).toContain('Notify Harbor')
+      expect(mailer.sent[0].body).toContain('/signup')
+    } finally {
+      notify.close()
+    }
+  })
+
+  it('still succeeds when founder notice delivery fails', async () => {
+    const mailer = createCapturingMailer({ failWith: 'SMTP 421 service unavailable' })
+    const notify = await createTestServer({
+      mailer,
+      signupNotifyEmail: 'bno@billyno.com',
+    })
+    try {
+      const created = await notify.request('/api/signup', {
+        method: 'POST',
+        body: JSON.stringify({
+          organizationName: 'Retry Harbor',
+          timezone: 'America/Chicago',
+          supportEmail: 'ops@retryharbor.example',
+          supportContactName: 'Retry desk',
+          adminName: 'Rita Retry',
+          adminEmail: 'rita.retry@example.com',
+          adminPassword: 'a-long-enough-password',
+        }),
+      })
+      expect(created.status).toBe(200)
+      expect(created.body.organization_id).toBeTruthy()
+      await notify.deps.deliveryWorker.runOnce()
+      const notices = await notify.db.read(async (uow) =>
+        (await uow.notifications.getAll()).filter((row) => row.type === 'signup_notice'),
+      )
+      expect(notices).toHaveLength(1)
+      expect(notices[0].status).toBe('retry_scheduled')
+    } finally {
+      notify.close()
+    }
+  })
+})
+
+describe('first-run setup founder notify', () => {
+  it('queues a founder notice from /setup when SIGNUP_NOTIFY_EMAIL is set', async () => {
+    const mailer = createCapturingMailer()
+    const fresh = await createTestServer({
+      seed: false,
+      mailer,
+      signupNotifyEmail: 'bno@billyno.com',
+    })
+    try {
+      const created = await fresh.request('/api/setup', {
+        method: 'POST',
+        body: JSON.stringify({
+          organizationName: 'Setup Harbor',
+          timezone: 'America/Chicago',
+          supportEmail: 'ops@setupharbor.example',
+          supportContactName: 'Setup desk',
+          adminName: 'Sam Setup',
+          adminEmail: 'sam.setup@example.com',
+          adminPassword: 'a-long-enough-password',
+        }),
+      })
+      expect(created.status).toBe(200)
+      await fresh.deps.deliveryWorker.runOnce()
+      const notices = await fresh.db.read(async (uow) =>
+        (await uow.notifications.getAll()).filter((row) => row.type === 'signup_notice'),
+      )
+      expect(notices).toHaveLength(1)
+      expect(notices[0].body).toContain('/setup')
+      expect(mailer.sent[0].to).toBe('bno@billyno.com')
+    } finally {
+      fresh.close()
+    }
   })
 })

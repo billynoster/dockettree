@@ -40,6 +40,8 @@ export async function createTestServer(
     seed?: boolean
     mailer?: Mailer
     firebase?: FirebaseWebConfig | null
+    /** Founder inbox for signup/setup notices; null skips (default). */
+    signupNotifyEmail?: string | null
     createIdentityProvider?: (db: SqliteDatabase, clock: Clock) => IdentityProvider
   } = {},
 ): Promise<TestServer> {
@@ -61,6 +63,7 @@ export async function createTestServer(
     publicUrl: 'http://127.0.0.1:43217',
     smtp: null,
     firebase: options.firebase ?? null,
+    signupNotifyEmail: options.signupNotifyEmail ?? null,
   })
   const deps: AppDependencies = {
     config,
